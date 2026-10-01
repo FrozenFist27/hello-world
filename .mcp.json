@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "chess": {
+      "command": "uv",
+      "args": ["run", "--directory", "tools/tintins-chess-analysis", "python", "-m", "server.mcp_server"],
+      "env": {
+        "CHESS_USERNAME": "",
+        "CHESS_ALIASES": "",
+        "LICHESS_TOKEN": "",
+        "CHESS_PROFILE_RECENT": "100",
+        "CHESS_PROFILE_LIFETIME": "all"
+      }
+    }
+  }
+}

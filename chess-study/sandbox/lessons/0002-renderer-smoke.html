@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sandbox — Renderer smoke test</title>
+<link rel="stylesheet" href="../assets/learno.css" />
+<link rel="stylesheet" href="../assets/components.css" />
+<script>(function(){try{var d=document.documentElement,t=localStorage.getItem('lx-theme'),a=localStorage.getItem('lx-accent');if(t&&t!=='auto')d.setAttribute('data-theme',t);if(a&&a!=='azul')d.setAttribute('data-accent',a)}catch(e){}})()</script>
+</head>
+<body class="lx-shell" data-lesson="0002-renderer-smoke">
+
+
+<!-- Shared arrowhead. Authored diagrams reference #lx-arrow and never carry
+     their own marker definition. -->
+<svg class="lx-defs" aria-hidden="true">
+  <defs>
+    <marker id="lx-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="lx-arrowhead" d="M 0 0 L 10 5 L 0 10 z" />
+    </marker>
+  </defs>
+</svg>
+
+  <nav class="lx-topbar">
+    <a class="lx-topbar-home" href="../" title="Ir para o painel">
+      <svg class="lx-icon-svg lx-topbar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
+  <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
+      <span>learno</span>
+    </a>
+    <div class="lx-topbar-right">
+      <a class="lx-topbar-link" href="../reference/library.html" title="Biblioteca">
+        <svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 6 4 14" />
+  <path d="M12 6v14" />
+  <path d="M8 8v12" />
+  <path d="M4 4v16" /></svg>
+        <span>Biblioteca</span>
+      </a>
+      <details class="lx-settings">
+      <summary class="lx-settings-btn" title="Configurações" aria-label="Configurações" role="button">
+        <svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
+  <circle cx="12" cy="12" r="3" /></svg>
+      </summary>
+      <div class="lx-settings-panel">
+        <div class="lx-settings-group">
+          <p class="lx-settings-label">Tema</p>
+          <div class="lx-settings-row">
+            <button type="button" class="lx-settings-opt" data-theme-set="light" title="Claro"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4" />
+  <path d="M12 2v2" />
+  <path d="M12 20v2" />
+  <path d="m4.93 4.93 1.41 1.41" />
+  <path d="m17.66 17.66 1.41 1.41" />
+  <path d="M2 12h2" />
+  <path d="M20 12h2" />
+  <path d="m6.34 17.66-1.41 1.41" />
+  <path d="m19.07 4.93-1.41 1.41" /></svg></button>
+            <button type="button" class="lx-settings-opt" data-theme-set="auto" title="Seguir o sistema"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2" />
+  <line x1="8" x2="16" y1="21" y2="21" />
+  <line x1="12" x2="12" y1="17" y2="21" /></svg></button>
+            <button type="button" class="lx-settings-opt" data-theme-set="dark" title="Escuro"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" /></svg></button>
+          </div>
+        </div>
+        <div class="lx-settings-group">
+          <p class="lx-settings-label">Cor principal</p>
+          <div class="lx-settings-row">
+            <button type="button" class="lx-settings-opt" data-accent-set="azul" title="Azul"><span class="lx-settings-dot lx-settings-dot--azul"></span>Azul</button>
+            <button type="button" class="lx-settings-opt" data-accent-set="roxo" title="Roxo"><span class="lx-settings-dot lx-settings-dot--roxo"></span>Roxo</button>
+            <button type="button" class="lx-settings-opt" data-accent-set="rosa" title="Rosa"><span class="lx-settings-dot lx-settings-dot--rosa"></span>Rosa</button>
+          </div>
+        </div>
+      </div>
+    </details>
+    </div>
+  </nav>
+
+<div class="lx-wrap">
+  <header class="lx-lesson-head">
+    <span class="lx-badge"><span class="lx-inline">Sandbox</span></span>
+    <h1 class="lx-title"><span class="lx-title-icon"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="16" y="16" width="6" height="6" rx="1" />
+  <rect x="2" y="16" width="6" height="6" rx="1" />
+  <rect x="9" y="2" width="6" height="6" rx="1" />
+  <path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3" />
+  <path d="M12 12V8" /></svg></span><span><span class="lx-inline">Sandbox — Renderer smoke test</span></span></h1>
+    <p class="lx-subtitle"><span class="lx-inline">Lição descartável: existe só para provar o pipeline <code class="lx-code">.json</code> + <code class="lx-code">.yml</code> de ponta a ponta</span></p>
+  </header>
+
+  <div class="lx-offline-banner" id="lx-banner" hidden>
+    Servidor fora do ar. As seções continuam abrindo por múltipla escolha, mas a validação por IA e o registro do progresso ficam indisponíveis.
+  </div>
+
+  <div class="lx-progress" role="presentation">
+    <span class="lx-progress-seg" data-seg="1"></span>
+    <span class="lx-progress-seg" data-seg="2"></span>
+  </div>
+
+  <div class="lx-blocks">
+  <div class="lx-card lx-analogy">
+    <span class="lx-analogy-label"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" />
+  <path d="M9 18h6" />
+  <path d="M10 22h4" /></svg> <span class="lx-inline">Pense num guarda-volumes de academia</span></span>
+    <p class="lx-analogy-text"><span class="lx-inline">Cada armário guarda as coisas de uma pessoa. Você não precisa procurar em todos — a etiqueta na chave diz exatamente qual abrir.
+</span></p>
+    <p class="lx-analogy-bridge"><span class="lx-inline">Essa etiqueta é a chave de shard, e o armário é o nó que guarda o dado.</span></p>
+  </div>
+  <div class="lx-prose">
+    <p><span class="lx-inline">Este parágrafo veio do <strong>YAML</strong>, não do JSON. O JSON só disse <em>qual</em>
+componente usar e em que ordem — o texto está aqui, referenciado por
+<code class="lx-code">@intro.body</code>.</span></p>
+    <p><span class="lx-inline">Este é um segundo parágrafo, separado por linha em branco. Ele existe para
+provar que o subconjunto de markdown do componente <code class="lx-code">prose</code> quebra parágrafos
+corretamente, e que <a class="lx-link" href="https://github.com/murichristopher/learno">links</a> também
+funcionam.</span></p>
+  </div>
+  <figure class="lx-figure">
+    <div class="lx-card lx-scroll"><svg class="lx-svg" viewBox="0 0 600 120" role="img"
+     aria-label="Cliente, roteador e três nós de armazenamento">
+  <rect class="lx-node lx-node--accent" x="8" y="36" width="118" height="48"/>
+  <text class="lx-label" x="67" y="65" text-anchor="middle">Cliente</text>
+  <path class="lx-edge" d="M128 60 H 214"/>
+  <text class="lx-label--muted" x="171" y="51" text-anchor="middle">hash(k)</text>
+  <rect class="lx-node" x="216" y="36" width="130" height="48"/>
+  <text class="lx-label" x="281" y="65" text-anchor="middle">Roteador</text>
+  <path class="lx-edge" d="M348 50 C 404 50, 404 26, 460 26"/>
+  <path class="lx-edge" d="M348 60 H 460"/>
+  <path class="lx-edge" d="M348 70 C 404 70, 404 94, 460 94"/>
+  <rect class="lx-node" x="462" y="6"  width="128" height="40"/>
+  <text class="lx-label" x="526" y="31" text-anchor="middle">Nó A</text>
+  <rect class="lx-node" x="462" y="46" width="128" height="28"/>
+  <text class="lx-label" x="526" y="65" text-anchor="middle">Nó B</text>
+  <rect class="lx-node" x="462" y="80" width="128" height="34"/>
+  <text class="lx-label" x="526" y="102" text-anchor="middle">Nó C</text>
+</svg>
+</div>
+    <figcaption class="lx-caption"><span class="lx-inline">Fluxo de uma requisição até o nó certo</span></figcaption>
+  </figure>
+  <div class="lx-card lx-callout lx-callout--note">
+    <span class="lx-callout-mark"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" />
+  <path d="M12 16v-4" />
+  <path d="M12 8h.01" /></svg></span>
+    <div>
+      <p class="lx-callout-title"><span class="lx-inline">O JSON não tem uma frase sequer</span></p>
+      <div class="lx-callout-text"><p><span class="lx-inline">Tudo que você lê nesta página está no .yml. O .json só diz qual componente usar, em que ordem, e qual chave do YAML cada prop referencia.</span></p></div>
+    </div>
+  </div>
+  <div class="lx-prose">
+    <p><span class="lx-inline">O diagrama acima e o de baixo <strong>não têm uma cor sequer</strong> no YAML. Se você
+escrever <code class="lx-code">fill=&quot;#9333ea&quot;</code> num deles, o build recusa a lição inteira e diz
+qual diagrama tem o problema.</span></p>
+  </div>
+  <figure class="lx-figure">
+    <div class="lx-compare">
+      <div class="lx-card lx-compare-col">
+        <span class="lx-compare-label"><span class="lx-inline">JSON — estrutura</span></span>
+        <p class="lx-compare-body"><span class="lx-inline">Quais componentes, em que ordem, com quais ids. É o que o build valida contra o vocabulário. Pequeno e chato de propósito.
+</span></p>
+      </div>
+      <div class="lx-card lx-compare-col">
+        <span class="lx-compare-label"><span class="lx-inline">YAML — conteúdo</span></span>
+        <p class="lx-compare-body"><span class="lx-inline">Prosa e SVG, endereçados por chave. É onde está tudo que uma pessoa escreveu, e o único arquivo que muda quando o texto muda.
+</span></p>
+      </div>
+    </div>
+    <figcaption class="lx-caption"><span class="lx-inline">As duas metades do formato, e o que cada uma resolve</span></figcaption>
+  </figure>
+  <div class="lx-card lx-callout lx-callout--warn">
+    <span class="lx-callout-mark"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+  <path d="M12 9v4" />
+  <path d="M12 17h.01" /></svg></span>
+    <div>
+      <p class="lx-callout-title"><span class="lx-inline">Componente não decide o próprio espaçamento</span></p>
+      <div class="lx-callout-text"><p><span class="lx-inline">A distância entre um bloco e o vizinho é do container. Um componente que define a própria margem ganha por especificidade e passa por cima do breakpoint do celular — foi assim que o card do diagrama ficou apertado.</span></p></div>
+    </div>
+  </div>
+  <figure class="lx-figure">
+    <div class="lx-card lx-table-wrap lx-scroll">
+      <table class="lx-table">
+        <thead><tr><th scope="col"><span class="lx-inline">Camada</span></th><th scope="col"><span class="lx-inline">Antes</span></th><th scope="col"><span class="lx-inline">Agora</span></th></tr></thead>
+        <tbody>
+          <tr><td data-label="Camada"><span class="lx-inline">CSS + JS</span></td><td data-label="Antes"><span class="lx-inline">13.1K</span></td><td data-label="Agora"><span class="lx-inline">linkado</span></td></tr>
+          <tr><td data-label="Camada"><span class="lx-inline">Tags estruturais</span></td><td data-label="Antes"><span class="lx-inline">12.3K</span></td><td data-label="Agora"><span class="lx-inline">gerado</span></td></tr>
+          <tr><td data-label="Camada"><span class="lx-inline">SVG</span></td><td data-label="Antes"><span class="lx-inline">6.6K</span></td><td data-label="Agora"><span class="lx-inline">6.6K</span></td></tr>
+          <tr><td data-label="Camada"><span class="lx-inline">Prosa</span></td><td data-label="Antes"><span class="lx-inline">6.2K</span></td><td data-label="Agora"><span class="lx-inline">6.2K</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <figcaption class="lx-caption"><span class="lx-inline">O que cada camada custa por lição</span></figcaption>
+  </figure>
+  <figure class="lx-figure">
+    <div class="lx-card lx-codeblock">
+      <span class="lx-codeblock-lang">json</span>
+      <pre><code class="hljs"><span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;component&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;diagram&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;props&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;svg&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;@diagrams.flow&quot;</span><span class="hljs-punctuation">,</span>
+             <span class="hljs-attr">&quot;caption&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;@intro.caption&quot;</span> <span class="hljs-punctuation">}</span> <span class="hljs-punctuation">}</span>
+</code></pre>
+    </div>
+    <figcaption class="lx-caption"><span class="lx-inline">Um bloco do .json — nenhum texto, só estrutura</span></figcaption>
+  </figure>
+  <figure class="lx-figure">
+    <div class="lx-card lx-codeblock">
+      <span class="lx-codeblock-lang">javascript</span>
+      <pre><code class="hljs"><span class="hljs-keyword">const</span> hljs = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;highlight.js&#x27;</span>);
+
+<span class="hljs-comment">// Sem lang, ou lang de texto puro, sai escapado e nada mais.</span>
+<span class="hljs-keyword">if</span> (!lang || <span class="hljs-variable constant_">PLAIN</span>.<span class="hljs-title function_">has</span>(lang.<span class="hljs-title function_">toLowerCase</span>())) {
+  body = <span class="hljs-title function_">esc</span>(source);
+} <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (hljs.<span class="hljs-title function_">getLanguage</span>(lang)) {
+  body = hljs.<span class="hljs-title function_">highlight</span>(source, { <span class="hljs-attr">language</span>: lang }).<span class="hljs-property">value</span>;
+} <span class="hljs-keyword">else</span> {
+  <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">`unknown language &quot;<span class="hljs-subst">${lang}</span>&quot;`</span>);
+}
+</code></pre>
+    </div>
+    <figcaption class="lx-caption"><span class="lx-inline">O componente que renderiza este bloco — destacado no build, sem JS na página</span></figcaption>
+  </figure>
+  <figure class="lx-figure">
+    <div class="lx-card lx-codeblock">
+      <span class="lx-codeblock-lang">text</span>
+      <pre><code class="hljs">2026-07-26T19:53:29Z INF Registered tunnel connection
+2026-07-26T19:53:31Z WRN backpressure: queue depth 8412
+2026-07-26T19:53:34Z ERR dropping batch after 3 retries
+</code></pre>
+    </div>
+    <figcaption class="lx-caption"><span class="lx-inline">lang &quot;text&quot; desliga o destaque de propósito — um log não tem sintaxe</span></figcaption>
+  </figure>
+  <div class="lx-card lx-callout lx-callout--danger">
+    <span class="lx-callout-mark"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16h.01" />
+  <path d="M12 8v4" />
+  <path d="M15.312 2a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586l-4.688-4.688A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2z" /></svg></span>
+    <div>
+      <p class="lx-callout-title"><span class="lx-inline">Build recusa a lição inteira</span></p>
+      <div class="lx-callout-text"><p><span class="lx-inline">Componente desconhecido, referência quebrada, prop faltando ou SVG com cor própria não geram página parcial. Uma lição meio renderizada parece pronta, e é por isso que a falha é barulhenta.</span></p></div>
+    </div>
+  </div>
+  <figure class="lx-figure">
+    <div class="lx-card lx-scroll"><svg class="lx-svg" viewBox="0 0 600 130" role="img"
+     aria-label="Variantes de nó e aresta do design system">
+  <rect class="lx-node" x="10" y="20" width="130" height="46"/>
+  <text class="lx-label" x="75" y="48" text-anchor="middle">nó padrão</text>
+
+  <rect class="lx-node lx-node--accent" x="10" y="76" width="130" height="46"/>
+  <text class="lx-label" x="75" y="104" text-anchor="middle">nó destaque</text>
+
+  <rect class="lx-node lx-node--muted" x="230" y="20" width="140" height="46"/>
+  <text class="lx-label--muted" x="300" y="48" text-anchor="middle">nó apagado</text>
+
+  <path class="lx-edge" d="M400 34 H 560"/>
+  <text class="lx-label--muted" x="480" y="26" text-anchor="middle">aresta</text>
+
+  <path class="lx-edge lx-edge--dashed" d="M400 68 H 560"/>
+  <text class="lx-label--muted" x="480" y="60" text-anchor="middle">tracejada</text>
+
+  <path class="lx-edge lx-edge--accent" d="M400 102 H 560"/>
+  <text class="lx-label--muted" x="480" y="94" text-anchor="middle">destaque</text>
+</svg>
+</div>
+    <figcaption class="lx-caption"><span class="lx-inline">Variantes de nó e de aresta na mesma figura</span></figcaption>
+  </figure>
+<div class="lx-gate lx-gate--locked" data-gate="flashcards">
+      <div class="lx-gate-body" aria-hidden="true">
+  <section class="lx-flashcards">
+    <p class="lx-flash-title"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" />
+  <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" />
+  <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" /></svg> <span class="lx-inline">Revisão rápida</span></p>
+    <div class="lx-flash-grid">
+      <details class="lx-card lx-flash">
+        <summary data-show="revelar" data-hide="esconder"><span class="lx-inline">O que o <code class="lx-code">@</code> faz num valor do JSON?</span></summary>
+        <p class="lx-flash-back"><span class="lx-inline">Marca um caminho dentro do .yml. É resolvido antes do componente ver a prop, então componente só lida com valor real.</span></p>
+      </details>
+      <details class="lx-card lx-flash">
+        <summary data-show="revelar" data-hide="esconder"><span class="lx-inline">Por que o build recusa SVG com cor?</span></summary>
+        <p class="lx-flash-back"><span class="lx-inline">Porque cor vem das classes do design system. Um diagrama que traz a própria cor não acompanha o tema e diverge do resto.</span></p>
+      </details>
+      <details class="lx-card lx-flash">
+        <summary data-show="revelar" data-hide="esconder"><span class="lx-inline">O que <code class="lx-code">[head | tail] = [1, 2, 3]</code> faz em Elixir?</span></summary>
+        <p class="lx-flash-back"><span class="lx-inline">Desestrutura a lista: <code class="lx-code">head</code> vira <code class="lx-code">1</code> e <code class="lx-code">tail</code> vira <code class="lx-code">[2, 3]</code>.</span></p>
+      </details>
+    </div>
+  </section>
+      </div>
+      <div class="lx-gate-lock">
+        <span class="lx-gate-lock-badge"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+  <path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg></span>
+        <span class="lx-gate-lock-text">Encerre a lição para abrir a revisão</span>
+      </div>
+    </div>
+  <div class="lx-card lx-source">
+    <p class="lx-source-label"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v16" />
+  <path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" /></svg> Fonte primária</p>
+    <p class="lx-source-title"><a class="lx-link" href="https://github.com/murichristopher/learno/blob/master/LESSON-PIPELINE-SPEC.md" rel="noopener noreferrer" target="_blank"><span class="lx-inline">LESSON-PIPELINE-SPEC.md</span></a></p>
+    <p class="lx-source-note"><span class="lx-inline">O spec que esta lição existe para provar.</span></p>
+  </div>
+  <section class="lx-phase" data-phase="1" id="phase-1">
+    <div class="lx-phase-head">
+      <span class="lx-phase-badge"><span>1</span></span>
+      <h2 class="lx-phase-title"><span class="lx-inline">O <code class="lx-code">@</code> que destrava a próxima seção</span></h2>
+    </div>
+    <div class="lx-gate" data-gate="phase-1">
+      <div class="lx-gate-body">
+  <div class="lx-prose">
+    <p><span class="lx-inline">A seção 2 está fechada. Responda o bloco abaixo com nota 50 ou mais e ela abre. Como o validador do sandbox é determinístico, comece a resposta com !0 para ver a seção continuar trancada, ou com !p para destravar.</span></p>
+  </div>
+  <div class="lx-card lx-ask lx-recall"
+       data-concept-id="sandbox_widget_sharding"
+       data-phase="1"
+       data-summary="Seção sobre travas de progressão e prática de recuperação."
+       data-ok="Isso. Reconhecer parece aprender, e é justamente o que a trava impede."
+       data-bad="Não é o tamanho — é a diferença entre reconhecer e produzir.">
+    <span class="lx-ask-label"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 14a2 2 0 0 0 2-2V8h-2" />
+  <path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" />
+  <path d="M8 14a2 2 0 0 0 2-2V8H8" /></svg> Explique com suas palavras</span>
+    <div class="lx-ask-q"><p><span class="lx-inline">Explique, com suas palavras, por que uma lição que dá para rolar até o fim ensina reconhecimento em vez de recuperação.</span></p></div>
+
+    <div class="lx-ask-online">
+      <textarea class="lx-answer" placeholder="Escreva sua explicação…"></textarea>
+      <div class="lx-ask-tools">
+        <button type="button" class="lx-btn lx-btn--primary" data-action="validate">Validar</button>
+        <button type="button" class="lx-btn lx-btn--secondary lx-mic" data-action="mic" hidden>🎙 Ditar</button>
+        <select class="lx-lang" data-role="lang" hidden>
+          <option value="pt-BR" selected>Português</option>
+          <option value="en-US">English</option>
+        </select>
+        <span class="lx-mic-hint"></span>
+      </div>
+      <div class="lx-verdict">
+        <div class="lx-score">
+          <span class="lx-score-num">—</span><span class="lx-score-of">/100</span>
+          <span class="lx-score-word"></span>
+        </div>
+        <div class="lx-bar"><div class="lx-bar-fill"></div></div>
+        <p class="lx-feedback"></p>
+        <ul class="lx-misses"></ul>
+      </div>
+    </div>
+
+    <div class="lx-fallback">
+      <p class="lx-fallback-note">Servidor fora do ar — respondendo por múltipla escolha.</p>
+      
+        <label class="lx-choice">
+          <input type="radio" name="fb-sandbox_widget_sharding" value="0" data-correct="0" />
+          <span><span class="lx-inline">Porque o texto fica longo demais</span></span>
+        </label>
+        <label class="lx-choice">
+          <input type="radio" name="fb-sandbox_widget_sharding" value="1" data-correct="1" />
+          <span><span class="lx-inline">Porque ler a resposta é mais fácil do que produzi-la, e as duas coisas parecem iguais por dentro</span></span>
+        </label>
+      <p class="lx-inline-fb"></p>
+    </div>
+  </div>
+      </div>
+      <div class="lx-gate-lock">
+        <span class="lx-gate-lock-badge"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+  <path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg></span>
+        <span class="lx-gate-lock-text">Responda a seção anterior para abrir</span>
+      </div>
+    </div>
+  </section>
+  <section class="lx-phase lx-phase--locked" data-phase="2" id="phase-2">
+    <div class="lx-phase-head">
+      <span class="lx-phase-badge"><span>2</span></span>
+      <h2 class="lx-phase-title"><span class="lx-inline">Múltipla escolha, corrigida na própria página</span></h2>
+    </div>
+    <div class="lx-gate lx-gate--locked" data-gate="phase-2">
+      <div class="lx-gate-body" aria-hidden="true">
+  <div class="lx-prose">
+    <p><span class="lx-inline">Este bloco não precisa de servidor nenhum. É a mesma peça que o recall usa como fallback quando o servidor cai.</span></p>
+  </div>
+  <div class="lx-card lx-quiz" data-phase="2"
+       data-ok="Isso. Trocar de modo vira um toggle de classe, e não um fetch que precisa dar certo para mostrar a alternativa." data-bad="O contrário: se ele fosse buscado com `fetch` na hora, precisaria do servidor justamente quando o servidor caiu.">
+    <span class="lx-quiz-label">Escolha uma</span>
+    <div class="lx-ask-q"><p><span class="lx-inline">Olhando o trecho abaixo, por que o fallback é renderizado sempre e só
+escondido por CSS?</span></p>
+    <div class="lx-card lx-codeblock"><span class="lx-codeblock-lang">js</span><pre><code class="hljs"><span class="hljs-keyword">function</span> <span class="hljs-title function_">setOffline</span>(<span class="hljs-params">isOffline</span>) {
+  <span class="hljs-variable language_">document</span>.<span class="hljs-property">body</span>.<span class="hljs-property">classList</span>.<span class="hljs-title function_">toggle</span>(<span class="hljs-string">&#x27;lx-offline&#x27;</span>, isOffline);
+}</code></pre></div></div>
+    
+      <label class="lx-choice">
+        <input type="radio" name="quiz-1583411007" value="0" data-correct="0" />
+        <span><span class="lx-inline">Para economizar bytes na página</span></span>
+      </label>
+      <label class="lx-choice">
+        <input type="radio" name="quiz-1583411007" value="1" data-correct="1" />
+        <span><span class="lx-inline">Porque buscá-lo na hora exigiria o servidor exatamente quando o servidor está fora</span></span>
+      </label>
+    <p class="lx-inline-fb"></p>
+  </div>
+      </div>
+      <div class="lx-gate-lock">
+        <span class="lx-gate-lock-badge"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+  <path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg></span>
+        <span class="lx-gate-lock-text">Responda a seção anterior para abrir</span>
+      </div>
+    </div>
+  </section>
+<div class="lx-gate lx-gate--locked" data-gate="teachback">
+      <div class="lx-gate-body" aria-hidden="true">
+  <div class="lx-card lx-ask lx-teachback" data-concepts="sandbox_widget_sharding,sandbox_widget_replication">
+    <span class="lx-ask-label"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" />
+  <path d="M22 10v6" />
+  <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" /></svg> Ensina de volta</span>
+    <div class="lx-ask-q"><p><span class="lx-inline">Explique o pipeline inteiro para alguém que só viu lições em HTML escrito à mão: o que é o JSON, o que é o YAML, e o que o build recusa.</span></p></div>
+    <div class="lx-teachback-hint"><p><span class="lx-inline">Comece pelo problema (84% do que a IA escrevia era máquina), depois a divisão, depois as validações.</span></p></div>
+
+    <p class="lx-teachback-offline">
+      Esta parte precisa do servidor. Sem ele não dá para registrar a lição — e um score inventado estragaria o agendamento da revisão.
+    </p>
+
+    <div class="lx-ask-online">
+      <textarea class="lx-answer lx-answer--large" placeholder="Explique o conceito inteiro, com suas palavras…"></textarea>
+      <div class="lx-ask-tools">
+        <button type="button" class="lx-btn lx-btn--primary" data-action="teachback">Encerrar a lição</button>
+        <button type="button" class="lx-btn lx-btn--secondary lx-mic" data-action="mic" hidden>🎙 Ditar</button>
+        <select class="lx-lang" data-role="lang" hidden>
+          <option value="pt-BR" selected>Português</option>
+          <option value="en-US">English</option>
+        </select>
+        <span class="lx-mic-hint"></span>
+      </div>
+      <div class="lx-verdict">
+        <div class="lx-score">
+          <span class="lx-score-num">—</span><span class="lx-score-of">/100</span>
+          <span class="lx-score-word"></span>
+        </div>
+        <div class="lx-bar"><div class="lx-bar-fill"></div></div>
+        <p class="lx-feedback"></p>
+        <ul class="lx-misses"></ul>
+        <div class="lx-concepts"></div>
+      </div>
+    </div>
+  </div>
+      </div>
+      <div class="lx-gate-lock">
+        <span class="lx-gate-lock-badge"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+  <path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg></span>
+        <span class="lx-gate-lock-text">Termine as seções acima para abrir</span>
+      </div>
+    </div>
+  <div class="lx-done">
+    <div class="lx-card lx-next-review">
+      <span class="lx-next-review-label">Próxima revisão</span>
+      <span class="lx-next-review-date">—</span>
+      <span class="lx-next-review-note"></span>
+    </div>
+  </div>
+  </div>
+
+  <footer class="lx-lesson-foot">
+    <a class="lx-btn lx-btn--outline" href="../reference/my-learning.html">Painel</a>
+    <a class="lx-btn lx-btn--outline" href="../reference/glossary.html">Glossário</a>
+    <button type="button" class="lx-btn lx-btn--ghost" data-action="restart"
+      title="Apaga as respostas guardadas neste navegador e recomeça">Recomeçar</button>
+  </footer>
+</div>
+
+<script type="application/json" id="lx-config">{"lesson":"0002-renderer-smoke","concepts":["sandbox_widget_sharding","sandbox_widget_replication"],"phases":["1","2"],"strings":{"recall.ok":"Correto.","recall.bad":"Não é essa.","mic.dictate":"Ditar","mic.lang":"pt-BR","mic.stop":"Parar","mic.listening":"ouvindo…","mic.failed":"Não deu para transcrever agora. Você pode digitar a resposta.","score.top":"domínio","score.good":"sólido","score.mid":"parcial","score.bad":"não compreendido","score.error":"erro","run.validating":"Validando…","run.grading":"Avaliando…","run.needAnswer":"Escreva uma resposta antes de validar.","run.needExplain":"Escreva sua explicação antes de encerrar.","run.validateFailed":"Não deu para validar agora. Sua resposta continua aí.","run.finishFailed":"Não deu para encerrar agora. Sua explicação continua aí.","run.serverSaid":"servidor respondeu","run.notScheduled":"não agendada","run.notSaved":"A lição foi avaliada, mas o progresso não pôde ser salvo.","run.scheduled":"conceito(s) agendado(s) pelo SM-2.","run.restart":"Recomeçar","run.restartTitle":"Apaga as respostas guardadas neste navegador e recomeça","run.teachbackOf":"Teach-back final da lição"}}</script>
+<script src="../assets/learno.js" defer></script>
+</body>
+</html>

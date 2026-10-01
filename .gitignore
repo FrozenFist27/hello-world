@@ -1,0 +1,8 @@
+# Third-party tools fetched by setup-chess.sh (not vendored)
+tools/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/

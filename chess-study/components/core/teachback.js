@@ -1,0 +1,94 @@
+// No offline fallback on purpose: a multiple-choice stand-in for "explain it back"
+// measures nothing, and a fabricated score corrupts the review schedule.
+
+const { icon } = require('../../build/icons');
+const { t } = require('../../build/strings');
+const { gate } = require('../../build/gate');
+
+const { esc, inline, rich } = require('../../build/text');
+
+module.exports = {
+  meta: {
+    name: 'teachback',
+    purpose: 'the closing explanation that ends the lesson and feeds spaced review',
+    props: {
+      question:   'string',
+      conceptIds: 'array<string>',
+      hint:       'string?'
+    },
+    demo: {
+      question: 'Explain consistent hashing to someone who only knows hash modulo N.',
+      conceptIds: ['sandbox_widget_sharding', 'sandbox_widget_replication'],
+      hint: 'Start with the problem, then the ring, then what happens when a node is added.'
+    }
+  },
+
+  css: `
+.lx-teachback { border-left: 3px solid var(--lx-accent); }
+.lx-teachback-hint { color: var(--lx-text-muted); font-size: .85rem; margin-bottom: .7rem; }
+.lx-offline .lx-teachback-offline { display: block; }
+.lx-teachback-offline { display: none; color: var(--lx-text-muted); font-size: .875rem; font-style: italic; }
+.lx-offline .lx-teachback .lx-ask-online { display: none; }
+
+/* Completion — revealed once the teach-back has been scored and recorded. */
+.lx-done { display: none; }
+.lx-done.is-shown { display: block; }
+.lx-next-review {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem;
+  border-left: 3px solid var(--lx-accent);
+}
+.lx-next-review-label {
+  font-size: .68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em;
+  color: var(--lx-accent);
+}
+.lx-next-review-date { color: var(--lx-text); font-weight: 600; }
+.lx-next-review-note { color: var(--lx-text-muted); font-size: .85rem; width: 100%; }
+`,
+
+  render({ question, conceptIds, hint }) {
+    const card = `  <div class="lx-card lx-ask lx-teachback" data-concepts="${esc(conceptIds.join(','))}">
+    <span class="lx-ask-label">${icon('graduation-cap')} ${t('teachback.label')}</span>
+    <div class="lx-ask-q">${rich(question)}</div>
+    ${hint ? `<div class="lx-teachback-hint">${rich(hint)}</div>` : ''}
+
+    <p class="lx-teachback-offline">
+      ${t('teachback.offline')}
+    </p>
+
+    <div class="lx-ask-online">
+      <textarea class="lx-answer lx-answer--large" placeholder="${t('teachback.placeholder')}"></textarea>
+      <div class="lx-ask-tools">
+        <button type="button" class="lx-btn lx-btn--primary" data-action="teachback">${t('teachback.finish')}</button>
+        <button type="button" class="lx-btn lx-btn--secondary lx-mic" data-action="mic" hidden>🎙 ${t('mic.dictate')}</button>
+        <select class="lx-lang" data-role="lang" hidden>
+          <option value="pt-BR"${t('mic.lang') === 'pt-BR' ? ' selected' : ''}>Português</option>
+          <option value="en-US"${t('mic.lang') === 'en-US' ? ' selected' : ''}>English</option>
+        </select>
+        <span class="lx-mic-hint"></span>
+      </div>
+      <div class="lx-verdict">
+        <div class="lx-score">
+          <span class="lx-score-num">—</span><span class="lx-score-of">/100</span>
+          <span class="lx-score-word"></span>
+        </div>
+        <div class="lx-bar"><div class="lx-bar-fill"></div></div>
+        <p class="lx-feedback"></p>
+        <ul class="lx-misses"></ul>
+        <div class="lx-concepts"></div>
+      </div>
+    </div>
+  </div>`;
+    const done = `  <div class="lx-done">
+    <div class="lx-card lx-next-review">
+      <span class="lx-next-review-label">${t('done.nextReview')}</span>
+      <span class="lx-next-review-date">—</span>
+      <span class="lx-next-review-note"></span>
+    </div>
+  </div>`;
+    return gate(card, {
+      name: 'teachback',
+      reason: t('gate.teachback')
+    }) + '\n' + done;
+  }
+};

@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title data-t="dash.pageTitle">My learning — learno</title>
+<link rel="stylesheet" href="../assets/learno.css" />
+<link rel="stylesheet" href="../assets/components.css" />
+<script>(function(){try{var d=document.documentElement,t=localStorage.getItem('lx-theme'),a=localStorage.getItem('lx-accent');if(t&&t!=='auto')d.setAttribute('data-theme',t);if(a&&a!=='azul')d.setAttribute('data-accent',a)}catch(e){}})()</script>
+<style>
+  /* Page-local only. Everything visual comes from the design system; what is
+     here is the handful of shapes that exist on this page and nowhere else. */
+
+  /* the decision — the only thing above the fold */
+  .dash-now { border-left: 3px solid var(--lx-accent); }
+  .dash-now-label {
+    display: flex; align-items: center; gap: .4rem;
+    color: var(--lx-accent);
+    font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  }
+  .dash-now-title { color: var(--lx-text); font-size: 1.15rem; font-weight: 650; line-height: 1.3; margin: .5rem 0 0; }
+  .dash-now-why { color: var(--lx-text-2); font-size: .9rem; margin-top: .5rem; }
+  .dash-now-why > p + p { margin-top: .5rem; }
+  .dash-now-act { margin-top: .9rem; display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+  .dash-now-stamp { color: var(--lx-text-subtle); font-size: .72rem; }
+
+  .dash-pills { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); margin-top: 1rem; }
+  .dash-pill { display: flex; flex-direction: column; gap: .15rem; }
+  .dash-pill-num { font-size: 1.9rem; font-weight: 700; line-height: 1; color: var(--lx-text); }
+  .dash-pill-label { font-size: .75rem; color: var(--lx-text-muted); }
+  .dash-pill--due  .dash-pill-num { color: var(--lx-bad); }
+  .dash-pill--attention .dash-pill-num { color: var(--lx-warn); }
+
+  .dash-section { margin-top: 2.25rem; }
+  .dash-section-title {
+    display: flex; align-items: center; gap: .45rem;
+    font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--lx-text-subtle); margin-bottom: .8rem;
+  }
+  .dash-section-title .lx-icon-svg { width: .95rem; height: .95rem; color: var(--lx-accent); }
+
+  .dash-empty { color: var(--lx-text-muted); font-size: .875rem; font-style: italic; }
+
+  /* attention — a row is a problem plus the reason it is one */
+  .dash-issue { display: flex; align-items: flex-start; gap: .7rem; padding: .7rem .25rem; }
+  .dash-issue + .dash-issue { border-top: 1px solid var(--lx-border); }
+  .dash-issue-mark { flex: 0 0 auto; margin-top: .1rem; }
+  .dash-issue-mark .lx-icon-svg { width: 1rem; height: 1rem; }
+  .dash-issue--bad  .dash-issue-mark { color: var(--lx-bad); }
+  .dash-issue--warn .dash-issue-mark { color: var(--lx-warn); }
+  .dash-issue-body { flex: 1; min-width: 0; }
+  .dash-issue-what { color: var(--lx-text); font-weight: 550; }
+  .dash-issue-why  { color: var(--lx-text-2); font-size: .82rem; margin-top: .15rem; }
+  .dash-issue-tags { color: var(--lx-text-subtle); font-size: .72rem; margin-top: .2rem; }
+
+  /* reviews */
+  .dash-review { display: flex; align-items: center; gap: .7rem; padding: .6rem .25rem; }
+  .dash-review + .dash-review { border-top: 1px solid var(--lx-border); }
+  .dash-days {
+    flex-shrink: 0; min-width: 3.4rem; text-align: center;
+    font-size: .7rem; font-weight: 700; padding: .2rem .45rem; border-radius: 99px;
+    border: 1px solid var(--lx-border); color: var(--lx-text-muted);
+  }
+  .dash-days.today { color: var(--lx-bad);  border-color: var(--lx-bad);  background: color-mix(in srgb, var(--lx-bad) 10%, transparent); }
+  .dash-days.soon  { color: var(--lx-warn); border-color: var(--lx-warn); background: color-mix(in srgb, var(--lx-warn) 10%, transparent); }
+  .dash-concept { flex: 1; color: var(--lx-text); font-weight: 550; display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+  .dash-meta { color: var(--lx-text-subtle); font-size: .75rem; text-align: right; }
+
+  /* what is already done, folded away. It still has to look like something you
+     can open: an 18px row of small caps reads as a label, and the content
+     behind it may as well not exist. */
+  .dash-fold { margin-top: .6rem; }
+  .dash-fold > summary {
+    cursor: pointer; list-style: none;
+    display: flex; align-items: center; gap: .5rem;
+    min-height: 2.75rem; padding: .5rem .85rem;
+    border: 1px solid var(--lx-border); border-radius: var(--lx-radius-sm);
+    background: var(--lx-input);
+    font-size: .78rem; font-weight: 650; letter-spacing: .01em;
+    color: var(--lx-text-2);
+  }
+  .dash-fold > summary:hover { color: var(--lx-text); border-color: var(--lx-accent); }
+  .dash-fold > summary::-webkit-details-marker { display: none; }
+  .dash-fold > summary .lx-icon-svg { width: 1rem; height: 1rem; color: var(--lx-good); }
+  .dash-fold-chev { margin-left: auto; color: var(--lx-text-subtle) !important; transition: transform .15s; }
+  .dash-fold[open] > summary .dash-fold-chev { transform: rotate(180deg); }
+  .dash-fold[open] > summary { margin-bottom: .8rem; }
+
+  /* the way out of the dashboard and into everything else */
+  .dash-library {
+    display: flex; align-items: center; gap: .85rem;
+    margin-top: 1.25rem; padding: .9rem 1rem;
+    color: var(--lx-text); text-decoration: none;
+  }
+  .dash-library:hover { border-color: var(--lx-accent); }
+  .dash-library-icon {
+    flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+    width: 2.1rem; height: 2.1rem; border-radius: 50%;
+    background: var(--lx-accent-soft); color: var(--lx-accent);
+  }
+  .dash-library-icon .lx-icon-svg { width: 1.05rem; height: 1.05rem; }
+  .dash-library-body { flex: 1; display: flex; flex-direction: column; }
+  .dash-library-title { font-weight: 650; }
+  .dash-library-sub { color: var(--lx-text-subtle); font-size: .78rem; }
+  .dash-library > .lx-icon-svg { width: 1rem; height: 1rem; color: var(--lx-text-subtle); }
+  .dash-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .dash-chip {
+    display: inline-flex; align-items: baseline; gap: .4rem;
+    padding: .3rem .6rem; border-radius: 99px;
+    border: 1px solid var(--lx-border); background: var(--lx-input);
+    color: var(--lx-text); font-size: .8rem;
+  }
+  .dash-chip span { color: var(--lx-text-subtle); font-size: .72rem; }
+
+  /* lessons */
+  .dash-bar-wrap { flex: 1; height: .4rem; border-radius: 99px; background: var(--lx-border); overflow: hidden; min-width: 3rem; }
+  .dash-bar { height: 100%; border-radius: 99px; }
+  .dash-score { display: flex; align-items: center; gap: .5rem; }
+
+  /* score colours, applied by class rather than an inline hex */
+  .s-good { color: var(--lx-good); }
+  .s-mid  { color: var(--lx-warn); }
+  .s-bad  { color: var(--lx-bad); }
+  .b-good { background: var(--lx-good); }
+  .b-mid  { background: var(--lx-warn); }
+  .b-bad  { background: var(--lx-bad); }
+
+  @media (max-width: 560px) {
+    /* The date drops to its own line rather than squeezing the concept name.
+       Indented to line up under the title instead of under the pill, which is
+       what made the rows read as ragged. */
+    .dash-review { flex-wrap: wrap; }
+    .dash-meta { text-align: left; width: 100%; padding-left: calc(3.4rem + .7rem); }
+  }
+</style>
+</head>
+<body class="lx-shell">
+
+
+<nav class="lx-topbar">
+  <a class="lx-topbar-home" href="../" title="Go to the dashboard" data-t-attr="nav.home">
+    <svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
+    <span>learno</span>
+  </a>
+  <div class="lx-topbar-right">
+    <a class="lx-topbar-link" href="library.html" title="Library" data-t-attr="nav.library">
+      <svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 6 4 14" /><path d="M12 6v14" /><path d="M8 8v12" /><path d="M4 4v16" /></svg>
+      <span data-t="nav.library">Library</span>
+    </a>
+    <details class="lx-settings">
+    <summary class="lx-settings-btn" title="Settings" aria-label="Settings" role="button" data-t-attr="settings.title">
+      <svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
+  <circle cx="12" cy="12" r="3" /></svg>
+    </summary>
+    <div class="lx-settings-panel">
+      <div class="lx-settings-group">
+        <p class="lx-settings-label" data-t="settings.theme">Theme</p>
+        <div class="lx-settings-row">
+          <button type="button" class="lx-settings-opt" data-theme-set="light" title="Light" data-t-attr="settings.light"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4" />
+  <path d="M12 2v2" />
+  <path d="M12 20v2" />
+  <path d="m4.93 4.93 1.41 1.41" />
+  <path d="m17.66 17.66 1.41 1.41" />
+  <path d="M2 12h2" />
+  <path d="M20 12h2" />
+  <path d="m6.34 17.66-1.41 1.41" />
+  <path d="m19.07 4.93-1.41 1.41" /></svg></button>
+          <button type="button" class="lx-settings-opt" data-theme-set="auto" title="Follow the system" data-t-attr="settings.auto"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2" />
+  <line x1="8" x2="16" y1="21" y2="21" />
+  <line x1="12" x2="12" y1="17" y2="21" /></svg></button>
+          <button type="button" class="lx-settings-opt" data-theme-set="dark" title="Dark" data-t-attr="settings.dark"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" /></svg></button>
+        </div>
+      </div>
+      <div class="lx-settings-group">
+        <p class="lx-settings-label" data-t="settings.accent">Accent colour</p>
+        <div class="lx-settings-row">
+          <button type="button" class="lx-settings-opt" data-accent-set="azul" title="Blue" data-t-attr="settings.blue"><span class="lx-settings-dot lx-settings-dot--azul"></span><span data-t="settings.blue">Blue</span></button>
+          <button type="button" class="lx-settings-opt" data-accent-set="roxo" title="Purple" data-t-attr="settings.purple"><span class="lx-settings-dot lx-settings-dot--roxo"></span><span data-t="settings.purple">Purple</span></button>
+          <button type="button" class="lx-settings-opt" data-accent-set="rosa" title="Pink" data-t-attr="settings.pink"><span class="lx-settings-dot lx-settings-dot--rosa"></span><span data-t="settings.pink">Pink</span></button>
+        </div>
+      </div>
+    </div>
+    </details>
+  </div>
+</nav>
+
+<div class="lx-wrap">
+
+  <header class="lx-lesson-head">
+    <span class="lx-badge" id="last-updated" data-t="page.loading">loading…</span>
+    <h1 class="lx-title">
+      <span class="lx-title-icon">
+        <svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 14 4-4" /><path d="M3.34 19a10 10 0 1 1 17.32 0" /></svg>
+      </span>
+      <span data-t="dash.title">My learning</span>
+    </h1>
+    <p class="lx-subtitle" data-t="dash.subtitle">What to do now, what needs attention, and what already stands.</p>
+  </header>
+
+  <div class="lx-offline-banner" id="offline-banner" hidden data-t="dash.offline">The server is down. Lessons still open, but progress cannot be read.</div>
+
+  <div class="lx-card dash-now" id="now-card">
+    <span class="dash-now-label">
+      <svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>
+      <span data-t="dash.now">Now</span>
+    </span>
+    <p class="dash-now-title" data-t="page.loading">loading…</p>
+  </div>
+
+  <div class="dash-pills" id="summary-row">
+    <div class="lx-card dash-pill"><span class="dash-pill-num">—</span><span class="dash-pill-label" data-t="dash.dueToday">Due today</span></div>
+    <div class="lx-card dash-pill"><span class="dash-pill-num">—</span><span class="dash-pill-label" data-t="dash.needsAttention">Needing attention</span></div>
+  </div>
+
+  <section class="dash-section">
+    <h2 class="dash-section-title">
+      <svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+      <span data-t="dash.attention">Needs attention</span>
+    </h2>
+    <div class="lx-card" id="attention-content"><span class="dash-empty" data-t="page.loading">loading…</span></div>
+  </section>
+
+  <section class="dash-section">
+    <h2 class="dash-section-title">
+      <svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 14v2.2l1.6 1" /><path d="M16 2v4" /><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5" /><path d="M3 10h5" /><path d="M8 2v4" /><circle cx="16" cy="16" r="6" /></svg>
+      <span data-t="dash.agenda">Schedule</span>
+    </h2>
+    <div class="lx-card" id="reviews-content"><span class="dash-empty" data-t="page.loading">loading…</span></div>
+  </section>
+
+  <details class="dash-fold" id="mastered-fold">
+    <summary>
+      <svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.801 10A10 10 0 1 1 17 3.335" /><path d="m9 11 3 3L22 4" /></svg>
+      <span id="mastered-summary" data-t="dash.mastered">Already mastered</span>
+      <svg class="lx-icon-svg dash-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+    </summary>
+    <div id="mastered-content"></div>
+  </details>
+
+  <details class="dash-fold" id="lessons-fold">
+    <summary>
+      <svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" /><path d="M22 10v6" /><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" /></svg>
+      <span id="lessons-summary" data-t="dash.history">History</span>
+      <svg class="lx-icon-svg dash-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+    </summary>
+    <div class="lx-card" id="lessons-content"></div>
+  </details>
+
+  <a class="lx-card dash-library" href="library.html">
+    <span class="dash-library-icon">
+      <svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 6 4 14" /><path d="M12 6v14" /><path d="M8 8v12" /><path d="M4 4v16" /></svg>
+    </span>
+    <span class="dash-library-body">
+      <span class="dash-library-title" data-t="nav.library">Library</span>
+      <span class="dash-library-sub" id="library-sub" data-t="dash.librarySub">everything there is, with the score of each</span>
+    </span>
+    <svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+  </a>
+
+  <footer class="lx-lesson-foot">
+    <a class="lx-btn lx-btn--outline" href="glossary.html" data-t="nav.glossary">Glossary</a>
+  </footer>
+</div>
+
+<script src="../assets/learno.js" defer></script>
+<script>
+  const SERVER = location.protocol.startsWith('http') ? location.origin : 'http://localhost:9990';
+
+  let STR = JSON.parse(document.getElementById('lx-strings')?.textContent || 'null');
+  const t = (key, vars = {}) => String(STR?.[key] ?? key).replace(/\{(\w+)\}/g, (_m, k) => vars[k] ?? '');
+  const LOCALE = () => STR?.locale || 'en-GB';
+
+  async function ensureStrings() {
+    if (STR) return;
+    try {
+      STR = await (await fetch(`${SERVER}/api/strings`, { signal: AbortSignal.timeout(3000) })).json();
+    } catch { STR = {}; return; }
+    document.documentElement.lang = t('html.lang');
+    for (const el of document.querySelectorAll('[data-t]')) el.textContent = t(el.dataset.t);
+    for (const el of document.querySelectorAll('[data-t-attr]')) {
+      for (const a of ['title', 'aria-label', 'placeholder']) if (el.hasAttribute(a)) el.setAttribute(a, t(el.dataset.tAttr));
+    }
+  }
+
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  const ICON = {
+    alert: '<svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>',
+    clock: '<svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6v6l4 2" /><circle cx="12" cy="12" r="10" /></svg>',
+    down:  '<svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 17h6v-6" /><path d="m22 17-8.5-8.5-5 5L2 7" /></svg>'
+  };
+
+  // ── helpers ────────────────────────────────────────────────────────
+  function pretty(conceptId) {
+    return String(conceptId).replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function daysFromNow(dateStr) {
+    // By local calendar day, not by instant: a review due tonight is due this
+    // morning. `learno due` counts the same way.
+    const r = new Date(dateStr);
+    const review = new Date(r.getFullYear(), r.getMonth(), r.getDate());
+    const n = new Date();
+    const today = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+    return Math.round((review - today) / 86400000);
+  }
+
+  function formatDate(dateStr) {
+    return new Date(dateStr).toLocaleDateString(LOCALE(), { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  // A class, not a hex. The three verdict colours live in the design system so
+  // a score bar and a callout cannot disagree about what "good" looks like.
+  function scoreClass(s) { return s >= 80 ? 'good' : s >= 50 ? 'mid' : 'bad'; }
+
+  const lastScore = c => (c.history?.length ? c.history[c.history.length - 1].score : null);
+
+  // Paths in NEXT.md are written from the workspace root ("review/0012-r1.html"),
+  // but this page lives in reference/ — left relative, the browser would resolve
+  // them to reference/review/… and 404.
+  function workspaceHref(h) {
+    return /^https?:\/\//i.test(h) ? h : `${SERVER}/${String(h).replace(/^\/+/, '')}`;
+  }
+
+  // ── now ─────────────────────────────────────────────────────────
+  // NEXT.md when the model has written one, and a derived fallback when it has
+  // not — an empty decision card is the exact failure this page is fixing.
+  function renderNow(next, data) {
+    const el = document.getElementById('now-card');
+    const label = el.querySelector('.dash-now-label').outerHTML;
+
+    if (next && next.exists && next.title) {
+      const why = next.body
+        ? `<div class="dash-now-why">${next.body.split(/\n\s*\n/).filter(Boolean)
+            .map(p => `<p>${esc(p.trim())}</p>`).join('')}</div>`
+        : '';
+      const act = next.action
+        ? `<a class="lx-btn lx-btn--primary" href="${esc(workspaceHref(next.action.href))}">${esc(next.action.label)}</a>`
+        : '';
+      el.innerHTML = `${label}
+        <p class="dash-now-title">${esc(next.title)}</p>
+        ${why}
+        <div class="dash-now-act">${act}
+          <span class="dash-now-stamp">${esc(t('dash.fromNext', { date: formatDate(next.updated_at) }))}</span>
+        </div>`;
+      return;
+    }
+
+    const due = (data?.concepts || []).filter(c => c.next_review && daysFromNow(c.next_review) <= 0);
+    if (due.length) {
+      const names = due.slice(0, 3).map(c => pretty(c.concept_id)).join(', ');
+      el.innerHTML = `${label}
+        <p class="dash-now-title">${esc(t(due.length > 1 ? 'dash.dueMany' : 'dash.dueOne', { n: due.length }))}</p>
+        <div class="dash-now-why"><p>${esc(names)}${due.length > 3 ? esc(t('dash.andMore', { n: due.length - 3 })) : ''}. ${esc(t('dash.dueWhy'))}</p></div>
+        <div class="dash-now-act">
+          <a class="lx-btn lx-btn--primary" href="#attention-content">${esc(t('dash.seeOverdue'))}</a>
+          <span class="dash-now-stamp">${esc(t('dash.computed'))}</span>
+        </div>`;
+      return;
+    }
+
+    el.innerHTML = `${label}
+      <p class="dash-now-title">${esc(t('dash.nothingDue'))}</p>
+      <div class="dash-now-why"><p>${t('dash.nothingDueWhy')}</p></div>`;
+  }
+
+  // ── needs attention ────────────────────────────────────────────
+  // Every row carries the reason it is there. A list of concepts without a why
+  // is the same trophy shelf in a different colour.
+  function buildIssues(data) {
+    const issues = [];
+
+    for (const m of data.misconceptions || []) {
+      if (m.count < 2) continue;
+      issues.push({
+        rank: 0, level: 'bad', icon: ICON.alert,
+        what: m.text,
+        why:  t('dash.repeated', { n: m.count }),
+        tags: (m.concepts || []).map(pretty).join(' · ')
+      });
+    }
+
+    for (const c of data.concepts || []) {
+      const late = c.next_review ? -daysFromNow(c.next_review) : null;
+      if (late !== null && late > 0) {
+        issues.push({
+          rank: 1, level: late > 7 ? 'bad' : 'warn', icon: ICON.clock,
+          what: pretty(c.concept_id),
+          why:  t(late > 1 ? 'dash.lateMany' : 'dash.lateOne', { n: late }),
+          tags: t('dash.interval', { n: c.interval_days })
+        });
+        continue;
+      }
+      const s = lastScore(c);
+      if (s !== null && s < 75) {
+        issues.push({
+          rank: 2, level: s < 50 ? 'bad' : 'warn', icon: ICON.down,
+          what: pretty(c.concept_id),
+          why:  t('dash.lastScore', { n: s }),
+          tags: c.lesson_id ? t('dash.seenIn', { id: c.lesson_id }) : ''
+        });
+      }
+    }
+
+    return issues.sort((a, b) => a.rank - b.rank);
+  }
+
+  function renderAttention(issues) {
+    const el = document.getElementById('attention-content');
+    if (!issues.length) {
+      el.innerHTML = `<span class="dash-empty">${esc(t('dash.attentionEmpty'))}</span>`;
+      return;
+    }
+    el.innerHTML = issues.map(i => `
+      <div class="dash-issue dash-issue--${i.level}">
+        <span class="dash-issue-mark">${i.icon}</span>
+        <div class="dash-issue-body">
+          <div class="dash-issue-what">${esc(i.what)}</div>
+          <div class="dash-issue-why">${esc(i.why)}</div>
+          ${i.tags ? `<div class="dash-issue-tags">${esc(i.tags)}</div>` : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  // ── schedule ────────────────────────────────────────────────────────
+  const SOURCE_TAG = { conversation: 'dash.source.conversation', project: 'dash.source.project', ai_validation: 'dash.source.ai' };
+  const sourceTag = c => esc(t(SOURCE_TAG[c.mastery_source] || 'dash.source.ai'));
+
+  function renderReviews(concepts) {
+    const sorted = [...concepts]
+      .filter(c => c.next_review)
+      .sort((a, b) => new Date(a.next_review) - new Date(b.next_review));
+
+    if (sorted.length === 0) {
+      document.getElementById('reviews-content').innerHTML =
+        `<span class="dash-empty">${esc(t('dash.noReviews'))}</span>`;
+      return;
+    }
+
+    document.getElementById('reviews-content').innerHTML = sorted.map(c => {
+      const days  = daysFromNow(c.next_review);
+      const cls   = days <= 0 ? 'today' : days <= 3 ? 'soon' : '';
+      const label = esc(days < 0 ? t('dash.daysAgo', { n: -days }) : days === 0 ? t('dash.today') : days === 1 ? t('dash.tomorrow') : `+${days}d`);
+      return `
+        <div class="dash-review">
+          <span class="dash-days ${cls}">${label}</span>
+          <span class="dash-concept">${esc(pretty(c.concept_id))}<span class="lx-badge">${sourceTag(c)}</span></span>
+          <span class="dash-meta">${formatDate(c.next_review)}</span>
+        </div>`;
+    }).join('');
+  }
+
+  // ── already mastered ───────────────────────────────────────────────────
+  // Folded, and without the ease factor: it is SM-2 bookkeeping, and showing it
+  // tells the reader about the algorithm rather than about themselves.
+  function renderMastered(concepts) {
+    document.getElementById('mastered-summary').textContent = t('dash.masteredCount', { n: concepts.length });
+    document.getElementById('mastered-content').innerHTML = concepts.length
+      ? `<div class="dash-chips">${concepts.map(c => {
+          const s = lastScore(c);
+          return `<span class="dash-chip">${esc(pretty(c.concept_id))}<span>${s === null ? sourceTag(c) : s}</span></span>`;
+        }).join('')}</div>`
+      : `<span class="dash-empty">${esc(t('dash.noMastered'))}</span>`;
+  }
+
+  function renderLessons(lessons) {
+    document.getElementById('lessons-summary').textContent = t('dash.historyCount', { n: lessons.length });
+    if (!lessons.length) {
+      document.getElementById('lessons-content').innerHTML =
+        `<span class="dash-empty">${esc(t('dash.noLessons'))}</span>`;
+      return;
+    }
+    const sorted = [...lessons].sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at));
+    document.getElementById('lessons-content').innerHTML = sorted.map(l => {
+      const cls = scoreClass(l.final_score);
+      return `
+        <div class="dash-review">
+          <span class="dash-concept">${esc(l.lesson_id)}${l.kind === 'project' ? `<span class="lx-badge">${esc(t('dash.source.project'))}</span>` : ''}</span>
+          <span class="dash-meta">${formatDate(l.completed_at)}</span>
+          <span class="dash-score" style="flex:0 0 7rem">
+            <span class="dash-bar-wrap"><span class="dash-bar b-${cls}" style="display:block;width:${l.final_score}%"></span></span>
+            <strong class="s-${cls}">${l.final_score}</strong>
+          </span>
+        </div>`;
+    }).join('');
+  }
+
+  function renderSummary(data, issues) {
+    const due = data.concepts.filter(c => c.next_review && daysFromNow(c.next_review) <= 0).length;
+    document.getElementById('summary-row').innerHTML = `
+      <div class="lx-card dash-pill dash-pill--due">
+        <span class="dash-pill-num">${due}</span>
+        <span class="dash-pill-label">${esc(t('dash.dueToday'))}</span>
+      </div>
+      <div class="lx-card dash-pill dash-pill--attention">
+        <span class="dash-pill-num">${issues.length}</span>
+        <span class="dash-pill-label">${esc(t('dash.needsAttention'))}</span>
+      </div>`;
+  }
+
+  // ── main load ─────────────────────────────────────────────────────
+  async function load() {
+    let next = null;
+    try {
+      const r = await fetch(`${SERVER}/api/next`, { signal: AbortSignal.timeout(3000) });
+      if (r.ok) next = await r.json();
+    } catch {}
+
+    try {
+      const res = await fetch(`${SERVER}/api/progress`, { signal: AbortSignal.timeout(3000) });
+      if (!res.ok) throw new Error(`progress: ${res.status}`);
+      const data = await res.json();
+
+      document.getElementById('offline-banner').hidden = true;
+      document.getElementById('last-updated').textContent =
+        t('dash.updatedAt', { time: new Date().toLocaleTimeString(LOCALE(), { hour: '2-digit', minute: '2-digit' }) });
+
+      const issues = buildIssues(data);
+      renderNow(next, data);
+      renderSummary(data, issues);
+      renderAttention(issues);
+      renderReviews(data.concepts);
+      renderMastered(data.concepts.filter(c => c.mastered));
+      renderLessons(data.lessons);
+
+    } catch {
+      document.getElementById('offline-banner').hidden = false;
+      document.getElementById('last-updated').textContent = t('dash.offlineBadge');
+      renderNow(next, null);
+      document.getElementById('summary-row').innerHTML =
+        `<div class="lx-card"><span class="dash-empty">${esc(t('dash.serverDown'))}</span></div>`;
+      ['attention-content', 'reviews-content', 'lessons-content', 'mastered-content'].forEach(id => {
+        document.getElementById(id).innerHTML =
+          `<span class="dash-empty">${esc(t('dash.noData'))}</span>`;
+      });
+    }
+  }
+
+  // The file browser moved to library.html. What is left here is the count, so
+  // the link says how much is behind it instead of being a bare word.
+  async function loadCatalog() {
+    try {
+      const res  = await fetch(`${SERVER}/api/catalog`, { signal: AbortSignal.timeout(3000) });
+      const d    = await res.json();
+      const n    = ['lessons', 'reviews', 'projects'].map(k => (d[k] || []).length);
+      const bits = [[n[0], 'lesson'], [n[1], 'review'], [n[2], 'project']]
+        .filter(([c]) => c > 0)
+        .map(([c, kind]) => `${c} ${t(c === 1 ? `dash.${kind}One` : `dash.${kind}Many`)}`);
+      document.getElementById('library-sub').textContent =
+        bits.length ? t('dash.withScores', { list: bits.join(' · ') }) : t('page.nothingOnDisk');
+    } catch {}
+  }
+
+  ensureStrings().then(() => { load(); loadCatalog(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,709 @@
+:root {
+  color-scheme: light dark;
+
+  /* Accent */
+  --lx-accent:        #2563eb;
+  --lx-accent-solid:  #2563eb;
+  --lx-accent-strong: #1d4ed8;
+  --lx-accent-soft:   rgb(219 234 254 / .7);
+  --lx-accent-ring:   rgb(59 130 246 / .3);
+
+  /* Text */
+  --lx-text:        #111827;
+  --lx-text-2:      #374151;
+  --lx-text-muted:  #6b7280;
+  --lx-text-subtle: #7c828e;
+
+  /* Opaque surface for menus and popovers */
+  --lx-surface: #ffffff;
+
+  /* Glass card */
+  --lx-card:        rgb(255 255 255 / .6);
+  --lx-card-border: rgb(191 219 254 / .4);
+  --lx-card-shadow: 0 4px 24px -4px rgb(37 99 235 / .08);
+
+  /* Page container */
+  --lx-panel:        rgb(255 255 255 / .4);
+  --lx-panel-border: rgb(191 219 254 / .25);
+
+  /* Top bar */
+  --lx-bar:        rgb(255 255 255 / .6);
+  --lx-bar-border: rgb(191 219 254 / .45);
+
+  --lx-border: rgb(191 219 254 / .4);
+
+  /* Inputs */
+  --lx-input:        rgb(239 246 255 / .6);
+  --lx-input-border: rgb(191 219 254 / .4);
+  --lx-placeholder:  #6b7280;
+
+  /* Page background: solid, tinted by the accent only in the corners */
+  --lx-shell-via:  #ffffff;
+  --lx-shell-tint: 9%;
+  --lx-shell-hold: 40%;
+  --lx-shell-from: color-mix(in srgb, var(--lx-accent-solid) var(--lx-shell-tint), var(--lx-shell-via));
+  --lx-shell-to:   color-mix(in srgb, var(--lx-accent-solid) 6%, var(--lx-shell-via));
+
+  /* Verdict colours */
+  --lx-good: #059669;
+  --lx-warn: #d97706;
+  --lx-bad:  #dc2626;
+
+  /* Radii */
+  --lx-radius:    1.5rem;
+  --lx-radius-sm: .75rem;
+
+  /* Blur */
+  --lx-blur-sm: 4px;
+  --lx-blur:    24px;
+  --lx-blur-lg: 40px;
+}
+
+/* Dark values are repeated for the OS preference and for [data-theme="dark"]:
+   CSS cannot share one declaration list between the two selectors. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --lx-text:        #ffffff;
+    --lx-text-2:      rgb(255 255 255 / .9);
+    --lx-text-muted:  rgb(255 255 255 / .6);
+    --lx-text-subtle: rgb(255 255 255 / .4);
+
+    --lx-surface:     #131a2b;
+    --lx-card:        rgb(0 0 0 / .4);
+    --lx-card-border: rgb(147 197 253 / .16);
+    --lx-card-shadow: 0 4px 24px -4px rgb(0 0 0 / .4);
+
+    --lx-panel:        rgb(0 0 0 / .2);
+    --lx-panel-border: rgb(147 197 253 / .10);
+
+    --lx-bar:        rgb(0 0 0 / .3);
+    --lx-bar-border: rgb(147 197 253 / .12);
+
+    --lx-border: rgb(147 197 253 / .14);
+
+    --lx-input:        rgb(255 255 255 / .05);
+    --lx-input-border: rgb(147 197 253 / .14);
+    --lx-placeholder:  rgb(255 255 255 / .58);
+
+    --lx-good: #34d399;
+    --lx-warn: #fbbf24;
+    --lx-bad:  #f87171;
+    --lx-accent:        #60a5fa;
+    --lx-accent-strong: #93c5fd;
+  --lx-accent-solid:  #2563eb;
+    --lx-input:         rgb(147 197 253 / .07);
+    --lx-input-border:  rgb(147 197 253 / .14);
+    --lx-card-shadow:   0 4px 24px -4px rgb(0 0 0 / .4);
+
+    --lx-accent-soft:   rgb(59 130 246 / .16);
+    --lx-card-border:   rgb(147 197 253 / .16);
+    --lx-panel-border:  rgb(147 197 253 / .10);
+    --lx-bar-border:    rgb(147 197 253 / .12);
+    --lx-border:        rgb(147 197 253 / .14);
+    --lx-shell-via:     #0a1120;
+    --lx-shell-tint:    10%;
+    --lx-shell-hold:    44%;
+  }
+}
+
+:root[data-theme="dark"] {
+  --lx-text:        #ffffff;
+  --lx-text-2:      rgb(255 255 255 / .9);
+  --lx-text-muted:  rgb(255 255 255 / .6);
+  --lx-text-subtle: rgb(255 255 255 / .4);
+
+  --lx-surface:     #131a2b;
+  --lx-card:        rgb(0 0 0 / .4);
+  --lx-card-border: rgb(147 197 253 / .16);
+  --lx-card-shadow: 0 4px 24px -4px rgb(0 0 0 / .4);
+
+  --lx-panel:        rgb(0 0 0 / .2);
+  --lx-panel-border: rgb(147 197 253 / .10);
+
+  --lx-bar:        rgb(0 0 0 / .3);
+  --lx-bar-border: rgb(147 197 253 / .12);
+
+  --lx-border: rgb(147 197 253 / .14);
+
+  --lx-input:        rgb(255 255 255 / .05);
+  --lx-input-border: rgb(147 197 253 / .14);
+  --lx-placeholder:  rgb(255 255 255 / .58);
+
+  --lx-good: #34d399;
+  --lx-warn: #fbbf24;
+  --lx-bad:  #f87171;
+  --lx-accent:        #60a5fa;
+  --lx-accent-strong: #93c5fd;
+  --lx-accent-solid:  #2563eb;
+  --lx-input:         rgb(147 197 253 / .07);
+  --lx-input-border:  rgb(147 197 253 / .14);
+  --lx-card-shadow:   0 4px 24px -4px rgb(0 0 0 / .4);
+
+  --lx-accent-soft: rgb(59 130 246 / .16);
+  --lx-shell-via:   #0a1120;
+  --lx-shell-tint:  10%;
+  --lx-shell-hold:  44%;
+}
+
+/* Accents are an attribute, not inline custom properties: an inline style on
+   :root outranks [data-theme="dark"], so a light value would win in dark mode.
+   Hand-picked, not derived: a lightened blue drifts to cyan and collides with --lx-good.
+   The page background is the exception: it follows --lx-accent-solid on its own. */
+
+:root[data-accent="roxo"] {
+  --lx-surface:       #ffffff;
+  --lx-accent:        #9333ea;
+  --lx-accent-solid:  #9333ea;
+  --lx-accent-strong: #7e22ce;
+  --lx-accent-soft:   rgb(243 232 255 / .6);
+  --lx-accent-ring:   rgb(168 85 247 / .3);
+  --lx-card-border:   rgb(233 213 255 / .35);
+  --lx-panel-border:  rgb(233 213 255 / .22);
+  --lx-bar-border:    rgb(233 213 255 / .4);
+  --lx-border:        rgb(233 213 255 / .35);
+  --lx-input:         rgb(250 245 255 / .55);
+  --lx-input-border:  rgb(233 213 255 / .35);
+  --lx-card-shadow:   0 4px 24px -4px rgb(147 51 234 / .08);
+}
+
+:root[data-accent="rosa"] {
+  --lx-surface:       #ffffff;
+  --lx-accent:        #be185d;
+  --lx-accent-solid:  #be185d;
+  --lx-accent-strong: #9d174d;
+  --lx-accent-soft:   rgb(252 231 243 / .7);
+  --lx-accent-ring:   rgb(219 39 119 / .3);
+  --lx-card-border:   rgb(251 207 232 / .45);
+  --lx-panel-border:  rgb(251 207 232 / .28);
+  --lx-bar-border:    rgb(251 207 232 / .5);
+  --lx-border:        rgb(251 207 232 / .45);
+  --lx-input:         rgb(253 242 248 / .6);
+  --lx-input-border:  rgb(251 207 232 / .45);
+  --lx-card-shadow:   0 4px 24px -4px rgb(190 24 93 / .08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-accent="roxo"] {
+    --lx-surface:       #1c1430;
+    --lx-accent:        #c084fc;
+    --lx-accent-strong: #d8b4fe;
+  --lx-accent-solid:  #9333ea;
+    --lx-input:         rgb(216 180 254 / .07);
+    --lx-input-border:  rgb(216 180 254 / .14);
+    --lx-card-shadow:   0 4px 24px -4px rgb(0 0 0 / .4);
+
+    --lx-accent-soft:   rgb(168 85 247 / .16);
+    --lx-card-border:   rgb(216 180 254 / .16);
+    --lx-panel-border:  rgb(216 180 254 / .10);
+    --lx-bar-border:    rgb(216 180 254 / .12);
+    --lx-border:        rgb(216 180 254 / .14);
+  }
+  :root:not([data-theme="light"])[data-accent="rosa"] {
+    --lx-surface:       #26101c;
+    --lx-accent:        #f472b6;
+    --lx-accent-strong: #f9a8d4;
+  --lx-accent-solid:  #be185d;
+    --lx-input:         rgb(249 168 212 / .07);
+    --lx-input-border:  rgb(249 168 212 / .14);
+    --lx-card-shadow:   0 4px 24px -4px rgb(0 0 0 / .4);
+
+    --lx-accent-soft:   rgb(219 39 119 / .18);
+    --lx-card-border:   rgb(249 168 212 / .16);
+    --lx-panel-border:  rgb(249 168 212 / .10);
+    --lx-bar-border:    rgb(249 168 212 / .12);
+    --lx-border:        rgb(249 168 212 / .14);
+  }
+}
+
+:root[data-theme="dark"][data-accent="roxo"] {
+  --lx-surface:       #1c1430;
+  --lx-accent:        #c084fc;
+  --lx-accent-strong: #d8b4fe;
+  --lx-accent-solid:  #9333ea;
+  --lx-input:         rgb(216 180 254 / .07);
+  --lx-input-border:  rgb(216 180 254 / .14);
+  --lx-card-shadow:   0 4px 24px -4px rgb(0 0 0 / .4);
+
+  --lx-card-border:   rgb(216 180 254 / .16);
+  --lx-panel-border:  rgb(216 180 254 / .10);
+  --lx-bar-border:    rgb(216 180 254 / .12);
+  --lx-border:        rgb(216 180 254 / .14);
+  --lx-accent-soft: rgb(168 85 247 / .16);
+}
+:root[data-theme="dark"][data-accent="rosa"] {
+  --lx-surface:       #26101c;
+  --lx-accent:        #f472b6;
+  --lx-accent-strong: #f9a8d4;
+  --lx-accent-solid:  #be185d;
+  --lx-input:         rgb(249 168 212 / .07);
+  --lx-input-border:  rgb(249 168 212 / .14);
+  --lx-card-shadow:   0 4px 24px -4px rgb(0 0 0 / .4);
+
+  --lx-card-border:   rgb(249 168 212 / .16);
+  --lx-panel-border:  rgb(249 168 212 / .10);
+  --lx-bar-border:    rgb(249 168 212 / .12);
+  --lx-border:        rgb(249 168 212 / .14);
+  --lx-accent-soft: rgb(219 39 119 / .18);
+}
+
+/* Reset */
+
+*, *::before, *::after { box-sizing: border-box; }
+body, h1, h2, h3, h4, p, figure, blockquote, dl, dd, ol, ul { margin: 0; padding: 0; }
+ul[class], ol[class] { list-style: none; }
+img, svg { max-width: 100%; }
+button, input, select, textarea { font: inherit; color: inherit; }
+
+/* The gradient must live on `html`: only the root background covers the whole
+   canvas, iOS rubber-band included. On a fixed body or pseudo-element it stops short.
+   `fixed` sizes it to the viewport; without it a long page stretches the corner tint
+   over several screens. iOS ignores it and falls back to that stretch. */
+
+html {
+  min-height: 100%;
+  background-color: var(--lx-shell-via);
+  background-image: linear-gradient(158deg,
+    var(--lx-shell-from) 0%, var(--lx-shell-via) var(--lx-shell-hold), var(--lx-shell-to) 100%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+.lx-shell {
+  min-height: 100vh;
+  min-height: 100dvh;  /* iOS: 100vh is the large viewport, shorter than what scrolls */
+  color: var(--lx-text-2);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Bar */
+
+.lx-bar {
+  border-bottom: 1px solid var(--lx-bar-border);
+  background: var(--lx-bar);
+  backdrop-filter: blur(var(--lx-blur));
+  -webkit-backdrop-filter: blur(var(--lx-blur));
+}
+
+/* Page container */
+
+.lx-panel {
+  position: relative;
+  border-radius: var(--lx-radius);
+  border: 1px solid var(--lx-panel-border);
+  background: var(--lx-panel);
+  backdrop-filter: blur(var(--lx-blur-sm));
+  -webkit-backdrop-filter: blur(var(--lx-blur-sm));
+}
+
+/* Glass card */
+
+.lx-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--lx-radius);
+  border: 1px solid var(--lx-card-border);
+  background: var(--lx-card);
+  box-shadow: var(--lx-card-shadow);
+  backdrop-filter: blur(var(--lx-blur));
+  -webkit-backdrop-filter: blur(var(--lx-blur));
+  padding: 1.25rem;
+}
+
+.lx-modal {
+  border-radius: var(--lx-radius);
+  border: 1px solid var(--lx-bar-border);
+  background: color-mix(in srgb, var(--lx-card) 100%, white 20%);
+  backdrop-filter: blur(var(--lx-blur-lg));
+  -webkit-backdrop-filter: blur(var(--lx-blur-lg));
+  box-shadow: 0 24px 80px -12px rgb(37 99 235 / .15);
+}
+
+/* Text */
+
+.lx-title    { color: var(--lx-text);        font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.25; }
+.lx-subtitle { color: var(--lx-text-muted);  font-size: .95rem; }
+.lx-text     { color: var(--lx-text-2); }
+.lx-muted    { color: var(--lx-text-muted);  font-size: .875rem; }
+.lx-subtle   { color: var(--lx-text-subtle); font-size: .8rem; }
+.lx-h2       { color: var(--lx-text);        font-size: 1.125rem; font-weight: 650; letter-spacing: -.01em; }
+
+/* Controls */
+
+.lx-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .5rem .9rem;
+  border-radius: var(--lx-radius-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+.lx-btn--primary   { background: var(--lx-accent-solid); color: #fff; border: 1px solid var(--lx-accent-solid); }
+.lx-btn--primary:hover  { background: var(--lx-accent-strong); border-color: var(--lx-accent-strong); }
+.lx-btn--secondary { background: var(--lx-input); color: var(--lx-text-2); border: 1px solid var(--lx-border); }
+.lx-btn--secondary:hover { color: var(--lx-text); }
+.lx-btn--outline   { background: transparent; color: var(--lx-text-muted); border: 1px solid var(--lx-bar-border); }
+.lx-btn--ghost     { background: transparent; color: var(--lx-text-subtle); border: 1px dashed var(--lx-border); }
+.lx-btn--ghost:hover { color: var(--lx-bad); border-color: var(--lx-bad); }
+.lx-btn--outline:hover   { color: var(--lx-text); }
+.lx-btn:disabled   { opacity: .5; cursor: not-allowed; }
+
+.lx-input {
+  width: 100%;
+  padding: .55rem .75rem;
+  border-radius: var(--lx-radius-sm);
+  border: 1px solid var(--lx-input-border);
+  background: var(--lx-input);
+  color: var(--lx-text);
+  backdrop-filter: blur(var(--lx-blur-sm));
+  -webkit-backdrop-filter: blur(var(--lx-blur-sm));
+}
+.lx-input::placeholder,
+.lx-answer::placeholder { color: var(--lx-placeholder); }
+.lx-input:focus {
+  outline: none;
+  border-color: var(--lx-accent);
+  box-shadow: 0 0 0 2px var(--lx-accent-ring);
+}
+.lx-input:disabled { opacity: .6; cursor: not-allowed; }
+
+.lx-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .1rem .6rem;
+  border-radius: 9999px;
+  font-size: .75rem;
+  font-weight: 500;
+  background: var(--lx-accent-soft);
+  color: var(--lx-accent-strong);
+  border: 1px solid var(--lx-bar-border);
+}
+:root[data-theme="dark"] .lx-badge,
+:root:not([data-theme="light"]) .lx-badge { color: var(--lx-text-2); }
+
+.lx-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-accent-soft);
+  color: var(--lx-accent);
+}
+
+.lx-row {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .75rem;
+  border-radius: var(--lx-radius-sm);
+  transition: background-color .15s;
+}
+.lx-row:hover { background: var(--lx-input); }
+
+.lx-divider { border: 0; border-top: 1px solid var(--lx-border); }
+
+/* Diagrams: the build rejects colour literals in SVG, so these classes own every
+   fill and stroke. `marker-end` needs the shared <marker> the page template emits. */
+
+.lx-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.lx-svg  { display: block; width: 100%; height: auto; color: var(--lx-text-2); }
+
+.lx-node          { fill: var(--lx-card); stroke: var(--lx-card-border); stroke-width: 1.5; rx: 12; }
+.lx-node--accent  { fill: var(--lx-accent-soft); stroke: var(--lx-accent); }
+.lx-node--muted   { fill: transparent; stroke: var(--lx-text-subtle); stroke-dasharray: 4 3; }
+
+.lx-edge          { stroke: var(--lx-text-muted); stroke-width: 1.5; fill: none; marker-end: url(#lx-arrow); }
+.lx-edge--accent  { stroke: var(--lx-accent); }
+.lx-edge--dashed  { stroke-dasharray: 5 4; }
+.lx-edge--plain   { marker-end: none; }
+
+.lx-label         { fill: var(--lx-text); font-size: 13px; font-weight: 500; }
+.lx-label--muted  { fill: var(--lx-text-muted); font-size: 11px; font-weight: 400; }
+
+.lx-arrowhead     { fill: var(--lx-text-muted); }
+
+.lx-figure  { margin: 1rem 0; }
+.lx-caption { color: var(--lx-text-muted); font-size: .8rem; text-align: center; margin-top: .5rem; }
+
+.lx-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Reduced transparency */
+
+@media (prefers-reduced-transparency: reduce) {
+  .lx-bar, .lx-panel, .lx-card, .lx-modal, .lx-input {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .lx-card, .lx-modal { background: Canvas; }
+  html { background-image: none; background-color: Canvas; }
+}
+
+:root[data-transparency="reduce"] .lx-bar,
+:root[data-transparency="reduce"] .lx-panel,
+:root[data-transparency="reduce"] .lx-card,
+:root[data-transparency="reduce"] .lx-modal,
+:root[data-transparency="reduce"] .lx-input {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+:root[data-transparency="reduce"] .lx-card,
+:root[data-transparency="reduce"] .lx-modal { background: Canvas; }
+:root[data-transparency="reduce"] { background-image: none; background-color: Canvas; }
+
+/* Motion */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* Layout helpers */
+
+.lx-wrap  { max-width: 52rem; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+.lx-stack > * + * { margin-top: 1rem; }
+.lx-grid  { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); }
+
+/* Components carry no outer margin; spacing depends on the neighbour, so the container owns it. */
+.lx-blocks > * + * { margin-top: 1.75rem; }
+.lx-blocks > .lx-figure { margin: 1.75rem 0 0; }
+
+.lx-lesson-head { margin-bottom: 2rem; }
+.lx-lesson-head .lx-badge    { margin-bottom: .6rem; }
+.lx-lesson-head .lx-subtitle { margin-top: .5rem; }
+
+.lx-lesson-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--lx-border);
+}
+
+/* Phones get more gutter, not less: text runs closest to the edge there. */
+@media (max-width: 560px) {
+  .lx-wrap  { padding: 2rem 1.25rem 3.5rem; }
+  .lx-card  { padding: 1.35rem 1.25rem; border-radius: 1.25rem; }
+  .lx-title { font-size: 1.3rem; }
+  .lx-blocks > * + * { margin-top: 1.5rem; }
+  .lx-blocks > .lx-figure { margin-top: 1.5rem; }
+  .lx-lesson-head { margin-bottom: 1.6rem; }
+  .lx-lesson-foot { margin-top: 2.25rem; }
+  .lx-lesson-foot .lx-btn { flex: 1 1 auto; justify-content: center; }
+}
+
+@media (max-width: 360px) {
+  .lx-wrap { padding: 1.75rem 1rem 3rem; }
+  .lx-card { padding: 1.15rem 1rem; }
+}
+
+/* Offline banner */
+
+.lx-offline-banner {
+  border-radius: var(--lx-radius-sm);
+  border: 1px solid rgb(217 119 6 / .35);
+  background: rgb(217 119 6 / .1);
+  color: var(--lx-text-2);
+  font-size: .875rem;
+  padding: .75rem 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Icons */
+
+.lx-icon-svg { width: 1em; height: 1em; flex-shrink: 0; vertical-align: -.125em; }
+
+.lx-title { display: flex; align-items: center; gap: .6rem; }
+.lx-title-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2.4rem; height: 2.4rem; flex-shrink: 0;
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-accent-soft);
+  color: var(--lx-accent);
+}
+.lx-title-icon .lx-icon-svg { width: 1.3rem; height: 1.3rem; }
+
+/* Top bar */
+
+.lx-topbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: .6rem clamp(1rem, 4vw, 1.5rem);
+  border-bottom: 1px solid var(--lx-bar-border);
+  background: var(--lx-bar);
+  backdrop-filter: blur(var(--lx-blur));
+  -webkit-backdrop-filter: blur(var(--lx-blur));
+}
+.lx-topbar-home {
+  display: inline-flex; align-items: center; gap: .5rem;
+  color: var(--lx-text); text-decoration: none;
+  font-weight: 650; letter-spacing: -.01em;
+  padding: .35rem .5rem; margin: -.35rem -.5rem;
+  border-radius: var(--lx-radius-sm);
+}
+.lx-topbar-home:hover { background: var(--lx-input); color: var(--lx-accent); }
+.lx-topbar-home .lx-icon-svg { width: 1.1rem; height: 1.1rem; color: var(--lx-accent); }
+
+/* On phones the label collapses but the link stays: the library must be one tap away. */
+.lx-topbar-right { display: flex; align-items: center; gap: .35rem; }
+.lx-topbar-link {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .4rem .7rem; min-height: 2.25rem;
+  border-radius: var(--lx-radius-sm);
+  color: var(--lx-text-2); text-decoration: none;
+  font-size: .85rem; font-weight: 550;
+}
+.lx-topbar-link:hover { background: var(--lx-input); color: var(--lx-accent); }
+.lx-topbar-link .lx-icon-svg { width: 1rem; height: 1rem; }
+.lx-topbar-link[aria-current="page"] { color: var(--lx-accent); background: var(--lx-accent-soft); }
+
+.lx-topbar-actions { display: flex; gap: .15rem; padding: .15rem; border-radius: 99px; background: var(--lx-input); }
+.lx-theme-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2rem; height: 2rem;
+  border: 0; border-radius: 99px;
+  background: transparent; color: var(--lx-text-muted);
+  cursor: pointer;
+  transition: background-color .15s, color .15s;
+}
+.lx-theme-btn:hover { color: var(--lx-text); }
+.lx-theme-btn .lx-icon-svg { width: 1rem; height: 1rem; }
+.lx-theme-btn.is-active { background: var(--lx-card); color: var(--lx-accent); box-shadow: var(--lx-card-shadow); }
+.lx-theme-btn:focus-visible { outline: 2px solid var(--lx-accent); outline-offset: 2px; }
+
+:root[data-transparency="reduce"] .lx-topbar { backdrop-filter: none; background: Canvas; }
+@media (prefers-reduced-transparency: reduce) {
+  .lx-topbar { backdrop-filter: none; background: Canvas; }
+}
+
+@media (max-width: 560px) {
+  .lx-title-icon { width: 2rem; height: 2rem; }
+  .lx-title-icon .lx-icon-svg { width: 1.1rem; height: 1.1rem; }
+  .lx-topbar-home span { font-size: .9rem; }
+  .lx-topbar-link span { display: none; }
+  .lx-topbar-link { padding: .4rem .55rem; }
+}
+
+/* Gated blocks: blurred, never hidden, so the reader can see what is left. */
+
+.lx-gate { position: relative; }
+
+.lx-gate--locked > .lx-gate-body {
+  /* Heavy on purpose: legible-if-you-squint text invites squinting. */
+  filter: blur(9px);
+  user-select: none;
+  pointer-events: none;
+}
+
+.lx-gate--locked { max-height: 20rem; overflow: hidden; border-radius: var(--lx-radius); }
+.lx-gate--locked::after {
+  content: "";
+  position: absolute; inset: auto 0 0 0; height: 6rem;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--lx-shell-via));
+}
+
+/* The lock must be a sibling of the blurred body: a child would be blurred too. */
+.lx-gate-lock { display: none; }
+.lx-gate--locked > .lx-gate-lock {
+  display: flex;
+  position: absolute; inset: 0; z-index: 2;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: .5rem; text-align: center; padding: 1rem;
+}
+.lx-gate-lock-badge {
+  display: flex; align-items: center; justify-content: center;
+  width: 2.75rem; height: 2.75rem;
+  border-radius: 50%;
+  background: var(--lx-card);
+  border: 1px solid var(--lx-card-border);
+  box-shadow: var(--lx-card-shadow);
+  color: var(--lx-accent);
+  backdrop-filter: blur(var(--lx-blur));
+  -webkit-backdrop-filter: blur(var(--lx-blur));
+}
+.lx-gate-lock-badge .lx-icon-svg { width: 1.2rem; height: 1.2rem; }
+.lx-gate-lock-text {
+  color: var(--lx-text);
+  font-size: .85rem; font-weight: 550;
+  background: var(--lx-card);
+  border: 1px solid var(--lx-card-border);
+  border-radius: 99px;
+  padding: .3rem .8rem;
+  backdrop-filter: blur(var(--lx-blur));
+  -webkit-backdrop-filter: blur(var(--lx-blur));
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .lx-gate-lock-badge, .lx-gate-lock-text { backdrop-filter: none; background: Canvas; }
+}
+
+/* Settings panel */
+
+.lx-settings { position: relative; }
+.lx-settings-btn {
+  list-style: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2rem; height: 2rem;
+  border: 0; border-radius: 99px;
+  background: transparent; color: var(--lx-text-muted);
+  cursor: pointer; transition: background-color .15s, color .15s;
+}
+.lx-settings-btn::-webkit-details-marker { display: none; }
+.lx-settings-btn::marker { content: ""; }
+.lx-settings-btn:hover { color: var(--lx-text); background: var(--lx-input); }
+.lx-settings-btn .lx-icon-svg { width: 1rem; height: 1rem; }
+.lx-settings-btn:focus-visible { outline: 2px solid var(--lx-accent); outline-offset: 2px; }
+.lx-settings[open] .lx-settings-btn { color: var(--lx-accent); background: var(--lx-input); }
+
+.lx-settings-panel {
+  position: absolute; top: calc(100% + .6rem); right: 0; z-index: 40;
+  min-width: 15rem;
+  padding: .9rem;
+  border-radius: var(--lx-radius);
+  border: 1px solid var(--lx-card-border);
+  background: var(--lx-surface);
+  box-shadow: 0 16px 48px -12px rgb(0 0 0 / .45);
+}
+.lx-settings:not([open]) .lx-settings-panel { display: none; }
+
+.lx-settings-label {
+  font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--lx-text-subtle); margin-bottom: .4rem;
+}
+.lx-settings-group + .lx-settings-group { margin-top: .9rem; }
+.lx-settings-row { display: flex; gap: .3rem; }
+
+.lx-settings-opt {
+  flex: 1;
+  display: inline-flex; align-items: center; justify-content: center; gap: .3rem;
+  padding: .4rem .5rem;
+  border-radius: var(--lx-radius-sm);
+  border: 1px solid var(--lx-border);
+  background: transparent; color: var(--lx-text-2);
+  font-size: .75rem; cursor: pointer;
+}
+.lx-settings-opt:hover { background: var(--lx-input); }
+.lx-settings-opt.is-active { border-color: var(--lx-accent); color: var(--lx-text); background: var(--lx-accent-soft); }
+.lx-settings-opt .lx-icon-svg { width: .9rem; height: .9rem; }
+.lx-settings-opt:focus-visible { outline: 2px solid var(--lx-accent); outline-offset: 1px; }
+
+/* Hardcoded on purpose: each swatch shows its own colour, not the active accent. */
+.lx-settings-dot { width: 1rem; height: 1rem; border-radius: 50%; flex-shrink: 0; }
+.lx-settings-dot--azul { background: #2563eb; }
+.lx-settings-dot--roxo { background: #9333ea; }
+.lx-settings-dot--rosa { background: #be185d; }
+
+
+@media (max-width: 480px) {
+  .lx-settings-panel { position: fixed; top: auto; right: .75rem; left: .75rem; min-width: 0; }
+}

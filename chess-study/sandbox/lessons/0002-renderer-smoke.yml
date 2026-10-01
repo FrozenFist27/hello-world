@@ -1,0 +1,197 @@
+meta:
+  title: "Sandbox — Renderer smoke test"
+  subtitle: "Lição descartável: existe só para provar o pipeline `.json` + `.yml` de ponta a ponta"
+
+analogy:
+  label: "Pense num guarda-volumes de academia"
+  text: >
+    Cada armário guarda as coisas de uma pessoa. Você não precisa procurar em
+    todos — a etiqueta na chave diz exatamente qual abrir.
+  bridge: "Essa etiqueta é a chave de shard, e o armário é o nó que guarda o dado."
+
+intro:
+  caption: "Fluxo de uma requisição até o nó certo"
+  body: |
+    Este parágrafo veio do **YAML**, não do JSON. O JSON só disse *qual*
+    componente usar e em que ordem — o texto está aqui, referenciado por
+    `@intro.body`.
+
+    Este é um segundo parágrafo, separado por linha em branco. Ele existe para
+    provar que o subconjunto de markdown do componente `prose` quebra parágrafos
+    corretamente, e que [links](https://github.com/murichristopher/learno) também
+    funcionam.
+
+detail:
+  caption: "Variantes de nó e de aresta na mesma figura"
+  body: |
+    O diagrama acima e o de baixo **não têm uma cor sequer** no YAML. Se você
+    escrever `fill="#9333ea"` num deles, o build recusa a lição inteira e diz
+    qual diagrama tem o problema.
+
+diagrams:
+  flow: |
+    <svg class="lx-svg" viewBox="0 0 600 120" role="img"
+         aria-label="Cliente, roteador e três nós de armazenamento">
+      <rect class="lx-node lx-node--accent" x="8" y="36" width="118" height="48"/>
+      <text class="lx-label" x="67" y="65" text-anchor="middle">Cliente</text>
+      <path class="lx-edge" d="M128 60 H 214"/>
+      <text class="lx-label--muted" x="171" y="51" text-anchor="middle">hash(k)</text>
+      <rect class="lx-node" x="216" y="36" width="130" height="48"/>
+      <text class="lx-label" x="281" y="65" text-anchor="middle">Roteador</text>
+      <path class="lx-edge" d="M348 50 C 404 50, 404 26, 460 26"/>
+      <path class="lx-edge" d="M348 60 H 460"/>
+      <path class="lx-edge" d="M348 70 C 404 70, 404 94, 460 94"/>
+      <rect class="lx-node" x="462" y="6"  width="128" height="40"/>
+      <text class="lx-label" x="526" y="31" text-anchor="middle">Nó A</text>
+      <rect class="lx-node" x="462" y="46" width="128" height="28"/>
+      <text class="lx-label" x="526" y="65" text-anchor="middle">Nó B</text>
+      <rect class="lx-node" x="462" y="80" width="128" height="34"/>
+      <text class="lx-label" x="526" y="102" text-anchor="middle">Nó C</text>
+    </svg>
+
+  variants: |
+    <svg class="lx-svg" viewBox="0 0 600 130" role="img"
+         aria-label="Variantes de nó e aresta do design system">
+      <rect class="lx-node" x="10" y="20" width="130" height="46"/>
+      <text class="lx-label" x="75" y="48" text-anchor="middle">nó padrão</text>
+
+      <rect class="lx-node lx-node--accent" x="10" y="76" width="130" height="46"/>
+      <text class="lx-label" x="75" y="104" text-anchor="middle">nó destaque</text>
+
+      <rect class="lx-node lx-node--muted" x="230" y="20" width="140" height="46"/>
+      <text class="lx-label--muted" x="300" y="48" text-anchor="middle">nó apagado</text>
+
+      <path class="lx-edge" d="M400 34 H 560"/>
+      <text class="lx-label--muted" x="480" y="26" text-anchor="middle">aresta</text>
+
+      <path class="lx-edge lx-edge--dashed" d="M400 68 H 560"/>
+      <text class="lx-label--muted" x="480" y="60" text-anchor="middle">tracejada</text>
+
+      <path class="lx-edge lx-edge--accent" d="M400 102 H 560"/>
+      <text class="lx-label--muted" x="480" y="94" text-anchor="middle">destaque</text>
+    </svg>
+
+callouts:
+  note:
+    title: "O JSON não tem uma frase sequer"
+    text: >
+      Tudo que você lê nesta página está no .yml. O .json só diz qual componente
+      usar, em que ordem, e qual chave do YAML cada prop referencia.
+  warn:
+    title: "Componente não decide o próprio espaçamento"
+    text: >
+      A distância entre um bloco e o vizinho é do container. Um componente que
+      define a própria margem ganha por especificidade e passa por cima do
+      breakpoint do celular — foi assim que o card do diagrama ficou apertado.
+  danger:
+    title: "Build recusa a lição inteira"
+    text: >
+      Componente desconhecido, referência quebrada, prop faltando ou SVG com cor
+      própria não geram página parcial. Uma lição meio renderizada parece pronta,
+      e é por isso que a falha é barulhenta.
+
+compare:
+  caption: "As duas metades do formato, e o que cada uma resolve"
+  columns:
+    - label: "JSON — estrutura"
+      body: >
+        Quais componentes, em que ordem, com quais ids. É o que o build valida
+        contra o vocabulário. Pequeno e chato de propósito.
+    - label: "YAML — conteúdo"
+      body: >
+        Prosa e SVG, endereçados por chave. É onde está tudo que uma pessoa
+        escreveu, e o único arquivo que muda quando o texto muda.
+
+table:
+  caption: "O que cada camada custa por lição"
+  headers: ["Camada", "Antes", "Agora"]
+  rows:
+    - ["CSS + JS", "13.1K", "linkado"]
+    - ["Tags estruturais", "12.3K", "gerado"]
+    - ["SVG", "6.6K", "6.6K"]
+    - ["Prosa", "6.2K", "6.2K"]
+
+code:
+  lang: "json"
+  caption: "Um bloco do .json — nenhum texto, só estrutura"
+  source: |
+    { "component": "diagram",
+      "props": { "svg": "@diagrams.flow",
+                 "caption": "@intro.caption" } }
+
+flashcards:
+  title: "Revisão rápida"
+  cards:
+    - front: "O que o `@` faz num valor do JSON?"
+      back: "Marca um caminho dentro do .yml. É resolvido antes do componente ver a prop, então componente só lida com valor real."
+    - front: "Por que o build recusa SVG com cor?"
+      back: "Porque cor vem das classes do design system. Um diagrama que traz a própria cor não acompanha o tema e diverge do resto."
+    - front: "O que `[head | tail] = [1, 2, 3]` faz em Elixir?"
+      back: "Desestrutura a lista: `head` vira `1` e `tail` vira `[2, 3]`."
+
+source:
+  title: "LESSON-PIPELINE-SPEC.md"
+  url: "https://github.com/murichristopher/learno/blob/master/LESSON-PIPELINE-SPEC.md"
+  note: "O spec que esta lição existe para provar."
+
+code2:
+  lang: "javascript"
+  caption: "O componente que renderiza este bloco — destacado no build, sem JS na página"
+  source: |
+    const hljs = require('highlight.js');
+
+    // Sem lang, ou lang de texto puro, sai escapado e nada mais.
+    if (!lang || PLAIN.has(lang.toLowerCase())) {
+      body = esc(source);
+    } else if (hljs.getLanguage(lang)) {
+      body = hljs.highlight(source, { language: lang }).value;
+    } else {
+      throw new Error(`unknown language "${lang}"`);
+    }
+
+code3:
+  lang: "text"
+  caption: "lang \"text\" desliga o destaque de propósito — um log não tem sintaxe"
+  source: |
+    2026-07-26T19:53:29Z INF Registered tunnel connection
+    2026-07-26T19:53:31Z WRN backpressure: queue depth 8412
+    2026-07-26T19:53:34Z ERR dropping batch after 3 retries
+
+p1:
+  title: "O `@` que destrava a próxima seção"
+  body: >
+    A seção 2 está fechada. Responda o bloco abaixo com nota 50 ou mais e ela
+    abre. Como o validador do sandbox é determinístico, comece a resposta com
+    !0 para ver a seção continuar trancada, ou com !p para destravar.
+  question: "Explique, com suas palavras, por que uma lição que dá para rolar até o fim ensina reconhecimento em vez de recuperação."
+  summary: "Seção sobre travas de progressão e prática de recuperação."
+  fallback:
+    options:
+      - { text: "Porque o texto fica longo demais", correct: false }
+      - { text: "Porque ler a resposta é mais fácil do que produzi-la, e as duas coisas parecem iguais por dentro", correct: true }
+    ok: "Isso. Reconhecer parece aprender, e é justamente o que a trava impede."
+    bad: "Não é o tamanho — é a diferença entre reconhecer e produzir."
+
+p2:
+  title: "Múltipla escolha, corrigida na própria página"
+  body: >
+    Este bloco não precisa de servidor nenhum. É a mesma peça que o recall usa
+    como fallback quando o servidor cai.
+  question: |
+    Olhando o trecho abaixo, por que o fallback é renderizado sempre e só
+    escondido por CSS?
+
+    ```js
+    function setOffline(isOffline) {
+      document.body.classList.toggle('lx-offline', isOffline);
+    }
+    ```
+  ok: "Isso. Trocar de modo vira um toggle de classe, e não um fetch que precisa dar certo para mostrar a alternativa."
+  bad: "O contrário: se ele fosse buscado com `fetch` na hora, precisaria do servidor justamente quando o servidor caiu."
+  options:
+    - { text: "Para economizar bytes na página", correct: false }
+    - { text: "Porque buscá-lo na hora exigiria o servidor exatamente quando o servidor está fora", correct: true }
+
+teachback:
+  question: "Explique o pipeline inteiro para alguém que só viu lições em HTML escrito à mão: o que é o JSON, o que é o YAML, e o que o build recusa."
+  hint: "Comece pelo problema (84% do que a IA escrevia era máquina), depois a divisão, depois as validações."

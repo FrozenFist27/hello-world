@@ -1,0 +1,20 @@
+{
+  "name": "learno",
+  "version": "1.0.0",
+  "description": "Stateful, multi-session tutoring engine",
+  "private": true,
+  "scripts": {
+    "build": "node build/render.js --all"
+  },
+  "dependencies": {
+    "highlight.js": "^11.11.1",
+    "js-yaml": "^4.1.0",
+    "lucide-static": "^1.27.0"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "bin": {
+    "learno": "bin/learno.js"
+  }
+}
