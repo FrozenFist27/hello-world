@@ -1,0 +1,133 @@
+meta:
+  title: "Look both ways: the check before every move"
+  subtitle: "What did their last move attack, what can I take, what checks are there. Three questions, every move, before anything else."
+
+analogy:
+  label: "Think of crossing a road"
+  text: |
+    Nobody decides to look before stepping off the kerb. You look left, you look right, you look left again, and you do it on the street you cross every day, at the quiet hour, when you are sure nothing is coming. It takes two seconds. It is not cleverness, it is a habit that runs before the thought of where you are going. The one crossing where you skip it, because you were thinking about something more interesting, is the only one that ever matters.
+  bridge: |
+    In chess the thing you are looking for is a **hanging piece**: a piece left where it can be taken for nothing. The three looks before every move are the **blunder check**. Under 1000, almost every game is decided by it, in one direction or the other, and nothing else in this study is worth learning until it runs by itself.
+
+p1:
+  title: "What can I take? The hanging piece"
+  body: |
+    A piece is **hanging** when it is attacked and nobody defends it: whoever takes it gets it for free. The values make "free" exact: pawn 1, knight 3, bishop 3, rook 5, queen 9. A knight taken for a pawn is a loss of two, and at this level a loss of two is usually the game.
+
+    Here is how it happens. White has played the first four moves of the Italian Game and Black, seeing a pawn on e4, took it: 4...Nxe4. Black asked "what can I take?" and stopped there. The question that was missing is the one from White's side: e4 was defended by the pawn on d3, so the knight that took it now stands where a pawn can take it back, and nothing of Black's defends e4.
+
+    5.dxe4 collects a knight for a pawn. Stockfish says +3.9 for White after it, and every other move throws most of that away: 5.O-O lets the knight walk home and loses 4.5 pawns of advantage; 5.Nc3 even loses a pawn after 5...Nxc3. So the first look, before every move of yours: every capture you have, and is it free? Attacked and undefended is free. Attacked by a pawn is nearly always free whatever defends it, because a pawn is the cheapest thing on the board.
+  # verified: FEN from 1.e4 e5 2.Nf3 Nc6 3.Bc4 Nf6 4.d3 Nxe4 (python-chess, legal); pgn trace @ depth 18: 4...Nxe4 cp_loss 384 (engine preferred 4...Bc5)
+  # verified: eval --multipv 3 @ depth 20: dxe4 +402, Bxf7+ +50, Qe2 -13
+  # verified: move dxe4 cp_loss 4 (best, +394 after); O-O cp_loss 445; Nc3 cp_loss 556 (5...Nxc3); Bxf7+ cp_loss 324 @ depth 20
+  teach_fen: "r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 5"
+  teach_caption: "Italian Game after 4...Nxe4?: the knight stands on a square the d3 pawn attacks, and nothing of Black's defends it. 5.dxe4 wins a knight for a pawn."
+  teach_highlight: ["e4", "d3"]
+  teach_arrows: ["d3e4"]
+  lead: |
+    Now the same look, with nothing marked. Same opening, one move later than a game you could play tomorrow: Black has just put a knight on g4, aiming at f2 together with the bishop on c5.
+  # verified: FEN from 1.e4 e5 2.Nf3 Nc6 3.Bc4 Bc5 4.d3 Nf6 5.h3 Ng4 (python-chess, legal); pgn trace @ depth 18: 5...Ng4 cp_loss 384 (engine preferred 5...d6)
+  # verified: eval --multipv 3 @ depth 20: hxg4 +415, d4 +254, Bxf7+ +149
+  # verified: move hxg4 cp_loss 5 (best, +410 after); O-O cp_loss 323 (6...Nf6); Qe2 cp_loss 373; Rf1 cp_loss 419; Nc3 cp_loss 663 (6...Nxf2) @ depth 20
+  fen: "r1bqk2r/pppp1ppp/2n5/2b1p3/2B1P1n1/3P1N1P/PPP2PP1/RNBQK2R w KQkq - 1 6"
+  caption: "After 5...Ng4. White to move."
+  question: "White to move. What do you play, and why? Say which piece is hanging, what attacks it, and what defends it."
+  summary: |
+    Answer: 6.hxg4. The knight on g4 is attacked by the h3 pawn and defended by nothing: the c8 bishop's road to g4 is blocked by the d7 pawn, and the queen on d8 does not reach g4. Black wanted ...Nxf2 together with the bishop on c5, but it is White's move and the attacker can simply be taken. Stockfish at depth 20: 6.hxg4 +4.1 (the best move, cp_loss 5); 6.O-O loses 323 centipawns because the knight walks back with 6...Nf6; 6.Qe2 loses 373; 6.Rf1 "to guard f2" loses 419; 6.Nc3?? loses 663 because 6...Nxf2 then hits the queen and the rook.
+
+    A full answer names 6.hxg4 and says the knight is attacked by a pawn and undefended, so it is a whole knight (3) for nothing, the largest free gain on the board. Naming a move that guards f2 (O-O, Rf1, Qe2) instead of taking the attacker scores low even with a sensible reason: the threat to f2 is real, but the piece making it is free to take, and taking it ends the threat. hxg4 with no reason, or with "it attacks f2" as the only reason: partial.
+  fallback:
+    options:
+      - { text: "6.hxg4: the knight on g4 is attacked by the h-pawn and nothing defends it, so take it", correct: true }
+      - { text: "6.O-O: get the king safe first, the knight and bishop are both aiming at f2", correct: false }
+      - { text: "6.Rf1: guard f2, which the knight and the bishop both attack", correct: false }
+    ok: "Yes. A pawn attacks it, nothing defends it: a whole knight for free. Guarding f2 would have answered a threat by leaving the attacker standing."
+    bad: "The threat to f2 is real, but ask the questions in order: before you defend anything, what can you take? Look at what the h3 pawn attacks."
+
+p2:
+  title: "What did their last move attack?"
+  body: |
+    The second look is about them. Every move changes what a piece attacks, so the first thing to look at is the piece that just moved: which squares does it reach now, and is one of yours standing on one of them?
+
+    Here it is after 1.e4 e5 2.Nf3 Nc6 3.Bb5 a6. The a-pawn has moved one square, and that square attacks b5. The bishop that was pinning the knight a move ago is now the thing under attack, and whatever plan you had waits. Two answers keep the bishop: 4.Ba4 (the engine's choice, +0.4) and 4.Bxc6 (trade it for the knight, +0.1). Any move that ignores the pawn hands the bishop over: 4.O-O?? axb5 and White is a piece down for nothing, a swing of four and a half pawns. 4.Nc3?? and 4.d4?? lose it the same way.
+  # verified: FEN from 1.e4 e5 2.Nf3 Nc6 3.Bb5 a6 (python-chess, legal)
+  # verified: eval --multipv 3 @ depth 20: Ba4 +36, Bc4 +10, Bxc6 +3
+  # verified: move Ba4 cp_loss 0 (best); Bxc6 cp_loss 27; Bc4 cp_loss 36; O-O cp_loss 455 (4...axb5); Nc3 cp_loss 467; d4 cp_loss 392 @ depth 20
+  teach_fen: "r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4"
+  teach_caption: "Ruy Lopez after 3...a6: the pawn that just moved attacks the bishop. Move it or trade it; anything else loses it."
+  teach_highlight: ["a6", "b5"]
+  teach_arrows: ["a6b5"]
+  lead: |
+    The third look is the checks: yours and theirs. A check has to be answered before anything else, so a move that gives check and takes something, or that lands a queen next to your king, is the most dangerous move on the board, and the one most often missed. Here you are Black, the board is turned your way, and White has just played 3.Bc4 after bringing the queen out early. Run the second and third looks: what did that bishop just attack, and what check does White have next move?
+  # verified: FEN from 1.e4 e5 2.Qh5 Nc6 3.Bc4 (python-chess, legal), Black to move
+  # verified: eval --multipv 3 @ depth 20: g6 -47, Qe7 -16, Nh6 +16 (all hold f7)
+  # verified: move g6 cp_loss 0 (best); Qe7 cp_loss 33; Qf6 cp_loss 70; Nh6 cp_loss 74 @ depth 20
+  # verified: mate @ depth 24 after 3...Nf6, after 3...Bc5 and after 3...d6: forced mate in 1 for White, pv 4.Qxf7#
+  fen: "r1bqkbnr/pppp1ppp/2n5/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 3 3"
+  caption: "After 1.e4 e5 2.Qh5 Nc6 3.Bc4. Black to move."
+  question: "Black to move. What did White's last move attack, what check does White have next move, and what do you play?"
+  options:
+    - { text: "3...g6: the bishop and the queen both aim at f7, where 4.Qxf7 would be mate; g6 attacks the queen and closes the line to f7", correct: true }
+    - { text: "3...Nf6: develop a piece and attack the queen", correct: false }
+    - { text: "3...Bc5: develop the bishop to its best square", correct: false }
+    - { text: "3...d6: open the bishop and defend e5", correct: false }
+  ok: "Yes. Two pieces on f7, defended once by the king, and the queen gives check when she takes: mate. 3...g6 kicks the queen off the diagonal and the game goes on. (3...Qe7 and 3...Qf6 also hold f7; the engine prefers g6 because it does it without blocking a piece.)"
+  bad: "Developing is right in general and wrong here, because it does not answer the check that is coming. Look at what the bishop on c4 attacks, then at what the queen on h5 attacks, and find the one square they share."
+
+p3:
+  title: "Before you let go of the piece: the same three looks, from their chair"
+  body: |
+    The check is not finished when you have found a move. Play it in your head, then change chairs and ask the three questions as the opponent: what did that move just attack, what can they take now, what checks do they have. If any answer is "a piece for free" or "a check that wins something", the move goes back and you look for another.
+
+    The usual failure here is a capture or a check that *feels* strong. After 1.e4 e5 2.Nf3 Nc6 3.Bc4 Nf6, 4.Bxf7+ gives check and takes a pawn, and both feel like progress. Change chairs. After 4...Kxf7, what can White take? Nothing. What checks does White have? 5.Ng5+, and the king just steps away. White has given a bishop (3) for a pawn (1). Stockfish: -3.3 for White after 4.Bxf7+ Kxf7, a loss of 3.7 pawns against the quiet 4.d3. 4.Nxe5?? is the same mistake with the knight: 4...Nxe5, because the e5 pawn was defended all along. The right moves are the boring ones: 4.d3, 4.Nc3 and 4.O-O all keep every piece safe and stay within 0.7 of the engine's best. (Its own first choices are 4.d3 and the sharp 4.Ng5; that does not matter here. What matters is that nothing you own can be taken for free after your move.)
+  # verified: FEN from 1.e4 e5 2.Nf3 Nc6 3.Bc4 Nf6 (python-chess, legal)
+  # verified: eval --multipv 4 @ depth 20: d3 +27, Ng5 +25, Nc3 +2, d4 +2
+  # verified: move Bxf7+ cp_loss 371 (-332 after, reply 4...Kxf7); Nxe5 cp_loss 335 (4...Nxe5); d3 cp_loss 23; Nc3 cp_loss 58; O-O cp_loss 73 @ depth 20
+  # verified: line "Bxf7+ Kxf7" @ depth 20: -332 then -328, neither move engine-best; final FEN r1bq1b1r/pppp1kpp/2n2n2/4p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQ - 0 5
+  teach_fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4"
+  teach_caption: "Italian Game after 3...Nf6. 4.Bxf7+? is check and takes a pawn; after 4...Kxf7 White has nothing to take, no useful check, and is a bishop down for a pawn."
+  teach_highlight: ["f7"]
+  teach_arrows: ["c4f7", "e8f7"]
+  lead: |
+    Now a position from the same opening a few moves on, with nothing marked. Both sides have castled. White has two tempting moves and several quiet ones; run the three looks on whatever you want to play, from Black's chair, before you answer.
+  # verified: FEN from 1.e4 e5 2.Nf3 Nc6 3.Bc4 Nf6 4.d3 Be7 5.O-O O-O 6.Nc3 d6 (python-chess, legal)
+  # verified: eval --multipv 4 @ depth 20: a4 +36, a3 +27, h3 +12, Nd5 +1
+  # verified: move Nxe5 cp_loss 429 (-397 after, reply 7...dxe5); Bxf7+ cp_loss 451 (-419 after, reply 7...Rxf7); Ng5 cp_loss 71; Bg5 cp_loss 50; Be3 cp_loss 53; h3 cp_loss 29; a3 cp_loss 4; Nd5 cp_loss 29 @ depth 20
+  fen: "r1bq1rk1/ppp1bppp/2np1n2/4p3/2B1P3/2NP1N2/PPP2PPP/R1BQ1RK1 w - - 0 7"
+  caption: "After 6...d6. White to move."
+  question: "White to move. What do you play, and why? Name at least one tempting move you rejected, and what the look from Black's chair told you about it."
+  summary: |
+    Any move that hangs nothing is right: 7.a4 (the engine's best, +0.4), 7.a3, 7.h3, 7.Bg5, 7.Be3 and 7.Nd5 are all within 0.6 of it at depth 20. The two tempting moves fail the look from Black's chair. 7.Nxe5?? takes a pawn that is defended twice (the d6 pawn and the c6 knight) while the knight landing on e5 is defended by nothing: 7...dxe5, a knight for a pawn, -4.0 for White (cp_loss 429). 7.Bxf7+?? is check and takes a pawn, but f7 is defended by the rook on f8 as well as the king: 7...Rxf7, a bishop for a pawn, -4.2 (cp_loss 451).
+
+    A full answer names a safe move and rejects at least one of the two grabs by giving the recapture and the values (a piece worth 3 for a pawn worth 1). A safe move with no reasoning, or "I just developed", is partial. Naming 7.Nxe5 or 7.Bxf7+ as the move scores low whatever the reasoning: the check was not run from Black's side.
+  fallback:
+    options:
+      - { text: "7.h3 (or any quiet move such as a3, Bg5, Be3): nothing of White's can be taken afterwards, and both grabs lose a piece for a pawn", correct: true }
+      - { text: "7.Nxe5: win a pawn in the centre", correct: false }
+      - { text: "7.Bxf7+: check and a pawn, and Black's king is dragged into the open", correct: false }
+    ok: "Yes. Change chairs after the grab: 7.Nxe5 dxe5 and 7.Bxf7+ Rxf7 both leave White a piece down for a pawn. The quiet move keeps everything."
+    bad: "It takes something, and it is still a blunder. Play it in your head, then ask from Black's chair: what can Black take now? Count what defends the square you just landed on."
+
+teachback:
+  question: "Explain the check before every move to a friend who has just learned how the pieces move. Give the three questions in order, say what a hanging piece is and why 'a knight for a pawn' is a loss, and walk through one position from this lesson from both sides of the board: the look before your move, and the look from the opponent's chair after it."
+  hint: "Three questions on the position in front of you; then the same three after your move, from their chair."
+
+flashcards:
+  title: "Before every move"
+  cards:
+    - front: "A piece is *hanging* when..."
+      back: "...it is attacked and nothing defends it, or a pawn attacks it. Whoever takes it gets it for free, or for a pawn."
+    - front: "Piece values"
+      back: "Pawn 1, knight 3, bishop 3, rook 5, queen 9. A knight for a pawn is minus two, and under 1000 minus two is usually the game."
+    - front: "Question 1, before every move"
+      back: "What did their last move attack? Look at the piece that just moved and every square it now reaches."
+    - front: "Question 2, before every move"
+      back: "What can I take, and is it free? Every capture on the board, and what defends the square."
+    - front: "Question 3, and then the switch"
+      back: "What checks are there, mine and theirs? Then play your move in your head and ask all three again from their chair: what did I just attack, what can they take, what checks do they have."
+
+source:
+  title: "Learning Chess, Step 1 (the Steps Method) — Brunia & van Wijgerden: attack, capture and defence"
+  url: "https://www.stappenmethode.nl/en/"
+  note: |
+    The three looks are Step 1's lessons on attacking, capturing and defending, with the checks question from *Bobby Fischer Teaches Chess* (Fischer, Margulies, Mosenfelder), both Tier 1 in RESOURCES.md. John Bartholomew's *Chess Fundamentals #1: Undefended Pieces* (Tier 2) is the same idea in twenty minutes. Every position here is from a typical beginner 1.e4 e5 game, and every move, evaluation and mate was checked with Stockfish through `scripts/engine_check.py` at depth 20 (mates at depth 24) before it was written down; the checks are recorded as comments beside each position in the lesson's source file.

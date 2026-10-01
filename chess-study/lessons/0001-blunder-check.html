@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Look both ways: the check before every move</title>
+<link rel="stylesheet" href="../assets/learno.css" />
+<link rel="stylesheet" href="../assets/components.css" />
+<script>(function(){try{var d=document.documentElement,t=localStorage.getItem('lx-theme'),a=localStorage.getItem('lx-accent');if(t&&t!=='auto')d.setAttribute('data-theme',t);if(a&&a!=='azul')d.setAttribute('data-accent',a)}catch(e){}})()</script>
+</head>
+<body class="lx-shell" data-lesson="0001-blunder-check">
+
+
+<!-- Shared arrowhead. Authored diagrams reference #lx-arrow and never carry
+     their own marker definition. -->
+<svg class="lx-defs" aria-hidden="true">
+  <defs>
+    <marker id="lx-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="lx-arrowhead" d="M 0 0 L 10 5 L 0 10 z" />
+    </marker>
+  </defs>
+</svg>
+
+  <nav class="lx-topbar">
+    <a class="lx-topbar-home" href="../" title="Go to the dashboard">
+      <svg class="lx-icon-svg lx-topbar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
+  <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
+      <span>learno</span>
+    </a>
+    <div class="lx-topbar-right">
+      <a class="lx-topbar-link" href="../reference/library.html" title="Library">
+        <svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 6 4 14" />
+  <path d="M12 6v14" />
+  <path d="M8 8v12" />
+  <path d="M4 4v16" /></svg>
+        <span>Library</span>
+      </a>
+      <details class="lx-settings">
+      <summary class="lx-settings-btn" title="Settings" aria-label="Settings" role="button">
+        <svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
+  <circle cx="12" cy="12" r="3" /></svg>
+      </summary>
+      <div class="lx-settings-panel">
+        <div class="lx-settings-group">
+          <p class="lx-settings-label">Theme</p>
+          <div class="lx-settings-row">
+            <button type="button" class="lx-settings-opt" data-theme-set="light" title="Light"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4" />
+  <path d="M12 2v2" />
+  <path d="M12 20v2" />
+  <path d="m4.93 4.93 1.41 1.41" />
+  <path d="m17.66 17.66 1.41 1.41" />
+  <path d="M2 12h2" />
+  <path d="M20 12h2" />
+  <path d="m6.34 17.66-1.41 1.41" />
+  <path d="m19.07 4.93-1.41 1.41" /></svg></button>
+            <button type="button" class="lx-settings-opt" data-theme-set="auto" title="Follow the system"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2" />
+  <line x1="8" x2="16" y1="21" y2="21" />
+  <line x1="12" x2="12" y1="17" y2="21" /></svg></button>
+            <button type="button" class="lx-settings-opt" data-theme-set="dark" title="Dark"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" /></svg></button>
+          </div>
+        </div>
+        <div class="lx-settings-group">
+          <p class="lx-settings-label">Accent colour</p>
+          <div class="lx-settings-row">
+            <button type="button" class="lx-settings-opt" data-accent-set="azul" title="Blue"><span class="lx-settings-dot lx-settings-dot--azul"></span>Blue</button>
+            <button type="button" class="lx-settings-opt" data-accent-set="roxo" title="Purple"><span class="lx-settings-dot lx-settings-dot--roxo"></span>Purple</button>
+            <button type="button" class="lx-settings-opt" data-accent-set="rosa" title="Pink"><span class="lx-settings-dot lx-settings-dot--rosa"></span>Pink</button>
+          </div>
+        </div>
+      </div>
+    </details>
+    </div>
+  </nav>
+
+<div class="lx-wrap">
+  <header class="lx-lesson-head">
+    <span class="lx-badge"><span class="lx-inline">Lesson 1 · I stop hanging pieces</span></span>
+    <h1 class="lx-title"><span class="lx-title-icon"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+  <circle cx="12" cy="12" r="3" /></svg></span><span><span class="lx-inline">Look both ways: the check before every move</span></span></h1>
+    <p class="lx-subtitle"><span class="lx-inline">What did their last move attack, what can I take, what checks are there. Three questions, every move, before anything else.</span></p>
+  </header>
+
+  <div class="lx-offline-banner" id="lx-banner" hidden>
+    The server is down. Sections still open by multiple choice, but AI scoring and progress tracking are unavailable.
+  </div>
+
+  <div class="lx-progress" role="presentation">
+    <span class="lx-progress-seg" data-seg="1"></span>
+    <span class="lx-progress-seg" data-seg="2"></span>
+    <span class="lx-progress-seg" data-seg="3"></span>
+  </div>
+
+  <div class="lx-blocks">
+  <div class="lx-card lx-analogy">
+    <span class="lx-analogy-label"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" />
+  <path d="M9 18h6" />
+  <path d="M10 22h4" /></svg> <span class="lx-inline">Think of crossing a road</span></span>
+    <p class="lx-analogy-text"><span class="lx-inline">Nobody decides to look before stepping off the kerb. You look left, you look right, you look left again, and you do it on the street you cross every day, at the quiet hour, when you are sure nothing is coming. It takes two seconds. It is not cleverness, it is a habit that runs before the thought of where you are going. The one crossing where you skip it, because you were thinking about something more interesting, is the only one that ever matters.
+</span></p>
+    <p class="lx-analogy-bridge"><span class="lx-inline">In chess the thing you are looking for is a <strong>hanging piece</strong>: a piece left where it can be taken for nothing. The three looks before every move are the <strong>blunder check</strong>. Under 1000, almost every game is decided by it, in one direction or the other, and nothing else in this study is worth learning until it runs by itself.
+</span></p>
+  </div>
+  <section class="lx-phase" data-phase="1" id="phase-1">
+    <div class="lx-phase-head">
+      <span class="lx-phase-badge"><span>1</span></span>
+      <h2 class="lx-phase-title"><span class="lx-inline">What can I take? The hanging piece</span></h2>
+    </div>
+    <div class="lx-gate" data-gate="phase-1">
+      <div class="lx-gate-body">
+  <div class="lx-prose">
+    <p><span class="lx-inline">A piece is <strong>hanging</strong> when it is attacked and nobody defends it: whoever takes it gets it for free. The values make &quot;free&quot; exact: pawn 1, knight 3, bishop 3, rook 5, queen 9. A knight taken for a pawn is a loss of two, and at this level a loss of two is usually the game.</span></p>
+    <p><span class="lx-inline">Here is how it happens. White has played the first four moves of the Italian Game and Black, seeing a pawn on e4, took it: 4...Nxe4. Black asked &quot;what can I take?&quot; and stopped there. The question that was missing is the one from White's side: e4 was defended by the pawn on d3, so the knight that took it now stands where a pawn can take it back, and nothing of Black's defends e4.</span></p>
+    <p><span class="lx-inline">5.dxe4 collects a knight for a pawn. Stockfish says +3.9 for White after it, and every other move throws most of that away: 5.O-O lets the knight walk home and loses 4.5 pawns of advantage; 5.Nc3 even loses a pawn after 5...Nxc3. So the first look, before every move of yours: every capture you have, and is it free? Attacked and undefended is free. Attacked by a pawn is nearly always free whatever defends it, because a pawn is the cheapest thing on the board.</span></p>
+  </div>
+  <figure class="lx-figure">
+    <div class="lx-card lx-board-wrap">
+      <div class="lx-board" role="img" aria-label="Italian Game after 4...Nxe4?: the knight stands on a square the d3 pawn attacks, and nothing of Black's defends it. 5.dxe4 wins a knight for a pawn."><div class="lx-board-sq lx-board-sq--light" data-square="a8"><i class="lx-board-coord lx-board-coord--rank">8</i><span class="lx-board-pc lx-board-pc--b">♜</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="b8"></div><div class="lx-board-sq lx-board-sq--light" data-square="c8"><span class="lx-board-pc lx-board-pc--b">♝</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d8"><span class="lx-board-pc lx-board-pc--b">♛</span></div><div class="lx-board-sq lx-board-sq--light" data-square="e8"><span class="lx-board-pc lx-board-pc--b">♚</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="f8"><span class="lx-board-pc lx-board-pc--b">♝</span></div><div class="lx-board-sq lx-board-sq--light" data-square="g8"></div><div class="lx-board-sq lx-board-sq--dark" data-square="h8"><span class="lx-board-pc lx-board-pc--b">♜</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="a7"><i class="lx-board-coord lx-board-coord--rank">7</i><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="b7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="c7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="d7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="e7"></div><div class="lx-board-sq lx-board-sq--light" data-square="f7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="g7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="h7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="a6"><i class="lx-board-coord lx-board-coord--rank">6</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="b6"></div><div class="lx-board-sq lx-board-sq--light" data-square="c6"><span class="lx-board-pc lx-board-pc--b">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d6"></div><div class="lx-board-sq lx-board-sq--light" data-square="e6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="f6"></div><div class="lx-board-sq lx-board-sq--light" data-square="g6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="h6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a5"><i class="lx-board-coord lx-board-coord--rank">5</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="c5"></div><div class="lx-board-sq lx-board-sq--light" data-square="d5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="e5"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="f5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="g5"></div><div class="lx-board-sq lx-board-sq--light" data-square="h5"></div><div class="lx-board-sq lx-board-sq--light" data-square="a4"><i class="lx-board-coord lx-board-coord--rank">4</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="b4"></div><div class="lx-board-sq lx-board-sq--light" data-square="c4"><span class="lx-board-pc lx-board-pc--w">♝</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d4"></div><div class="lx-board-sq lx-board-sq--light lx-board-sq--hi" data-square="e4"><span class="lx-board-pc lx-board-pc--b">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="f4"></div><div class="lx-board-sq lx-board-sq--light" data-square="g4"></div><div class="lx-board-sq lx-board-sq--dark" data-square="h4"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a3"><i class="lx-board-coord lx-board-coord--rank">3</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b3"></div><div class="lx-board-sq lx-board-sq--dark" data-square="c3"></div><div class="lx-board-sq lx-board-sq--light lx-board-sq--hi" data-square="d3"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="e3"></div><div class="lx-board-sq lx-board-sq--light" data-square="f3"><span class="lx-board-pc lx-board-pc--w">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="g3"></div><div class="lx-board-sq lx-board-sq--light" data-square="h3"></div><div class="lx-board-sq lx-board-sq--light" data-square="a2"><i class="lx-board-coord lx-board-coord--rank">2</i><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="b2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="c2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d2"></div><div class="lx-board-sq lx-board-sq--light" data-square="e2"></div><div class="lx-board-sq lx-board-sq--dark" data-square="f2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="g2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="h2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="a1"><i class="lx-board-coord lx-board-coord--rank">1</i><span class="lx-board-pc lx-board-pc--w">♜</span><i class="lx-board-coord lx-board-coord--file">a</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b1"><span class="lx-board-pc lx-board-pc--w">♞</span><i class="lx-board-coord lx-board-coord--file">b</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="c1"><span class="lx-board-pc lx-board-pc--w">♝</span><i class="lx-board-coord lx-board-coord--file">c</i></div><div class="lx-board-sq lx-board-sq--light" data-square="d1"><span class="lx-board-pc lx-board-pc--w">♛</span><i class="lx-board-coord lx-board-coord--file">d</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="e1"><span class="lx-board-pc lx-board-pc--w">♚</span><i class="lx-board-coord lx-board-coord--file">e</i></div><div class="lx-board-sq lx-board-sq--light" data-square="f1"><i class="lx-board-coord lx-board-coord--file">f</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="g1"><i class="lx-board-coord lx-board-coord--file">g</i></div><div class="lx-board-sq lx-board-sq--light" data-square="h1"><span class="lx-board-pc lx-board-pc--w">♜</span><i class="lx-board-coord lx-board-coord--file">h</i></div><svg class="lx-board-arrows" viewBox="0 0 800 800" aria-hidden="true"><line class="lx-board-arrow" x1="350.0" y1="550.0" x2="434.4" y2="465.6"/></svg></div>
+      <p class="lx-board-turn"><span class="lx-board-dot lx-board-dot--white"></span>White to move</p>
+    </div>
+    <figcaption class="lx-caption"><span class="lx-inline">Italian Game after 4...Nxe4?: the knight stands on a square the d3 pawn attacks, and nothing of Black's defends it. 5.dxe4 wins a knight for a pawn.</span></figcaption>
+  </figure>
+  <div class="lx-prose">
+    <p><span class="lx-inline">Now the same look, with nothing marked. Same opening, one move later than a game you could play tomorrow: Black has just put a knight on g4, aiming at f2 together with the bishop on c5.</span></p>
+  </div>
+  <figure class="lx-figure">
+    <div class="lx-card lx-board-wrap">
+      <div class="lx-board" role="img" aria-label="After 5...Ng4. White to move."><div class="lx-board-sq lx-board-sq--light" data-square="a8"><i class="lx-board-coord lx-board-coord--rank">8</i><span class="lx-board-pc lx-board-pc--b">♜</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="b8"></div><div class="lx-board-sq lx-board-sq--light" data-square="c8"><span class="lx-board-pc lx-board-pc--b">♝</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d8"><span class="lx-board-pc lx-board-pc--b">♛</span></div><div class="lx-board-sq lx-board-sq--light" data-square="e8"><span class="lx-board-pc lx-board-pc--b">♚</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="f8"></div><div class="lx-board-sq lx-board-sq--light" data-square="g8"></div><div class="lx-board-sq lx-board-sq--dark" data-square="h8"><span class="lx-board-pc lx-board-pc--b">♜</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="a7"><i class="lx-board-coord lx-board-coord--rank">7</i><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="b7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="c7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="d7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="e7"></div><div class="lx-board-sq lx-board-sq--light" data-square="f7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="g7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="h7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="a6"><i class="lx-board-coord lx-board-coord--rank">6</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="b6"></div><div class="lx-board-sq lx-board-sq--light" data-square="c6"><span class="lx-board-pc lx-board-pc--b">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d6"></div><div class="lx-board-sq lx-board-sq--light" data-square="e6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="f6"></div><div class="lx-board-sq lx-board-sq--light" data-square="g6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="h6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a5"><i class="lx-board-coord lx-board-coord--rank">5</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="c5"><span class="lx-board-pc lx-board-pc--b">♝</span></div><div class="lx-board-sq lx-board-sq--light" data-square="d5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="e5"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="f5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="g5"></div><div class="lx-board-sq lx-board-sq--light" data-square="h5"></div><div class="lx-board-sq lx-board-sq--light" data-square="a4"><i class="lx-board-coord lx-board-coord--rank">4</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="b4"></div><div class="lx-board-sq lx-board-sq--light" data-square="c4"><span class="lx-board-pc lx-board-pc--w">♝</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d4"></div><div class="lx-board-sq lx-board-sq--light" data-square="e4"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="f4"></div><div class="lx-board-sq lx-board-sq--light" data-square="g4"><span class="lx-board-pc lx-board-pc--b">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="h4"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a3"><i class="lx-board-coord lx-board-coord--rank">3</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b3"></div><div class="lx-board-sq lx-board-sq--dark" data-square="c3"></div><div class="lx-board-sq lx-board-sq--light" data-square="d3"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="e3"></div><div class="lx-board-sq lx-board-sq--light" data-square="f3"><span class="lx-board-pc lx-board-pc--w">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="g3"></div><div class="lx-board-sq lx-board-sq--light" data-square="h3"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="a2"><i class="lx-board-coord lx-board-coord--rank">2</i><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="b2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="c2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d2"></div><div class="lx-board-sq lx-board-sq--light" data-square="e2"></div><div class="lx-board-sq lx-board-sq--dark" data-square="f2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="g2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="h2"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a1"><i class="lx-board-coord lx-board-coord--rank">1</i><span class="lx-board-pc lx-board-pc--w">♜</span><i class="lx-board-coord lx-board-coord--file">a</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b1"><span class="lx-board-pc lx-board-pc--w">♞</span><i class="lx-board-coord lx-board-coord--file">b</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="c1"><span class="lx-board-pc lx-board-pc--w">♝</span><i class="lx-board-coord lx-board-coord--file">c</i></div><div class="lx-board-sq lx-board-sq--light" data-square="d1"><span class="lx-board-pc lx-board-pc--w">♛</span><i class="lx-board-coord lx-board-coord--file">d</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="e1"><span class="lx-board-pc lx-board-pc--w">♚</span><i class="lx-board-coord lx-board-coord--file">e</i></div><div class="lx-board-sq lx-board-sq--light" data-square="f1"><i class="lx-board-coord lx-board-coord--file">f</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="g1"><i class="lx-board-coord lx-board-coord--file">g</i></div><div class="lx-board-sq lx-board-sq--light" data-square="h1"><span class="lx-board-pc lx-board-pc--w">♜</span><i class="lx-board-coord lx-board-coord--file">h</i></div></div>
+      <p class="lx-board-turn"><span class="lx-board-dot lx-board-dot--white"></span>White to move</p>
+    </div>
+    <figcaption class="lx-caption"><span class="lx-inline">After 5...Ng4. White to move.</span></figcaption>
+  </figure>
+  <div class="lx-card lx-ask lx-recall"
+       data-concept-id="hanging-piece"
+       data-phase="1"
+       data-summary="Answer: 6.hxg4. The knight on g4 is attacked by the h3 pawn and defended by nothing: the c8 bishop's road to g4 is blocked by the d7 pawn, and the queen on d8 does not reach g4. Black wanted ...Nxf2 together with the bishop on c5, but it is White's move and the attacker can simply be taken. Stockfish at depth 20: 6.hxg4 +4.1 (the best move, cp_loss 5); 6.O-O loses 323 centipawns because the knight walks back with 6...Nf6; 6.Qe2 loses 373; 6.Rf1 &quot;to guard f2&quot; loses 419; 6.Nc3?? loses 663 because 6...Nxf2 then hits the queen and the rook.
+
+A full answer names 6.hxg4 and says the knight is attacked by a pawn and undefended, so it is a whole knight (3) for nothing, the largest free gain on the board. Naming a move that guards f2 (O-O, Rf1, Qe2) instead of taking the attacker scores low even with a sensible reason: the threat to f2 is real, but the piece making it is free to take, and taking it ends the threat. hxg4 with no reason, or with &quot;it attacks f2&quot; as the only reason: partial.
+"
+       data-ok="Yes. A pawn attacks it, nothing defends it: a whole knight for free. Guarding f2 would have answered a threat by leaving the attacker standing."
+       data-bad="The threat to f2 is real, but ask the questions in order: before you defend anything, what can you take? Look at what the h3 pawn attacks.">
+    <span class="lx-ask-label"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 14a2 2 0 0 0 2-2V8h-2" />
+  <path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" />
+  <path d="M8 14a2 2 0 0 0 2-2V8H8" /></svg> Explain in your own words</span>
+    <div class="lx-ask-q"><p><span class="lx-inline">White to move. What do you play, and why? Say which piece is hanging, what attacks it, and what defends it.</span></p></div>
+
+    <div class="lx-ask-online">
+      <textarea class="lx-answer" placeholder="Write your explanation…"></textarea>
+      <div class="lx-ask-tools">
+        <button type="button" class="lx-btn lx-btn--primary" data-action="validate">Check</button>
+        <button type="button" class="lx-btn lx-btn--secondary lx-mic" data-action="mic" hidden>🎙 Dictate</button>
+        <select class="lx-lang" data-role="lang" hidden>
+          <option value="pt-BR">Português</option>
+          <option value="en-US" selected>English</option>
+        </select>
+        <span class="lx-mic-hint"></span>
+      </div>
+      <div class="lx-verdict">
+        <div class="lx-score">
+          <span class="lx-score-num">—</span><span class="lx-score-of">/100</span>
+          <span class="lx-score-word"></span>
+        </div>
+        <div class="lx-bar"><div class="lx-bar-fill"></div></div>
+        <p class="lx-feedback"></p>
+        <ul class="lx-misses"></ul>
+      </div>
+    </div>
+
+    <div class="lx-fallback">
+      <p class="lx-fallback-note">Server is down — answering by multiple choice.</p>
+      
+        <label class="lx-choice">
+          <input type="radio" name="fb-hanging-piece" value="0" data-correct="1" />
+          <span><span class="lx-inline">6.hxg4: the knight on g4 is attacked by the h-pawn and nothing defends it, so take it</span></span>
+        </label>
+        <label class="lx-choice">
+          <input type="radio" name="fb-hanging-piece" value="1" data-correct="0" />
+          <span><span class="lx-inline">6.O-O: get the king safe first, the knight and bishop are both aiming at f2</span></span>
+        </label>
+        <label class="lx-choice">
+          <input type="radio" name="fb-hanging-piece" value="2" data-correct="0" />
+          <span><span class="lx-inline">6.Rf1: guard f2, which the knight and the bishop both attack</span></span>
+        </label>
+      <p class="lx-inline-fb"></p>
+    </div>
+  </div>
+      </div>
+      <div class="lx-gate-lock">
+        <span class="lx-gate-lock-badge"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+  <path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg></span>
+        <span class="lx-gate-lock-text">Answer the previous section to open this one</span>
+      </div>
+    </div>
+  </section>
+  <section class="lx-phase lx-phase--locked" data-phase="2" id="phase-2">
+    <div class="lx-phase-head">
+      <span class="lx-phase-badge"><span>2</span></span>
+      <h2 class="lx-phase-title"><span class="lx-inline">What did their last move attack?</span></h2>
+    </div>
+    <div class="lx-gate lx-gate--locked" data-gate="phase-2">
+      <div class="lx-gate-body" aria-hidden="true">
+  <div class="lx-prose">
+    <p><span class="lx-inline">The second look is about them. Every move changes what a piece attacks, so the first thing to look at is the piece that just moved: which squares does it reach now, and is one of yours standing on one of them?</span></p>
+    <p><span class="lx-inline">Here it is after 1.e4 e5 2.Nf3 Nc6 3.Bb5 a6. The a-pawn has moved one square, and that square attacks b5. The bishop that was pinning the knight a move ago is now the thing under attack, and whatever plan you had waits. Two answers keep the bishop: 4.Ba4 (the engine's choice, +0.4) and 4.Bxc6 (trade it for the knight, +0.1). Any move that ignores the pawn hands the bishop over: 4.O-O?? axb5 and White is a piece down for nothing, a swing of four and a half pawns. 4.Nc3?? and 4.d4?? lose it the same way.</span></p>
+  </div>
+  <figure class="lx-figure">
+    <div class="lx-card lx-board-wrap">
+      <div class="lx-board" role="img" aria-label="Ruy Lopez after 3...a6: the pawn that just moved attacks the bishop. Move it or trade it; anything else loses it."><div class="lx-board-sq lx-board-sq--light" data-square="a8"><i class="lx-board-coord lx-board-coord--rank">8</i><span class="lx-board-pc lx-board-pc--b">♜</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="b8"></div><div class="lx-board-sq lx-board-sq--light" data-square="c8"><span class="lx-board-pc lx-board-pc--b">♝</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d8"><span class="lx-board-pc lx-board-pc--b">♛</span></div><div class="lx-board-sq lx-board-sq--light" data-square="e8"><span class="lx-board-pc lx-board-pc--b">♚</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="f8"><span class="lx-board-pc lx-board-pc--b">♝</span></div><div class="lx-board-sq lx-board-sq--light" data-square="g8"><span class="lx-board-pc lx-board-pc--b">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="h8"><span class="lx-board-pc lx-board-pc--b">♜</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="a7"><i class="lx-board-coord lx-board-coord--rank">7</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="c7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="d7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="e7"></div><div class="lx-board-sq lx-board-sq--light" data-square="f7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="g7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="h7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light lx-board-sq--hi" data-square="a6"><i class="lx-board-coord lx-board-coord--rank">6</i><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="b6"></div><div class="lx-board-sq lx-board-sq--light" data-square="c6"><span class="lx-board-pc lx-board-pc--b">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d6"></div><div class="lx-board-sq lx-board-sq--light" data-square="e6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="f6"></div><div class="lx-board-sq lx-board-sq--light" data-square="g6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="h6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a5"><i class="lx-board-coord lx-board-coord--rank">5</i></div><div class="lx-board-sq lx-board-sq--light lx-board-sq--hi" data-square="b5"><span class="lx-board-pc lx-board-pc--w">♝</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="c5"></div><div class="lx-board-sq lx-board-sq--light" data-square="d5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="e5"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="f5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="g5"></div><div class="lx-board-sq lx-board-sq--light" data-square="h5"></div><div class="lx-board-sq lx-board-sq--light" data-square="a4"><i class="lx-board-coord lx-board-coord--rank">4</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="b4"></div><div class="lx-board-sq lx-board-sq--light" data-square="c4"></div><div class="lx-board-sq lx-board-sq--dark" data-square="d4"></div><div class="lx-board-sq lx-board-sq--light" data-square="e4"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="f4"></div><div class="lx-board-sq lx-board-sq--light" data-square="g4"></div><div class="lx-board-sq lx-board-sq--dark" data-square="h4"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a3"><i class="lx-board-coord lx-board-coord--rank">3</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b3"></div><div class="lx-board-sq lx-board-sq--dark" data-square="c3"></div><div class="lx-board-sq lx-board-sq--light" data-square="d3"></div><div class="lx-board-sq lx-board-sq--dark" data-square="e3"></div><div class="lx-board-sq lx-board-sq--light" data-square="f3"><span class="lx-board-pc lx-board-pc--w">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="g3"></div><div class="lx-board-sq lx-board-sq--light" data-square="h3"></div><div class="lx-board-sq lx-board-sq--light" data-square="a2"><i class="lx-board-coord lx-board-coord--rank">2</i><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="b2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="c2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="e2"></div><div class="lx-board-sq lx-board-sq--dark" data-square="f2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="g2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="h2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="a1"><i class="lx-board-coord lx-board-coord--rank">1</i><span class="lx-board-pc lx-board-pc--w">♜</span><i class="lx-board-coord lx-board-coord--file">a</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b1"><span class="lx-board-pc lx-board-pc--w">♞</span><i class="lx-board-coord lx-board-coord--file">b</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="c1"><span class="lx-board-pc lx-board-pc--w">♝</span><i class="lx-board-coord lx-board-coord--file">c</i></div><div class="lx-board-sq lx-board-sq--light" data-square="d1"><span class="lx-board-pc lx-board-pc--w">♛</span><i class="lx-board-coord lx-board-coord--file">d</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="e1"><span class="lx-board-pc lx-board-pc--w">♚</span><i class="lx-board-coord lx-board-coord--file">e</i></div><div class="lx-board-sq lx-board-sq--light" data-square="f1"><i class="lx-board-coord lx-board-coord--file">f</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="g1"><i class="lx-board-coord lx-board-coord--file">g</i></div><div class="lx-board-sq lx-board-sq--light" data-square="h1"><span class="lx-board-pc lx-board-pc--w">♜</span><i class="lx-board-coord lx-board-coord--file">h</i></div><svg class="lx-board-arrows" viewBox="0 0 800 800" aria-hidden="true"><line class="lx-board-arrow" x1="50.0" y1="250.0" x2="134.4" y2="334.4"/></svg></div>
+      <p class="lx-board-turn"><span class="lx-board-dot lx-board-dot--white"></span>White to move</p>
+    </div>
+    <figcaption class="lx-caption"><span class="lx-inline">Ruy Lopez after 3...a6: the pawn that just moved attacks the bishop. Move it or trade it; anything else loses it.</span></figcaption>
+  </figure>
+  <div class="lx-prose">
+    <p><span class="lx-inline">The third look is the checks: yours and theirs. A check has to be answered before anything else, so a move that gives check and takes something, or that lands a queen next to your king, is the most dangerous move on the board, and the one most often missed. Here you are Black, the board is turned your way, and White has just played 3.Bc4 after bringing the queen out early. Run the second and third looks: what did that bishop just attack, and what check does White have next move?</span></p>
+  </div>
+  <figure class="lx-figure">
+    <div class="lx-card lx-board-wrap">
+      <div class="lx-board" role="img" aria-label="After 1.e4 e5 2.Qh5 Nc6 3.Bc4. Black to move."><div class="lx-board-sq lx-board-sq--light" data-square="h1"><i class="lx-board-coord lx-board-coord--rank">1</i><span class="lx-board-pc lx-board-pc--w">♜</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="g1"><span class="lx-board-pc lx-board-pc--w">♞</span></div><div class="lx-board-sq lx-board-sq--light" data-square="f1"></div><div class="lx-board-sq lx-board-sq--dark" data-square="e1"><span class="lx-board-pc lx-board-pc--w">♚</span></div><div class="lx-board-sq lx-board-sq--light" data-square="d1"></div><div class="lx-board-sq lx-board-sq--dark" data-square="c1"><span class="lx-board-pc lx-board-pc--w">♝</span></div><div class="lx-board-sq lx-board-sq--light" data-square="b1"><span class="lx-board-pc lx-board-pc--w">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="a1"><span class="lx-board-pc lx-board-pc--w">♜</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="h2"><i class="lx-board-coord lx-board-coord--rank">2</i><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="g2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="f2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="e2"></div><div class="lx-board-sq lx-board-sq--dark" data-square="d2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="c2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="b2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="a2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="h3"><i class="lx-board-coord lx-board-coord--rank">3</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="g3"></div><div class="lx-board-sq lx-board-sq--light" data-square="f3"></div><div class="lx-board-sq lx-board-sq--dark" data-square="e3"></div><div class="lx-board-sq lx-board-sq--light" data-square="d3"></div><div class="lx-board-sq lx-board-sq--dark" data-square="c3"></div><div class="lx-board-sq lx-board-sq--light" data-square="b3"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a3"></div><div class="lx-board-sq lx-board-sq--dark" data-square="h4"><i class="lx-board-coord lx-board-coord--rank">4</i></div><div class="lx-board-sq lx-board-sq--light" data-square="g4"></div><div class="lx-board-sq lx-board-sq--dark" data-square="f4"></div><div class="lx-board-sq lx-board-sq--light" data-square="e4"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d4"></div><div class="lx-board-sq lx-board-sq--light" data-square="c4"><span class="lx-board-pc lx-board-pc--w">♝</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="b4"></div><div class="lx-board-sq lx-board-sq--light" data-square="a4"></div><div class="lx-board-sq lx-board-sq--light" data-square="h5"><i class="lx-board-coord lx-board-coord--rank">5</i><span class="lx-board-pc lx-board-pc--w">♛</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="g5"></div><div class="lx-board-sq lx-board-sq--light" data-square="f5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="e5"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="d5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="c5"></div><div class="lx-board-sq lx-board-sq--light" data-square="b5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="h6"><i class="lx-board-coord lx-board-coord--rank">6</i></div><div class="lx-board-sq lx-board-sq--light" data-square="g6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="f6"></div><div class="lx-board-sq lx-board-sq--light" data-square="e6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="d6"></div><div class="lx-board-sq lx-board-sq--light" data-square="c6"><span class="lx-board-pc lx-board-pc--b">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="b6"></div><div class="lx-board-sq lx-board-sq--light" data-square="a6"></div><div class="lx-board-sq lx-board-sq--light" data-square="h7"><i class="lx-board-coord lx-board-coord--rank">7</i><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="g7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="f7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="e7"></div><div class="lx-board-sq lx-board-sq--light" data-square="d7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="c7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="b7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="a7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="h8"><i class="lx-board-coord lx-board-coord--rank">8</i><span class="lx-board-pc lx-board-pc--b">♜</span><i class="lx-board-coord lx-board-coord--file">h</i></div><div class="lx-board-sq lx-board-sq--light" data-square="g8"><span class="lx-board-pc lx-board-pc--b">♞</span><i class="lx-board-coord lx-board-coord--file">g</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="f8"><span class="lx-board-pc lx-board-pc--b">♝</span><i class="lx-board-coord lx-board-coord--file">f</i></div><div class="lx-board-sq lx-board-sq--light" data-square="e8"><span class="lx-board-pc lx-board-pc--b">♚</span><i class="lx-board-coord lx-board-coord--file">e</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="d8"><span class="lx-board-pc lx-board-pc--b">♛</span><i class="lx-board-coord lx-board-coord--file">d</i></div><div class="lx-board-sq lx-board-sq--light" data-square="c8"><span class="lx-board-pc lx-board-pc--b">♝</span><i class="lx-board-coord lx-board-coord--file">c</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="b8"><i class="lx-board-coord lx-board-coord--file">b</i></div><div class="lx-board-sq lx-board-sq--light" data-square="a8"><span class="lx-board-pc lx-board-pc--b">♜</span><i class="lx-board-coord lx-board-coord--file">a</i></div></div>
+      <p class="lx-board-turn"><span class="lx-board-dot lx-board-dot--black"></span>Black to move</p>
+    </div>
+    <figcaption class="lx-caption"><span class="lx-inline">After 1.e4 e5 2.Qh5 Nc6 3.Bc4. Black to move.</span></figcaption>
+  </figure>
+  <div class="lx-card lx-quiz" data-phase="2"
+       data-ok="Yes. Two pieces on f7, defended once by the king, and the queen gives check when she takes: mate. 3...g6 kicks the queen off the diagonal and the game goes on. (3...Qe7 and 3...Qf6 also hold f7; the engine prefers g6 because it does it without blocking a piece.)" data-bad="Developing is right in general and wrong here, because it does not answer the check that is coming. Look at what the bishop on c4 attacks, then at what the queen on h5 attacks, and find the one square they share.">
+    <span class="lx-quiz-label">Pick one</span>
+    <div class="lx-ask-q"><p><span class="lx-inline">Black to move. What did White's last move attack, what check does White have next move, and what do you play?</span></p></div>
+    
+      <label class="lx-choice">
+        <input type="radio" name="quiz-1382994501" value="0" data-correct="1" />
+        <span><span class="lx-inline">3...g6: the bishop and the queen both aim at f7, where 4.Qxf7 would be mate; g6 attacks the queen and closes the line to f7</span></span>
+      </label>
+      <label class="lx-choice">
+        <input type="radio" name="quiz-1382994501" value="1" data-correct="0" />
+        <span><span class="lx-inline">3...Nf6: develop a piece and attack the queen</span></span>
+      </label>
+      <label class="lx-choice">
+        <input type="radio" name="quiz-1382994501" value="2" data-correct="0" />
+        <span><span class="lx-inline">3...Bc5: develop the bishop to its best square</span></span>
+      </label>
+      <label class="lx-choice">
+        <input type="radio" name="quiz-1382994501" value="3" data-correct="0" />
+        <span><span class="lx-inline">3...d6: open the bishop and defend e5</span></span>
+      </label>
+    <p class="lx-inline-fb"></p>
+  </div>
+      </div>
+      <div class="lx-gate-lock">
+        <span class="lx-gate-lock-badge"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+  <path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg></span>
+        <span class="lx-gate-lock-text">Answer the previous section to open this one</span>
+      </div>
+    </div>
+  </section>
+  <section class="lx-phase lx-phase--locked" data-phase="3" id="phase-3">
+    <div class="lx-phase-head">
+      <span class="lx-phase-badge"><span>3</span></span>
+      <h2 class="lx-phase-title"><span class="lx-inline">Before you let go of the piece: the same three looks, from their chair</span></h2>
+    </div>
+    <div class="lx-gate lx-gate--locked" data-gate="phase-3">
+      <div class="lx-gate-body" aria-hidden="true">
+  <div class="lx-prose">
+    <p><span class="lx-inline">The check is not finished when you have found a move. Play it in your head, then change chairs and ask the three questions as the opponent: what did that move just attack, what can they take now, what checks do they have. If any answer is &quot;a piece for free&quot; or &quot;a check that wins something&quot;, the move goes back and you look for another.</span></p>
+    <p><span class="lx-inline">The usual failure here is a capture or a check that <em>feels</em> strong. After 1.e4 e5 2.Nf3 Nc6 3.Bc4 Nf6, 4.Bxf7+ gives check and takes a pawn, and both feel like progress. Change chairs. After 4...Kxf7, what can White take? Nothing. What checks does White have? 5.Ng5+, and the king just steps away. White has given a bishop (3) for a pawn (1). Stockfish: -3.3 for White after 4.Bxf7+ Kxf7, a loss of 3.7 pawns against the quiet 4.d3. 4.Nxe5?? is the same mistake with the knight: 4...Nxe5, because the e5 pawn was defended all along. The right moves are the boring ones: 4.d3, 4.Nc3 and 4.O-O all keep every piece safe and stay within 0.7 of the engine's best. (Its own first choices are 4.d3 and the sharp 4.Ng5; that does not matter here. What matters is that nothing you own can be taken for free after your move.)</span></p>
+  </div>
+  <figure class="lx-figure">
+    <div class="lx-card lx-board-wrap">
+      <div class="lx-board" role="img" aria-label="Italian Game after 3...Nf6. 4.Bxf7+? is check and takes a pawn; after 4...Kxf7 White has nothing to take, no useful check, and is a bishop down for a pawn."><div class="lx-board-sq lx-board-sq--light" data-square="a8"><i class="lx-board-coord lx-board-coord--rank">8</i><span class="lx-board-pc lx-board-pc--b">♜</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="b8"></div><div class="lx-board-sq lx-board-sq--light" data-square="c8"><span class="lx-board-pc lx-board-pc--b">♝</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d8"><span class="lx-board-pc lx-board-pc--b">♛</span></div><div class="lx-board-sq lx-board-sq--light" data-square="e8"><span class="lx-board-pc lx-board-pc--b">♚</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="f8"><span class="lx-board-pc lx-board-pc--b">♝</span></div><div class="lx-board-sq lx-board-sq--light" data-square="g8"></div><div class="lx-board-sq lx-board-sq--dark" data-square="h8"><span class="lx-board-pc lx-board-pc--b">♜</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="a7"><i class="lx-board-coord lx-board-coord--rank">7</i><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="b7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="c7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="d7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="e7"></div><div class="lx-board-sq lx-board-sq--light lx-board-sq--hi" data-square="f7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="g7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="h7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="a6"><i class="lx-board-coord lx-board-coord--rank">6</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="b6"></div><div class="lx-board-sq lx-board-sq--light" data-square="c6"><span class="lx-board-pc lx-board-pc--b">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d6"></div><div class="lx-board-sq lx-board-sq--light" data-square="e6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="f6"><span class="lx-board-pc lx-board-pc--b">♞</span></div><div class="lx-board-sq lx-board-sq--light" data-square="g6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="h6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a5"><i class="lx-board-coord lx-board-coord--rank">5</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="c5"></div><div class="lx-board-sq lx-board-sq--light" data-square="d5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="e5"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="f5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="g5"></div><div class="lx-board-sq lx-board-sq--light" data-square="h5"></div><div class="lx-board-sq lx-board-sq--light" data-square="a4"><i class="lx-board-coord lx-board-coord--rank">4</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="b4"></div><div class="lx-board-sq lx-board-sq--light" data-square="c4"><span class="lx-board-pc lx-board-pc--w">♝</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d4"></div><div class="lx-board-sq lx-board-sq--light" data-square="e4"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="f4"></div><div class="lx-board-sq lx-board-sq--light" data-square="g4"></div><div class="lx-board-sq lx-board-sq--dark" data-square="h4"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a3"><i class="lx-board-coord lx-board-coord--rank">3</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b3"></div><div class="lx-board-sq lx-board-sq--dark" data-square="c3"></div><div class="lx-board-sq lx-board-sq--light" data-square="d3"></div><div class="lx-board-sq lx-board-sq--dark" data-square="e3"></div><div class="lx-board-sq lx-board-sq--light" data-square="f3"><span class="lx-board-pc lx-board-pc--w">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="g3"></div><div class="lx-board-sq lx-board-sq--light" data-square="h3"></div><div class="lx-board-sq lx-board-sq--light" data-square="a2"><i class="lx-board-coord lx-board-coord--rank">2</i><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="b2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="c2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="e2"></div><div class="lx-board-sq lx-board-sq--dark" data-square="f2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="g2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="h2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="a1"><i class="lx-board-coord lx-board-coord--rank">1</i><span class="lx-board-pc lx-board-pc--w">♜</span><i class="lx-board-coord lx-board-coord--file">a</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b1"><span class="lx-board-pc lx-board-pc--w">♞</span><i class="lx-board-coord lx-board-coord--file">b</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="c1"><span class="lx-board-pc lx-board-pc--w">♝</span><i class="lx-board-coord lx-board-coord--file">c</i></div><div class="lx-board-sq lx-board-sq--light" data-square="d1"><span class="lx-board-pc lx-board-pc--w">♛</span><i class="lx-board-coord lx-board-coord--file">d</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="e1"><span class="lx-board-pc lx-board-pc--w">♚</span><i class="lx-board-coord lx-board-coord--file">e</i></div><div class="lx-board-sq lx-board-sq--light" data-square="f1"><i class="lx-board-coord lx-board-coord--file">f</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="g1"><i class="lx-board-coord lx-board-coord--file">g</i></div><div class="lx-board-sq lx-board-sq--light" data-square="h1"><span class="lx-board-pc lx-board-pc--w">♜</span><i class="lx-board-coord lx-board-coord--file">h</i></div><svg class="lx-board-arrows" viewBox="0 0 800 800" aria-hidden="true"><line class="lx-board-arrow" x1="250.0" y1="450.0" x2="534.4" y2="165.6"/><line class="lx-board-arrow" x1="450.0" y1="50.0" x2="534.4" y2="134.4"/></svg></div>
+      <p class="lx-board-turn"><span class="lx-board-dot lx-board-dot--white"></span>White to move</p>
+    </div>
+    <figcaption class="lx-caption"><span class="lx-inline">Italian Game after 3...Nf6. 4.Bxf7+? is check and takes a pawn; after 4...Kxf7 White has nothing to take, no useful check, and is a bishop down for a pawn.</span></figcaption>
+  </figure>
+  <div class="lx-prose">
+    <p><span class="lx-inline">Now a position from the same opening a few moves on, with nothing marked. Both sides have castled. White has two tempting moves and several quiet ones; run the three looks on whatever you want to play, from Black's chair, before you answer.</span></p>
+  </div>
+  <figure class="lx-figure">
+    <div class="lx-card lx-board-wrap">
+      <div class="lx-board" role="img" aria-label="After 6...d6. White to move."><div class="lx-board-sq lx-board-sq--light" data-square="a8"><i class="lx-board-coord lx-board-coord--rank">8</i><span class="lx-board-pc lx-board-pc--b">♜</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="b8"></div><div class="lx-board-sq lx-board-sq--light" data-square="c8"><span class="lx-board-pc lx-board-pc--b">♝</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d8"><span class="lx-board-pc lx-board-pc--b">♛</span></div><div class="lx-board-sq lx-board-sq--light" data-square="e8"></div><div class="lx-board-sq lx-board-sq--dark" data-square="f8"><span class="lx-board-pc lx-board-pc--b">♜</span></div><div class="lx-board-sq lx-board-sq--light" data-square="g8"><span class="lx-board-pc lx-board-pc--b">♚</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="h8"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a7"><i class="lx-board-coord lx-board-coord--rank">7</i><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="b7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="c7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="d7"></div><div class="lx-board-sq lx-board-sq--dark" data-square="e7"><span class="lx-board-pc lx-board-pc--b">♝</span></div><div class="lx-board-sq lx-board-sq--light" data-square="f7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="g7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="h7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="a6"><i class="lx-board-coord lx-board-coord--rank">6</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="b6"></div><div class="lx-board-sq lx-board-sq--light" data-square="c6"><span class="lx-board-pc lx-board-pc--b">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d6"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="e6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="f6"><span class="lx-board-pc lx-board-pc--b">♞</span></div><div class="lx-board-sq lx-board-sq--light" data-square="g6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="h6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a5"><i class="lx-board-coord lx-board-coord--rank">5</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="c5"></div><div class="lx-board-sq lx-board-sq--light" data-square="d5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="e5"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="f5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="g5"></div><div class="lx-board-sq lx-board-sq--light" data-square="h5"></div><div class="lx-board-sq lx-board-sq--light" data-square="a4"><i class="lx-board-coord lx-board-coord--rank">4</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="b4"></div><div class="lx-board-sq lx-board-sq--light" data-square="c4"><span class="lx-board-pc lx-board-pc--w">♝</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d4"></div><div class="lx-board-sq lx-board-sq--light" data-square="e4"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="f4"></div><div class="lx-board-sq lx-board-sq--light" data-square="g4"></div><div class="lx-board-sq lx-board-sq--dark" data-square="h4"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a3"><i class="lx-board-coord lx-board-coord--rank">3</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b3"></div><div class="lx-board-sq lx-board-sq--dark" data-square="c3"><span class="lx-board-pc lx-board-pc--w">♞</span></div><div class="lx-board-sq lx-board-sq--light" data-square="d3"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="e3"></div><div class="lx-board-sq lx-board-sq--light" data-square="f3"><span class="lx-board-pc lx-board-pc--w">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="g3"></div><div class="lx-board-sq lx-board-sq--light" data-square="h3"></div><div class="lx-board-sq lx-board-sq--light" data-square="a2"><i class="lx-board-coord lx-board-coord--rank">2</i><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="b2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="c2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d2"></div><div class="lx-board-sq lx-board-sq--light" data-square="e2"></div><div class="lx-board-sq lx-board-sq--dark" data-square="f2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="g2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="h2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="a1"><i class="lx-board-coord lx-board-coord--rank">1</i><span class="lx-board-pc lx-board-pc--w">♜</span><i class="lx-board-coord lx-board-coord--file">a</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b1"><i class="lx-board-coord lx-board-coord--file">b</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="c1"><span class="lx-board-pc lx-board-pc--w">♝</span><i class="lx-board-coord lx-board-coord--file">c</i></div><div class="lx-board-sq lx-board-sq--light" data-square="d1"><span class="lx-board-pc lx-board-pc--w">♛</span><i class="lx-board-coord lx-board-coord--file">d</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="e1"><i class="lx-board-coord lx-board-coord--file">e</i></div><div class="lx-board-sq lx-board-sq--light" data-square="f1"><span class="lx-board-pc lx-board-pc--w">♜</span><i class="lx-board-coord lx-board-coord--file">f</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="g1"><span class="lx-board-pc lx-board-pc--w">♚</span><i class="lx-board-coord lx-board-coord--file">g</i></div><div class="lx-board-sq lx-board-sq--light" data-square="h1"><i class="lx-board-coord lx-board-coord--file">h</i></div></div>
+      <p class="lx-board-turn"><span class="lx-board-dot lx-board-dot--white"></span>White to move</p>
+    </div>
+    <figcaption class="lx-caption"><span class="lx-inline">After 6...d6. White to move.</span></figcaption>
+  </figure>
+  <div class="lx-card lx-ask lx-recall"
+       data-concept-id="blunder-check"
+       data-phase="3"
+       data-summary="Any move that hangs nothing is right: 7.a4 (the engine's best, +0.4), 7.a3, 7.h3, 7.Bg5, 7.Be3 and 7.Nd5 are all within 0.6 of it at depth 20. The two tempting moves fail the look from Black's chair. 7.Nxe5?? takes a pawn that is defended twice (the d6 pawn and the c6 knight) while the knight landing on e5 is defended by nothing: 7...dxe5, a knight for a pawn, -4.0 for White (cp_loss 429). 7.Bxf7+?? is check and takes a pawn, but f7 is defended by the rook on f8 as well as the king: 7...Rxf7, a bishop for a pawn, -4.2 (cp_loss 451).
+
+A full answer names a safe move and rejects at least one of the two grabs by giving the recapture and the values (a piece worth 3 for a pawn worth 1). A safe move with no reasoning, or &quot;I just developed&quot;, is partial. Naming 7.Nxe5 or 7.Bxf7+ as the move scores low whatever the reasoning: the check was not run from Black's side.
+"
+       data-ok="Yes. Change chairs after the grab: 7.Nxe5 dxe5 and 7.Bxf7+ Rxf7 both leave White a piece down for a pawn. The quiet move keeps everything."
+       data-bad="It takes something, and it is still a blunder. Play it in your head, then ask from Black's chair: what can Black take now? Count what defends the square you just landed on.">
+    <span class="lx-ask-label"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 14a2 2 0 0 0 2-2V8h-2" />
+  <path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" />
+  <path d="M8 14a2 2 0 0 0 2-2V8H8" /></svg> Explain in your own words</span>
+    <div class="lx-ask-q"><p><span class="lx-inline">White to move. What do you play, and why? Name at least one tempting move you rejected, and what the look from Black's chair told you about it.</span></p></div>
+
+    <div class="lx-ask-online">
+      <textarea class="lx-answer" placeholder="Write your explanation…"></textarea>
+      <div class="lx-ask-tools">
+        <button type="button" class="lx-btn lx-btn--primary" data-action="validate">Check</button>
+        <button type="button" class="lx-btn lx-btn--secondary lx-mic" data-action="mic" hidden>🎙 Dictate</button>
+        <select class="lx-lang" data-role="lang" hidden>
+          <option value="pt-BR">Português</option>
+          <option value="en-US" selected>English</option>
+        </select>
+        <span class="lx-mic-hint"></span>
+      </div>
+      <div class="lx-verdict">
+        <div class="lx-score">
+          <span class="lx-score-num">—</span><span class="lx-score-of">/100</span>
+          <span class="lx-score-word"></span>
+        </div>
+        <div class="lx-bar"><div class="lx-bar-fill"></div></div>
+        <p class="lx-feedback"></p>
+        <ul class="lx-misses"></ul>
+      </div>
+    </div>
+
+    <div class="lx-fallback">
+      <p class="lx-fallback-note">Server is down — answering by multiple choice.</p>
+      
+        <label class="lx-choice">
+          <input type="radio" name="fb-blunder-check" value="0" data-correct="1" />
+          <span><span class="lx-inline">7.h3 (or any quiet move such as a3, Bg5, Be3): nothing of White's can be taken afterwards, and both grabs lose a piece for a pawn</span></span>
+        </label>
+        <label class="lx-choice">
+          <input type="radio" name="fb-blunder-check" value="1" data-correct="0" />
+          <span><span class="lx-inline">7.Nxe5: win a pawn in the centre</span></span>
+        </label>
+        <label class="lx-choice">
+          <input type="radio" name="fb-blunder-check" value="2" data-correct="0" />
+          <span><span class="lx-inline">7.Bxf7+: check and a pawn, and Black's king is dragged into the open</span></span>
+        </label>
+      <p class="lx-inline-fb"></p>
+    </div>
+  </div>
+      </div>
+      <div class="lx-gate-lock">
+        <span class="lx-gate-lock-badge"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+  <path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg></span>
+        <span class="lx-gate-lock-text">Answer the previous section to open this one</span>
+      </div>
+    </div>
+  </section>
+<div class="lx-gate lx-gate--locked" data-gate="teachback">
+      <div class="lx-gate-body" aria-hidden="true">
+  <div class="lx-card lx-ask lx-teachback" data-concepts="hanging-piece,last-move-threat,blunder-check">
+    <span class="lx-ask-label"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" />
+  <path d="M22 10v6" />
+  <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" /></svg> Teach it back</span>
+    <div class="lx-ask-q"><p><span class="lx-inline">Explain the check before every move to a friend who has just learned how the pieces move. Give the three questions in order, say what a hanging piece is and why 'a knight for a pawn' is a loss, and walk through one position from this lesson from both sides of the board: the look before your move, and the look from the opponent's chair after it.</span></p></div>
+    <div class="lx-teachback-hint"><p><span class="lx-inline">Three questions on the position in front of you; then the same three after your move, from their chair.</span></p></div>
+
+    <p class="lx-teachback-offline">
+      This part needs the server. Without it the lesson cannot be recorded — and an invented score would poison the review schedule.
+    </p>
+
+    <div class="lx-ask-online">
+      <textarea class="lx-answer lx-answer--large" placeholder="Explain the whole concept, in your own words…"></textarea>
+      <div class="lx-ask-tools">
+        <button type="button" class="lx-btn lx-btn--primary" data-action="teachback">Finish the lesson</button>
+        <button type="button" class="lx-btn lx-btn--secondary lx-mic" data-action="mic" hidden>🎙 Dictate</button>
+        <select class="lx-lang" data-role="lang" hidden>
+          <option value="pt-BR">Português</option>
+          <option value="en-US" selected>English</option>
+        </select>
+        <span class="lx-mic-hint"></span>
+      </div>
+      <div class="lx-verdict">
+        <div class="lx-score">
+          <span class="lx-score-num">—</span><span class="lx-score-of">/100</span>
+          <span class="lx-score-word"></span>
+        </div>
+        <div class="lx-bar"><div class="lx-bar-fill"></div></div>
+        <p class="lx-feedback"></p>
+        <ul class="lx-misses"></ul>
+        <div class="lx-concepts"></div>
+      </div>
+    </div>
+  </div>
+      </div>
+      <div class="lx-gate-lock">
+        <span class="lx-gate-lock-badge"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+  <path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg></span>
+        <span class="lx-gate-lock-text">Finish the sections above to open this</span>
+      </div>
+    </div>
+  <div class="lx-done">
+    <div class="lx-card lx-next-review">
+      <span class="lx-next-review-label">Next review</span>
+      <span class="lx-next-review-date">—</span>
+      <span class="lx-next-review-note"></span>
+    </div>
+  </div>
+<div class="lx-gate lx-gate--locked" data-gate="flashcards">
+      <div class="lx-gate-body" aria-hidden="true">
+  <section class="lx-flashcards">
+    <p class="lx-flash-title"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" />
+  <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" />
+  <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" /></svg> <span class="lx-inline">Before every move</span></p>
+    <div class="lx-flash-grid">
+      <details class="lx-card lx-flash">
+        <summary data-show="show" data-hide="hide"><span class="lx-inline">A piece is <em>hanging</em> when...</span></summary>
+        <p class="lx-flash-back"><span class="lx-inline">...it is attacked and nothing defends it, or a pawn attacks it. Whoever takes it gets it for free, or for a pawn.</span></p>
+      </details>
+      <details class="lx-card lx-flash">
+        <summary data-show="show" data-hide="hide"><span class="lx-inline">Piece values</span></summary>
+        <p class="lx-flash-back"><span class="lx-inline">Pawn 1, knight 3, bishop 3, rook 5, queen 9. A knight for a pawn is minus two, and under 1000 minus two is usually the game.</span></p>
+      </details>
+      <details class="lx-card lx-flash">
+        <summary data-show="show" data-hide="hide"><span class="lx-inline">Question 1, before every move</span></summary>
+        <p class="lx-flash-back"><span class="lx-inline">What did their last move attack? Look at the piece that just moved and every square it now reaches.</span></p>
+      </details>
+      <details class="lx-card lx-flash">
+        <summary data-show="show" data-hide="hide"><span class="lx-inline">Question 2, before every move</span></summary>
+        <p class="lx-flash-back"><span class="lx-inline">What can I take, and is it free? Every capture on the board, and what defends the square.</span></p>
+      </details>
+      <details class="lx-card lx-flash">
+        <summary data-show="show" data-hide="hide"><span class="lx-inline">Question 3, and then the switch</span></summary>
+        <p class="lx-flash-back"><span class="lx-inline">What checks are there, mine and theirs? Then play your move in your head and ask all three again from their chair: what did I just attack, what can they take, what checks do they have.</span></p>
+      </details>
+    </div>
+  </section>
+      </div>
+      <div class="lx-gate-lock">
+        <span class="lx-gate-lock-badge"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+  <path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg></span>
+        <span class="lx-gate-lock-text">Finish the lesson to open the review</span>
+      </div>
+    </div>
+  <div class="lx-card lx-source">
+    <p class="lx-source-label"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v16" />
+  <path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" /></svg> Primary source</p>
+    <p class="lx-source-title"><a class="lx-link" href="https://www.stappenmethode.nl/en/" rel="noopener noreferrer" target="_blank"><span class="lx-inline">Learning Chess, Step 1 (the Steps Method) — Brunia &amp; van Wijgerden: attack, capture and defence</span></a></p>
+    <p class="lx-source-note"><span class="lx-inline">The three looks are Step 1's lessons on attacking, capturing and defending, with the checks question from <em>Bobby Fischer Teaches Chess</em> (Fischer, Margulies, Mosenfelder), both Tier 1 in RESOURCES.md. John Bartholomew's <em>Chess Fundamentals #1: Undefended Pieces</em> (Tier 2) is the same idea in twenty minutes. Every position here is from a typical beginner 1.e4 e5 game, and every move, evaluation and mate was checked with Stockfish through <code class="lx-code">scripts/engine_check.py</code> at depth 20 (mates at depth 24) before it was written down; the checks are recorded as comments beside each position in the lesson's source file.
+</span></p>
+  </div>
+  </div>
+
+  <footer class="lx-lesson-foot">
+    <a class="lx-btn lx-btn--outline" href="../reference/my-learning.html">Dashboard</a>
+    <a class="lx-btn lx-btn--outline" href="../reference/glossary.html">Glossary</a>
+    <button type="button" class="lx-btn lx-btn--ghost" data-action="restart"
+      title="Clears the answers kept in this browser and starts again">Start over</button>
+  </footer>
+</div>
+
+<script type="application/json" id="lx-config">{"lesson":"0001-blunder-check","concepts":["hanging-piece","last-move-threat","blunder-check"],"phases":["1","2","3"],"strings":{"recall.ok":"Correct.","recall.bad":"Not that one.","mic.dictate":"Dictate","mic.lang":"en-US","mic.stop":"Stop","mic.listening":"listening…","mic.failed":"Could not transcribe just now. You can type your answer.","score.top":"mastered","score.good":"solid","score.mid":"partial","score.bad":"not understood","score.error":"error","run.validating":"Checking…","run.grading":"Grading…","run.needAnswer":"Write an answer before checking.","run.needExplain":"Write your explanation before finishing.","run.validateFailed":"Could not check that just now. Your answer is still here.","run.finishFailed":"Could not finish just now. Your explanation is still here.","run.serverSaid":"the server replied","run.notScheduled":"not scheduled","run.notSaved":"The lesson was graded, but the progress could not be saved.","run.scheduled":"concept(s) scheduled by SM-2.","run.restart":"Start over","run.restartTitle":"Clears the answers kept in this browser and starts again","run.teachbackOf":"Final teach-back for lesson"}}</script>
+<script src="../assets/learno.js" defer></script>
+</body>
+</html>
