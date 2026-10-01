@@ -117,13 +117,13 @@
   <div class="lx-card lx-ask lx-recall"
        data-concept-id="sandbox-hanging-piece"
        data-phase="1"
-       data-summary="4.dxe5 wins the e5 pawn because after 4...Bxf3 5.Qxf3 dxe5 White is a pawn up with better development; the bishop on g4 is pinned to the queen so the knight on f3 is not really defending e5."
-       data-ok="Yes. dxe5 wins a pawn because the recapture is tied up by the pin."
-       data-bad="Look again at what defends e5, and at whether that defender can move.">
+       data-summary="4.dxe5 attacks the d6 pawn and forces 4...Bxf3 (otherwise Black just loses a pawn), and after 5.Qxf3 dxe5 material is level but White has the bishop pair and a lead in development. Engine at depth 16: 4.Be3 and 4.dxe5 are both good (+1.1 and +0.9); the point is the forced exchange, not a free pawn."
+       data-ok="Yes. Black must give up the bishop or lose a pawn; White keeps the two bishops."
+       data-bad="Count the pawns after 4...Bxf3 5.Qxf3 dxe5 before deciding what White won.">
     <span class="lx-ask-label"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 14a2 2 0 0 0 2-2V8h-2" />
   <path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" />
   <path d="M8 14a2 2 0 0 0 2-2V8H8" /></svg> Explain in your own words</span>
-    <div class="lx-ask-q"><p><span class="lx-inline">White to move. Which pawn can White win right now, and why does the pin matter?</span></p></div>
+    <div class="lx-ask-q"><p><span class="lx-inline">White to move. What does 4.dxe5 force, and what does White get out of it?</span></p></div>
 
     <div class="lx-ask-online">
       <textarea class="lx-answer" placeholder="Write your explanation…"></textarea>
@@ -152,15 +152,15 @@
       
         <label class="lx-choice">
           <input type="radio" name="fb-sandbox-hanging-piece" value="0" data-correct="1" />
-          <span><span class="lx-inline">The e5 pawn, with 4.dxe5</span></span>
+          <span><span class="lx-inline">It forces ...Bxf3 and gives White the bishop pair</span></span>
         </label>
         <label class="lx-choice">
           <input type="radio" name="fb-sandbox-hanging-piece" value="1" data-correct="0" />
-          <span><span class="lx-inline">The g4 bishop, with 4.Qxg4</span></span>
+          <span><span class="lx-inline">It wins the e5 pawn for free</span></span>
         </label>
         <label class="lx-choice">
           <input type="radio" name="fb-sandbox-hanging-piece" value="2" data-correct="0" />
-          <span><span class="lx-inline">Nothing yet; White should castle</span></span>
+          <span><span class="lx-inline">Nothing; White should castle first</span></span>
         </label>
       <p class="lx-inline-fb"></p>
     </div>

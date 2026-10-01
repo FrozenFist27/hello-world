@@ -1,0 +1,92 @@
+meta:
+  title: "Where you stand"
+  subtitle: "Three positions and no lesson: your answers decide where the lessons start."
+
+analogy:
+  label: "Think of the first visit to a physiotherapist"
+  text: |
+    Before they prescribe a single exercise they ask you to bend forward, reach up, and stand on one leg. Three small movements, no judgement, and they are not checking whether you do them perfectly: each one tells them something different about what to work on first. A plan written before that visit would be a plan for somebody else.
+  bridge: |
+    In chess the same first visit is called a **placement**: three positions, one move each, and the reasons you give are worth more than the moves. There is nothing to study before this page. Just answer honestly, without an engine and without hints.
+
+p1:
+  title: "What did their last move leave behind?"
+  body: |
+    A club game out of your own opening, 1.e4. Both sides have developed, Black put a bishop on g4 to pin your knight, you nudged it with 7.h3, and Black replied by castling.
+
+    Say your move and, in one or two sentences, why.
+  caption: "Italian Game after 7...O-O. White to move."
+  # verified: pgn trace of the move list @ depth 16 — 7...O-O cp_loss 297 (engine preferred 7...Bh5);
+  # verified: eval --multipv 3 @ depth 20 — hxg4 +357, b4 +78, a4 +77;
+  # verified: move hxg4 cp_loss 0 (best), Bg5 cp_loss 308, Nbd2 285, Be3 337 @ depth 20
+  fen: "r2q1rk1/ppp2ppp/2np1n2/2b1p3/2B1P1b1/2PP1N1P/PP3PP1/RNBQ1RK1 w - - 1 8"
+  question: "White to move. What do you play, and why? Give the move and the reason."
+  summary: |
+    Answer: 8.hxg4. Reason: Black's last move (castling) ignored the threat that 7.h3 made to the bishop on g4. The bishop is attacked by the pawn and defended only by the knight on f6, so 8.hxg4 Nxg4 wins a bishop for a pawn. Stockfish at depth 20: +3.6 for 8.hxg4 and under +0.8 for every other move; 8.Bg5 loses 308 centipawns, 8.Nbd2 285, 8.Be3 337.
+
+    A full answer names 8.hxg4 and says the bishop was left attacked (hanging, en prise, not properly defended) and that after the recapture ...Nxg4 White is still a piece for a pawn ahead. A correct move with no reason or a vague one ("it wins material") is partial. A reasonable-looking non-capture (8.Bg5, 8.Nbd2, 8.Be3, 8.Qb3) scores low even with good positional reasoning, because it misses a free piece; that gap is exactly what this phase measures.
+  fallback:
+    options:
+      - { text: "8.hxg4 — the bishop was left attacked by the h-pawn and only a knight can recapture: a piece for a pawn", correct: true }
+      - { text: "8.Bg5 — pin the f6 knight to the queen, the same idea Black used against you", correct: false }
+      - { text: "8.Nbd2 — finish developing before starting anything", correct: false }
+    ok: "Yes. A piece for a pawn, because Black's last move did not answer the threat you made the move before."
+    bad: "That is a sensible move in a quiet position, but this position is not quiet. Look at what your seventh move attacked and ask whether Black ever dealt with it."
+
+p2:
+  title: "Two moves ahead"
+  body: |
+    Paris, 1858. Paul Morphy, playing White in a box at the opera, has given up a knight and then a rook for a knight to reach this position. Count the material: White is a piece down. Black's king is still in the centre, and the attack has to land now or Morphy simply loses.
+
+    Find White's move and say what happens after Black's best reply.
+  caption: "Morphy – Duke of Brunswick and Count Isouard, Paris 1858, after 15...Nxd7. White to move."
+  # verified: FEN derived with python-chess from the full game score (1.e4 e5 2.Nf3 d6 ... 15.Bxd7+ Nxd7), board valid;
+  # verified: mate @ depth 24 — forced mate in 2, pv 16.Qb8+ Nxb8 17.Rd8#; line "Qb8+ Nxb8 Rd8#" @ depth 20 — game_over, 1-0;
+  # verified: move Rxd7 → 0 cp after 16...Kxd7 (only checks follow), Qa4 → -111 after 16...Bc5, Qb7 → +345 (misses the mate) @ depth 20
+  fen: "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 0 16"
+  question: "White to move. What do you play, and why? Name the first move and what follows after Black's best answer."
+  summary: |
+    Answer: 16.Qb8+! Nxb8 17.Rd8#, a forced mate in two (Stockfish `mate` at depth 24; the final position is checkmate). Mechanism: the knight on d7 is the only piece standing between the d1 rook and d8. 16.Qb8+ is a check the king cannot step out of (e7 is covered by the bishop on g5, d7 is occupied by its own knight), so the knight must take, and that drags it off the d-file: a deflection. 17.Rd8 is then mate because the same bishop on g5 protects d8 and still covers e7, and nothing of Black's can capture or block.
+
+    A full answer names 16.Qb8+, states that the knight is forced to capture, and gives 17.Rd8 mate with at least one reason it is mate (the bishop guarding d8, or the king having no squares). "Queen sacrifice, then the rook mates on d8" is a good answer. 16.Qb7 or 16.Qc3 (both about +3.5, still winning) show attacking sense but miss the two-move finish: partial. 16.Rxd7 (0.00 after 16...Kxd7, White has only checks) or 16.Qa4 (-1.1 after 16...Bc5) are refuted: low.
+  fallback:
+    options:
+      - { text: "16.Qb8+ — the knight must take, and with it off the d-file 17.Rd8 is mate", correct: true }
+      - { text: "16.Rxd7 — take the knight the rook has been attacking since move 14", correct: false }
+      - { text: "16.Qa4 — pin the knight to the king and win it next move", correct: false }
+    ok: "Yes. The queen is given away to drag the only piece off the d-file; the bishop on g5 guards d8 and e7, and the rook finishes."
+    bad: "Winning the knight is not the point: White is a piece down and attacking a king that never castled. Taking or pinning the knight lets Black's king walk out, or Black untangles with ...Bc5. Ask which single piece keeps the d1 rook off the back rank, and whether it can be made to leave."
+
+p3:
+  title: "The last pawn"
+  body: |
+    Everything else has been traded. White has one pawn left and a king in front of it; Black's king stands in the way. White has six legal moves and exactly one of them wins. The other five draw.
+
+    Which one, and what is the idea behind it?
+  caption: "King and pawn against king. White to move."
+  # verified: every legal move analysed @ depth 30 — Ke5 forced win (mate in 15); Kc6, Kc5, Kd4, Kc4 and e5 all 0.00;
+  # verified: eval after 1.e5 @ depth 30 — 1...Kd7 0.00 (2.e6+ Ke8 3.Kd6 Kd8 4.e7+ Ke8 5.Kc6 Kxe7); after 1.Kc6 — 1...Ke6 0.00 (2.e5 Kxe5);
+  # verified: line "Ke5 Kd7 Kf6 Ke8 Ke6 Kd8 Kf7" @ depth 24 — every White move keeps a forced mate
+  fen: "8/4k3/8/3K4/4P3/8/8/8 w - - 0 1"
+  question: "White to move. Which move wins, and why? Give the move and the idea in a sentence or two."
+  summary: |
+    Answer: 1.Ke5!, the only winning move. Stockfish at depth 30, every legal move checked: Ke5 is a forced win (mate in 15); Kc6, Kc5, Kd4, Kc4 and e5 are all 0.00. Idea: the opposition. After 1.Ke5 the kings face each other with one square between them and Black has to move, so Black must step aside (1...Kd7 2.Kf6, 1...Kf7 2.Kd6, 1...Kf8 2.Kf6) and White's king reaches the sixth rank in front of its pawn, which always wins: the pawn walks home escorted by the king. Pushing 1.e5? draws: 1...Kd7! 2.e6+ Ke8 3.Kd6 Kd8 4.e7+ Ke8 5.Kc6 Kxe7 and the pawn is gone. Going round with 1.Kc6? draws: 1...Ke6! 2.e5 Kxe5. The king must stay in front of the pawn and win the opposition before the pawn advances.
+
+    A full answer names 1.Ke5 and explains it with "the opposition" or an equivalent description (kings face to face, Black must give way, the white king gets ahead of its pawn). Saying that the pawn must not move yet, or that the king goes first, is the core idea. 1.e5 "to push the passed pawn" or 1.Kc6 "to head for the queening square" are the textbook mistakes and score low even when confidently argued. Naming Ke5 "because the king should lead" without any mention of the opposition or of Black having to give way is partial.
+  fallback:
+    options:
+      - { text: "1.Ke5 — stand in front of the pawn, face Black's king, and make it give way", correct: true }
+      - { text: "1.e5 — push the passed pawn while the king escorts it", correct: false }
+      - { text: "1.Kc6 — go round Black's king toward the queening square", correct: false }
+    ok: "Yes. Kings face to face and Black to move: Black has to step aside, and the white king walks the pawn home."
+    bad: "That lets Black's king settle in front of the pawn or simply take it, and the game is a draw. The question is which king has to give way first, and what White's king must do before the pawn moves."
+
+close:
+  text: |
+    That is the whole placement. There is no score on this page and nothing to pass: the coach reads your three answers, the moves and above all the reasons, and places you in a band. Then comes the interview (your rating and where it comes from, how your games are usually lost, what you have already studied), and the real lessons start from where you actually are, not from page one of a book.
+
+source:
+  title: "Where the positions come from"
+  url: "https://en.wikipedia.org/wiki/Opera_Game"
+  note: |
+    Position 1 was composed for this placement from a typical club game in the Italian Game (1.e4 e5 2.Nf3 Nc6 3.Bc4 Nf6 4.d3 Bc5 5.O-O d6 6.c3 Bg4 7.h3 O-O). Position 2 is Morphy – Duke of Brunswick and Count Isouard, Paris 1858 (the Opera Game), after 15...Nxd7. Position 3 is the first king-and-pawn ending of every endgame primer (Silman's Complete Endgame Course, Part One; Lichess Practice, "Key squares" and "Opposition"). Every position and every claim on this page was checked with Stockfish through `scripts/engine_check.py` before it was written down.

@@ -1,0 +1,44 @@
+{
+  "id": "0000-placement",
+  "tag": "Placement",
+  "icon": "compass",
+  "title": "@meta.title",
+  "subtitle": "@meta.subtitle",
+  "concepts": ["placement-hanging-piece", "placement-two-move-tactic", "placement-basic-endgame"],
+  "blocks": [
+    { "component": "analogy",
+      "props": { "label": "@analogy.label", "text": "@analogy.text", "bridge": "@analogy.bridge" } },
+
+    { "component": "phase", "props": { "id": "1", "title": "@p1.title" },
+      "children": [
+        { "component": "prose", "props": { "text": "@p1.body" } },
+        { "component": "board", "props": { "fen": "@p1.fen", "caption": "@p1.caption" } },
+        { "component": "recall",
+          "props": { "conceptId": "placement-hanging-piece", "phase": "1",
+                     "question": "@p1.question", "summary": "@p1.summary", "fallback": "@p1.fallback" } }
+      ] },
+
+    { "component": "phase", "props": { "id": "2", "title": "@p2.title" },
+      "children": [
+        { "component": "prose", "props": { "text": "@p2.body" } },
+        { "component": "board", "props": { "fen": "@p2.fen", "caption": "@p2.caption" } },
+        { "component": "recall",
+          "props": { "conceptId": "placement-two-move-tactic", "phase": "2",
+                     "question": "@p2.question", "summary": "@p2.summary", "fallback": "@p2.fallback" } }
+      ] },
+
+    { "component": "phase", "props": { "id": "3", "title": "@p3.title" },
+      "children": [
+        { "component": "prose", "props": { "text": "@p3.body" } },
+        { "component": "board", "props": { "fen": "@p3.fen", "caption": "@p3.caption" } },
+        { "component": "recall",
+          "props": { "conceptId": "placement-basic-endgame", "phase": "3",
+                     "question": "@p3.question", "summary": "@p3.summary", "fallback": "@p3.fallback" } }
+      ] },
+
+    { "component": "prose", "props": { "text": "@close.text" } },
+
+    { "component": "source",
+      "props": { "title": "@source.title", "url": "@source.url", "note": "@source.note" } }
+  ]
+}

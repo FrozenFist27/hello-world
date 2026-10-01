@@ -14,15 +14,15 @@ p1:
   fen: "rn1qkbnr/ppp2ppp/3p4/4p3/3PP1b1/5N2/PPP2PPP/RNBQKB1R w KQkq - 1 4"
   highlight: ["e5", "g4"]
   arrows: ["d4e5"]
-  question: "White to move. Which pawn can White win right now, and why does the pin matter?"
-  summary: "4.dxe5 wins the e5 pawn because after 4...Bxf3 5.Qxf3 dxe5 White is a pawn up with better development; the bishop on g4 is pinned to the queen so the knight on f3 is not really defending e5."
+  question: "White to move. What does 4.dxe5 force, and what does White get out of it?"
+  summary: "4.dxe5 attacks the d6 pawn and forces 4...Bxf3 (otherwise Black just loses a pawn), and after 5.Qxf3 dxe5 material is level but White has the bishop pair and a lead in development. Engine at depth 16: 4.Be3 and 4.dxe5 are both good (+1.1 and +0.9); the point is the forced exchange, not a free pawn."
   fallback:
     options:
-      - { text: "The e5 pawn, with 4.dxe5", correct: true }
-      - { text: "The g4 bishop, with 4.Qxg4", correct: false }
-      - { text: "Nothing yet; White should castle", correct: false }
-    ok: "Yes. dxe5 wins a pawn because the recapture is tied up by the pin."
-    bad: "Look again at what defends e5, and at whether that defender can move."
+      - { text: "It forces ...Bxf3 and gives White the bishop pair", correct: true }
+      - { text: "It wins the e5 pawn for free", correct: false }
+      - { text: "Nothing; White should castle first", correct: false }
+    ok: "Yes. Black must give up the bishop or lose a pawn; White keeps the two bishops."
+    bad: "Count the pawns after 4...Bxf3 5.Qxf3 dxe5 before deciding what White won."
 
 p2:
   caption: "The same position from Black's side (flip: true)"
