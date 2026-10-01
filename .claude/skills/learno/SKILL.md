@@ -22,3 +22,12 @@ opens this repo at its root, so:
    `cd chess-study && node bin/learno.js status | due | misconceptions | lesson <id>` yourself.
    Never assert a score or a due review from memory.
 4. The learner may not be technical: never ask them to run a command, run it yourself.
+5. **Chess content is designed by the `chess-master` agent, not by you.** Keep the tutor
+   loop (interview, session opening, grading, close-out, NEXT.md, learning records) and
+   delegate everything about *what* to teach and *how* in chess to the agent: the
+   diagnosis and placement, the verdict proposal, the source shortlist, the curriculum
+   patterns in MISSION.md, and every lesson, review and project in `chess-study/`. Spawn
+   it with the mission, NOTES.md, the latest learning records, the due concepts and the
+   per-section scores it needs, and let it write the files. It verifies every position
+   with Stockfish (`scripts/engine_check.py`) and renders boards with the `board`
+   component. You then build nothing yourself: open what it built, run the session.

@@ -24,8 +24,9 @@ build, which is what keeps the vocabulary meaningful rather than a suggestion.
 | `source` | the primary source the lesson stands on | `title: string, url: string?, note: string?` | core |
 | `table` | a data table, with a header and a caption | `headers: array<string>, rows: array<array<string>>, caption: string?` | core |
 | `teachback` | the closing explanation that ends the lesson and feeds spaced review | `question: string, conceptIds: array<string>, hint: string?` | core |
+| `board` | a chess position from FEN, with optional highlighted squares and arrows | `fen: string, caption: string?, highlight: array<string>?, arrows: array<string>?, flip: bool?, turn: bool?` | local |
 
-**15 components** — 15 core, 0 local.
+**16 components** — 15 core, 1 local.
 
 `core/` is upstream's. `local/` belongs to this fork and wins on a name
 collision, so a component can be overridden without editing an upstream file.

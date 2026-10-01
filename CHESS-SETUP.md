@@ -76,6 +76,19 @@ opens with what is due. The dashboard is at http://localhost:9990 while the loca
 
 Commit `chess-study/` as you go. The lessons, your answers, and `learno.db` are your progress.
 
+**The lessons are designed by a chess master, not by the generic tutor.** `.claude/agents/chess-master.md`
+is a master-strength coach persona that diagnoses your level, proposes a winnable verdict, picks
+canonical sources by rating band, sketches the curriculum as patterns, and writes every lesson, review
+and project. The learno tutor keeps the session loop (interview, grading, scheduling, close-out) and
+delegates all chess content to it. Two tools back the master:
+
+- `scripts/engine_check.py` verifies every position, move, line and mate with Stockfish before it
+  goes into a lesson (`mate`, `move`, `line`, `eval`, `pgn` subcommands; JSON out). Nothing is taught
+  from memory.
+- `chess-study/components/local/board.js` is a learno component that renders a FEN as a board with
+  highlighted squares and arrows, in light and dark mode, so lessons show positions instead of
+  describing them. Props: `fen`, `caption`, `highlight`, `arrows`, `flip`, `turn`.
+
 ## Layout
 
 ```
@@ -88,8 +101,10 @@ Commit `chess-study/` as you go. The lessons, your answers, and `learno.db` are 
   settings.json            registers the hooks above
 .mcp.json                  the `chess` MCP server (tintins) for game review and puzzles
 setup-chess.sh             one-shot, idempotent installer for everything
+scripts/engine_check.py    Stockfish verification helper used when authoring lessons
+.claude/agents/chess-master.md  the coach persona that designs the curriculum and lessons
 plugins/chess-coach/       vendored engine, coach, renderer, personas, tests
-chess-study/               learno engine + your study (lessons, reviews, learno.db)
+chess-study/               learno engine + your study (lessons, reviews, learno.db); components/local/board.js adds the chessboard
 tools/                     gitignored; tintins-chess-analysis checkout lives here
 ```
 

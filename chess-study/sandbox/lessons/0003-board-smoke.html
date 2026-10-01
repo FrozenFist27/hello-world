@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sandbox — board component smoke test</title>
+<link rel="stylesheet" href="../assets/learno.css" />
+<link rel="stylesheet" href="../assets/components.css" />
+<script>(function(){try{var d=document.documentElement,t=localStorage.getItem('lx-theme'),a=localStorage.getItem('lx-accent');if(t&&t!=='auto')d.setAttribute('data-theme',t);if(a&&a!=='azul')d.setAttribute('data-accent',a)}catch(e){}})()</script>
+</head>
+<body class="lx-shell" data-lesson="0003-board-smoke">
+
+
+<!-- Shared arrowhead. Authored diagrams reference #lx-arrow and never carry
+     their own marker definition. -->
+<svg class="lx-defs" aria-hidden="true">
+  <defs>
+    <marker id="lx-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="lx-arrowhead" d="M 0 0 L 10 5 L 0 10 z" />
+    </marker>
+  </defs>
+</svg>
+
+  <nav class="lx-topbar">
+    <a class="lx-topbar-home" href="../" title="Go to the dashboard">
+      <svg class="lx-icon-svg lx-topbar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
+  <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
+      <span>learno</span>
+    </a>
+    <div class="lx-topbar-right">
+      <a class="lx-topbar-link" href="../reference/library.html" title="Library">
+        <svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 6 4 14" />
+  <path d="M12 6v14" />
+  <path d="M8 8v12" />
+  <path d="M4 4v16" /></svg>
+        <span>Library</span>
+      </a>
+      <details class="lx-settings">
+      <summary class="lx-settings-btn" title="Settings" aria-label="Settings" role="button">
+        <svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
+  <circle cx="12" cy="12" r="3" /></svg>
+      </summary>
+      <div class="lx-settings-panel">
+        <div class="lx-settings-group">
+          <p class="lx-settings-label">Theme</p>
+          <div class="lx-settings-row">
+            <button type="button" class="lx-settings-opt" data-theme-set="light" title="Light"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4" />
+  <path d="M12 2v2" />
+  <path d="M12 20v2" />
+  <path d="m4.93 4.93 1.41 1.41" />
+  <path d="m17.66 17.66 1.41 1.41" />
+  <path d="M2 12h2" />
+  <path d="M20 12h2" />
+  <path d="m6.34 17.66-1.41 1.41" />
+  <path d="m19.07 4.93-1.41 1.41" /></svg></button>
+            <button type="button" class="lx-settings-opt" data-theme-set="auto" title="Follow the system"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2" />
+  <line x1="8" x2="16" y1="21" y2="21" />
+  <line x1="12" x2="12" y1="17" y2="21" /></svg></button>
+            <button type="button" class="lx-settings-opt" data-theme-set="dark" title="Dark"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" /></svg></button>
+          </div>
+        </div>
+        <div class="lx-settings-group">
+          <p class="lx-settings-label">Accent colour</p>
+          <div class="lx-settings-row">
+            <button type="button" class="lx-settings-opt" data-accent-set="azul" title="Blue"><span class="lx-settings-dot lx-settings-dot--azul"></span>Blue</button>
+            <button type="button" class="lx-settings-opt" data-accent-set="roxo" title="Purple"><span class="lx-settings-dot lx-settings-dot--roxo"></span>Purple</button>
+            <button type="button" class="lx-settings-opt" data-accent-set="rosa" title="Pink"><span class="lx-settings-dot lx-settings-dot--rosa"></span>Pink</button>
+          </div>
+        </div>
+      </div>
+    </details>
+    </div>
+  </nav>
+
+<div class="lx-wrap">
+  <header class="lx-lesson-head">
+    <span class="lx-badge"><span class="lx-inline">Sandbox · chess</span></span>
+    <h1 class="lx-title"><span class="lx-title-icon"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" />
+  <path d="M5 21h14" /></svg></span><span><span class="lx-inline">Sandbox — board component smoke test</span></span></h1>
+    <p class="lx-subtitle"><span class="lx-inline">Proves a FEN renders as a board with highlights and arrows, inside the lesson pipeline</span></p>
+  </header>
+
+  <div class="lx-offline-banner" id="lx-banner" hidden>
+    The server is down. Sections still open by multiple choice, but AI scoring and progress tracking are unavailable.
+  </div>
+
+  <div class="lx-progress" role="presentation">
+    <span class="lx-progress-seg" data-seg="1"></span>
+  </div>
+
+  <div class="lx-blocks">
+  <div class="lx-card lx-analogy">
+    <span class="lx-analogy-label"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" />
+  <path d="M9 18h6" />
+  <path d="M10 22h4" /></svg> <span class="lx-inline">Think of leaving your phone on a café table</span></span>
+    <p class="lx-analogy-text"><span class="lx-inline">You step away for a second and it is simply there for anyone to take. Nobody had to be clever.</span></p>
+    <p class="lx-analogy-bridge"><span class="lx-inline">In chess a piece left like that is called a <strong>hanging piece</strong>.</span></p>
+  </div>
+  <section class="lx-phase" data-phase="1" id="phase-1">
+    <div class="lx-phase-head">
+      <span class="lx-phase-badge"><span>1</span></span>
+      <h2 class="lx-phase-title"><span class="lx-inline">The piece nobody is guarding</span></h2>
+    </div>
+    <div class="lx-gate" data-gate="phase-1">
+      <div class="lx-gate-body">
+  <div class="lx-prose">
+    <p><span class="lx-inline">Black has just played ...Nc6. Look at the e5 pawn and ask who defends it.</span></p>
+  </div>
+  <figure class="lx-figure">
+    <div class="lx-card lx-board-wrap">
+      <div class="lx-board" role="img" aria-label="Opera Game, after 3...Bg4: the knight is pinned to the queen"><div class="lx-board-sq lx-board-sq--light" data-square="a8"><i class="lx-board-coord lx-board-coord--rank">8</i><span class="lx-board-pc lx-board-pc--b">♜</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="b8"><span class="lx-board-pc lx-board-pc--b">♞</span></div><div class="lx-board-sq lx-board-sq--light" data-square="c8"></div><div class="lx-board-sq lx-board-sq--dark" data-square="d8"><span class="lx-board-pc lx-board-pc--b">♛</span></div><div class="lx-board-sq lx-board-sq--light" data-square="e8"><span class="lx-board-pc lx-board-pc--b">♚</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="f8"><span class="lx-board-pc lx-board-pc--b">♝</span></div><div class="lx-board-sq lx-board-sq--light" data-square="g8"><span class="lx-board-pc lx-board-pc--b">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="h8"><span class="lx-board-pc lx-board-pc--b">♜</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="a7"><i class="lx-board-coord lx-board-coord--rank">7</i><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="b7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="c7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="d7"></div><div class="lx-board-sq lx-board-sq--dark" data-square="e7"></div><div class="lx-board-sq lx-board-sq--light" data-square="f7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="g7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="h7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="a6"><i class="lx-board-coord lx-board-coord--rank">6</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="b6"></div><div class="lx-board-sq lx-board-sq--light" data-square="c6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="d6"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="e6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="f6"></div><div class="lx-board-sq lx-board-sq--light" data-square="g6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="h6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a5"><i class="lx-board-coord lx-board-coord--rank">5</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="c5"></div><div class="lx-board-sq lx-board-sq--light" data-square="d5"></div><div class="lx-board-sq lx-board-sq--dark lx-board-sq--hi" data-square="e5"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="f5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="g5"></div><div class="lx-board-sq lx-board-sq--light" data-square="h5"></div><div class="lx-board-sq lx-board-sq--light" data-square="a4"><i class="lx-board-coord lx-board-coord--rank">4</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="b4"></div><div class="lx-board-sq lx-board-sq--light" data-square="c4"></div><div class="lx-board-sq lx-board-sq--dark" data-square="d4"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="e4"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="f4"></div><div class="lx-board-sq lx-board-sq--light lx-board-sq--hi" data-square="g4"><span class="lx-board-pc lx-board-pc--b">♝</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="h4"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a3"><i class="lx-board-coord lx-board-coord--rank">3</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b3"></div><div class="lx-board-sq lx-board-sq--dark" data-square="c3"></div><div class="lx-board-sq lx-board-sq--light" data-square="d3"></div><div class="lx-board-sq lx-board-sq--dark" data-square="e3"></div><div class="lx-board-sq lx-board-sq--light" data-square="f3"><span class="lx-board-pc lx-board-pc--w">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="g3"></div><div class="lx-board-sq lx-board-sq--light" data-square="h3"></div><div class="lx-board-sq lx-board-sq--light" data-square="a2"><i class="lx-board-coord lx-board-coord--rank">2</i><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="b2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="c2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d2"></div><div class="lx-board-sq lx-board-sq--light" data-square="e2"></div><div class="lx-board-sq lx-board-sq--dark" data-square="f2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="g2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="h2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="a1"><i class="lx-board-coord lx-board-coord--rank">1</i><span class="lx-board-pc lx-board-pc--w">♜</span><i class="lx-board-coord lx-board-coord--file">a</i></div><div class="lx-board-sq lx-board-sq--light" data-square="b1"><span class="lx-board-pc lx-board-pc--w">♞</span><i class="lx-board-coord lx-board-coord--file">b</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="c1"><span class="lx-board-pc lx-board-pc--w">♝</span><i class="lx-board-coord lx-board-coord--file">c</i></div><div class="lx-board-sq lx-board-sq--light" data-square="d1"><span class="lx-board-pc lx-board-pc--w">♛</span><i class="lx-board-coord lx-board-coord--file">d</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="e1"><span class="lx-board-pc lx-board-pc--w">♚</span><i class="lx-board-coord lx-board-coord--file">e</i></div><div class="lx-board-sq lx-board-sq--light" data-square="f1"><span class="lx-board-pc lx-board-pc--w">♝</span><i class="lx-board-coord lx-board-coord--file">f</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="g1"><i class="lx-board-coord lx-board-coord--file">g</i></div><div class="lx-board-sq lx-board-sq--light" data-square="h1"><span class="lx-board-pc lx-board-pc--w">♜</span><i class="lx-board-coord lx-board-coord--file">h</i></div><svg class="lx-board-arrows" viewBox="0 0 800 800" aria-hidden="true"><line class="lx-board-arrow" x1="350.0" y1="450.0" x2="434.4" y2="365.6"/></svg></div>
+      <p class="lx-board-turn"><span class="lx-board-dot lx-board-dot--white"></span>White to move</p>
+    </div>
+    <figcaption class="lx-caption"><span class="lx-inline">Opera Game, after 3...Bg4: the knight is pinned to the queen</span></figcaption>
+  </figure>
+  <div class="lx-card lx-ask lx-recall"
+       data-concept-id="sandbox-hanging-piece"
+       data-phase="1"
+       data-summary="4.dxe5 wins the e5 pawn because after 4...Bxf3 5.Qxf3 dxe5 White is a pawn up with better development; the bishop on g4 is pinned to the queen so the knight on f3 is not really defending e5."
+       data-ok="Yes. dxe5 wins a pawn because the recapture is tied up by the pin."
+       data-bad="Look again at what defends e5, and at whether that defender can move.">
+    <span class="lx-ask-label"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 14a2 2 0 0 0 2-2V8h-2" />
+  <path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" />
+  <path d="M8 14a2 2 0 0 0 2-2V8H8" /></svg> Explain in your own words</span>
+    <div class="lx-ask-q"><p><span class="lx-inline">White to move. Which pawn can White win right now, and why does the pin matter?</span></p></div>
+
+    <div class="lx-ask-online">
+      <textarea class="lx-answer" placeholder="Write your explanation…"></textarea>
+      <div class="lx-ask-tools">
+        <button type="button" class="lx-btn lx-btn--primary" data-action="validate">Check</button>
+        <button type="button" class="lx-btn lx-btn--secondary lx-mic" data-action="mic" hidden>🎙 Dictate</button>
+        <select class="lx-lang" data-role="lang" hidden>
+          <option value="pt-BR">Português</option>
+          <option value="en-US" selected>English</option>
+        </select>
+        <span class="lx-mic-hint"></span>
+      </div>
+      <div class="lx-verdict">
+        <div class="lx-score">
+          <span class="lx-score-num">—</span><span class="lx-score-of">/100</span>
+          <span class="lx-score-word"></span>
+        </div>
+        <div class="lx-bar"><div class="lx-bar-fill"></div></div>
+        <p class="lx-feedback"></p>
+        <ul class="lx-misses"></ul>
+      </div>
+    </div>
+
+    <div class="lx-fallback">
+      <p class="lx-fallback-note">Server is down — answering by multiple choice.</p>
+      
+        <label class="lx-choice">
+          <input type="radio" name="fb-sandbox-hanging-piece" value="0" data-correct="1" />
+          <span><span class="lx-inline">The e5 pawn, with 4.dxe5</span></span>
+        </label>
+        <label class="lx-choice">
+          <input type="radio" name="fb-sandbox-hanging-piece" value="1" data-correct="0" />
+          <span><span class="lx-inline">The g4 bishop, with 4.Qxg4</span></span>
+        </label>
+        <label class="lx-choice">
+          <input type="radio" name="fb-sandbox-hanging-piece" value="2" data-correct="0" />
+          <span><span class="lx-inline">Nothing yet; White should castle</span></span>
+        </label>
+      <p class="lx-inline-fb"></p>
+    </div>
+  </div>
+      </div>
+      <div class="lx-gate-lock">
+        <span class="lx-gate-lock-badge"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+  <path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg></span>
+        <span class="lx-gate-lock-text">Answer the previous section to open this one</span>
+      </div>
+    </div>
+  </section>
+  <figure class="lx-figure">
+    <div class="lx-card lx-board-wrap">
+      <div class="lx-board" role="img" aria-label="The same position from Black's side (flip: true)"><div class="lx-board-sq lx-board-sq--light" data-square="h1"><i class="lx-board-coord lx-board-coord--rank">1</i><span class="lx-board-pc lx-board-pc--w">♜</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="g1"></div><div class="lx-board-sq lx-board-sq--light" data-square="f1"><span class="lx-board-pc lx-board-pc--w">♝</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="e1"><span class="lx-board-pc lx-board-pc--w">♚</span></div><div class="lx-board-sq lx-board-sq--light" data-square="d1"><span class="lx-board-pc lx-board-pc--w">♛</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="c1"><span class="lx-board-pc lx-board-pc--w">♝</span></div><div class="lx-board-sq lx-board-sq--light" data-square="b1"><span class="lx-board-pc lx-board-pc--w">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="a1"><span class="lx-board-pc lx-board-pc--w">♜</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="h2"><i class="lx-board-coord lx-board-coord--rank">2</i><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="g2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="f2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="e2"></div><div class="lx-board-sq lx-board-sq--dark" data-square="d2"></div><div class="lx-board-sq lx-board-sq--light" data-square="c2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="b2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="a2"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="h3"><i class="lx-board-coord lx-board-coord--rank">3</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="g3"></div><div class="lx-board-sq lx-board-sq--light" data-square="f3"><span class="lx-board-pc lx-board-pc--w">♞</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="e3"></div><div class="lx-board-sq lx-board-sq--light" data-square="d3"></div><div class="lx-board-sq lx-board-sq--dark" data-square="c3"></div><div class="lx-board-sq lx-board-sq--light" data-square="b3"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a3"></div><div class="lx-board-sq lx-board-sq--dark" data-square="h4"><i class="lx-board-coord lx-board-coord--rank">4</i></div><div class="lx-board-sq lx-board-sq--light" data-square="g4"><span class="lx-board-pc lx-board-pc--b">♝</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="f4"></div><div class="lx-board-sq lx-board-sq--light" data-square="e4"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="d4"><span class="lx-board-pc lx-board-pc--w">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="c4"></div><div class="lx-board-sq lx-board-sq--dark" data-square="b4"></div><div class="lx-board-sq lx-board-sq--light" data-square="a4"></div><div class="lx-board-sq lx-board-sq--light" data-square="h5"><i class="lx-board-coord lx-board-coord--rank">5</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="g5"></div><div class="lx-board-sq lx-board-sq--light" data-square="f5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="e5"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="d5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="c5"></div><div class="lx-board-sq lx-board-sq--light" data-square="b5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="a5"></div><div class="lx-board-sq lx-board-sq--dark" data-square="h6"><i class="lx-board-coord lx-board-coord--rank">6</i></div><div class="lx-board-sq lx-board-sq--light" data-square="g6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="f6"></div><div class="lx-board-sq lx-board-sq--light" data-square="e6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="d6"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="c6"></div><div class="lx-board-sq lx-board-sq--dark" data-square="b6"></div><div class="lx-board-sq lx-board-sq--light" data-square="a6"></div><div class="lx-board-sq lx-board-sq--light" data-square="h7"><i class="lx-board-coord lx-board-coord--rank">7</i><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="g7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="f7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="e7"></div><div class="lx-board-sq lx-board-sq--light" data-square="d7"></div><div class="lx-board-sq lx-board-sq--dark" data-square="c7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--light" data-square="b7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="a7"><span class="lx-board-pc lx-board-pc--b">♟</span></div><div class="lx-board-sq lx-board-sq--dark" data-square="h8"><i class="lx-board-coord lx-board-coord--rank">8</i><span class="lx-board-pc lx-board-pc--b">♜</span><i class="lx-board-coord lx-board-coord--file">h</i></div><div class="lx-board-sq lx-board-sq--light" data-square="g8"><span class="lx-board-pc lx-board-pc--b">♞</span><i class="lx-board-coord lx-board-coord--file">g</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="f8"><span class="lx-board-pc lx-board-pc--b">♝</span><i class="lx-board-coord lx-board-coord--file">f</i></div><div class="lx-board-sq lx-board-sq--light" data-square="e8"><span class="lx-board-pc lx-board-pc--b">♚</span><i class="lx-board-coord lx-board-coord--file">e</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="d8"><span class="lx-board-pc lx-board-pc--b">♛</span><i class="lx-board-coord lx-board-coord--file">d</i></div><div class="lx-board-sq lx-board-sq--light" data-square="c8"><i class="lx-board-coord lx-board-coord--file">c</i></div><div class="lx-board-sq lx-board-sq--dark" data-square="b8"><span class="lx-board-pc lx-board-pc--b">♞</span><i class="lx-board-coord lx-board-coord--file">b</i></div><div class="lx-board-sq lx-board-sq--light" data-square="a8"><span class="lx-board-pc lx-board-pc--b">♜</span><i class="lx-board-coord lx-board-coord--file">a</i></div></div>
+      <p class="lx-board-turn"><span class="lx-board-dot lx-board-dot--white"></span>White to move</p>
+    </div>
+    <figcaption class="lx-caption"><span class="lx-inline">The same position from Black's side (flip: true)</span></figcaption>
+  </figure>
+<div class="lx-gate lx-gate--locked" data-gate="teachback">
+      <div class="lx-gate-body" aria-hidden="true">
+  <div class="lx-card lx-ask lx-teachback" data-concepts="sandbox-hanging-piece">
+    <span class="lx-ask-label"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" />
+  <path d="M22 10v6" />
+  <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" /></svg> Teach it back</span>
+    <div class="lx-ask-q"><p><span class="lx-inline">Explain in your own words what a hanging piece is and the question you ask before every move to avoid leaving one.</span></p></div>
+    <div class="lx-teachback-hint"><p><span class="lx-inline">Who defends it, and can the defender actually do its job?</span></p></div>
+
+    <p class="lx-teachback-offline">
+      This part needs the server. Without it the lesson cannot be recorded — and an invented score would poison the review schedule.
+    </p>
+
+    <div class="lx-ask-online">
+      <textarea class="lx-answer lx-answer--large" placeholder="Explain the whole concept, in your own words…"></textarea>
+      <div class="lx-ask-tools">
+        <button type="button" class="lx-btn lx-btn--primary" data-action="teachback">Finish the lesson</button>
+        <button type="button" class="lx-btn lx-btn--secondary lx-mic" data-action="mic" hidden>🎙 Dictate</button>
+        <select class="lx-lang" data-role="lang" hidden>
+          <option value="pt-BR">Português</option>
+          <option value="en-US" selected>English</option>
+        </select>
+        <span class="lx-mic-hint"></span>
+      </div>
+      <div class="lx-verdict">
+        <div class="lx-score">
+          <span class="lx-score-num">—</span><span class="lx-score-of">/100</span>
+          <span class="lx-score-word"></span>
+        </div>
+        <div class="lx-bar"><div class="lx-bar-fill"></div></div>
+        <p class="lx-feedback"></p>
+        <ul class="lx-misses"></ul>
+        <div class="lx-concepts"></div>
+      </div>
+    </div>
+  </div>
+      </div>
+      <div class="lx-gate-lock">
+        <span class="lx-gate-lock-badge"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+  <path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg></span>
+        <span class="lx-gate-lock-text">Finish the sections above to open this</span>
+      </div>
+    </div>
+  <div class="lx-done">
+    <div class="lx-card lx-next-review">
+      <span class="lx-next-review-label">Next review</span>
+      <span class="lx-next-review-date">—</span>
+      <span class="lx-next-review-note"></span>
+    </div>
+  </div>
+  <div class="lx-card lx-source">
+    <p class="lx-source-label"><svg class="lx-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v16" />
+  <path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" /></svg> Primary source</p>
+    <p class="lx-source-title"><span class="lx-inline">Sandbox fixture — not a real lesson</span></p>
+    <p class="lx-source-note"><span class="lx-inline">Position from Morphy vs Duke Karl and Count Isouard, Paris 1858, verified with Stockfish 18.</span></p>
+  </div>
+  </div>
+
+  <footer class="lx-lesson-foot">
+    <a class="lx-btn lx-btn--outline" href="../reference/my-learning.html">Dashboard</a>
+    <a class="lx-btn lx-btn--outline" href="../reference/glossary.html">Glossary</a>
+    <button type="button" class="lx-btn lx-btn--ghost" data-action="restart"
+      title="Clears the answers kept in this browser and starts again">Start over</button>
+  </footer>
+</div>
+
+<script type="application/json" id="lx-config">{"lesson":"0003-board-smoke","concepts":["sandbox-hanging-piece"],"phases":["1"],"strings":{"recall.ok":"Correct.","recall.bad":"Not that one.","mic.dictate":"Dictate","mic.lang":"en-US","mic.stop":"Stop","mic.listening":"listening…","mic.failed":"Could not transcribe just now. You can type your answer.","score.top":"mastered","score.good":"solid","score.mid":"partial","score.bad":"not understood","score.error":"error","run.validating":"Checking…","run.grading":"Grading…","run.needAnswer":"Write an answer before checking.","run.needExplain":"Write your explanation before finishing.","run.validateFailed":"Could not check that just now. Your answer is still here.","run.finishFailed":"Could not finish just now. Your explanation is still here.","run.serverSaid":"the server replied","run.notScheduled":"not scheduled","run.notSaved":"The lesson was graded, but the progress could not be saved.","run.scheduled":"concept(s) scheduled by SM-2.","run.restart":"Start over","run.restartTitle":"Clears the answers kept in this browser and starts again","run.teachbackOf":"Final teach-back for lesson"}}</script>
+<script src="../assets/learno.js" defer></script>
+</body>
+</html>

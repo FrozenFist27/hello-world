@@ -1,0 +1,37 @@
+meta:
+  title: "Sandbox — board component smoke test"
+  subtitle: "Proves a FEN renders as a board with highlights and arrows, inside the lesson pipeline"
+
+analogy:
+  label: "Think of leaving your phone on a café table"
+  text: "You step away for a second and it is simply there for anyone to take. Nobody had to be clever."
+  bridge: "In chess a piece left like that is called a **hanging piece**."
+
+p1:
+  title: "The piece nobody is guarding"
+  body: "Black has just played ...Nc6. Look at the e5 pawn and ask who defends it."
+  caption: "Opera Game, after 3...Bg4: the knight is pinned to the queen"
+  fen: "rn1qkbnr/ppp2ppp/3p4/4p3/3PP1b1/5N2/PPP2PPP/RNBQKB1R w KQkq - 1 4"
+  highlight: ["e5", "g4"]
+  arrows: ["d4e5"]
+  question: "White to move. Which pawn can White win right now, and why does the pin matter?"
+  summary: "4.dxe5 wins the e5 pawn because after 4...Bxf3 5.Qxf3 dxe5 White is a pawn up with better development; the bishop on g4 is pinned to the queen so the knight on f3 is not really defending e5."
+  fallback:
+    options:
+      - { text: "The e5 pawn, with 4.dxe5", correct: true }
+      - { text: "The g4 bishop, with 4.Qxg4", correct: false }
+      - { text: "Nothing yet; White should castle", correct: false }
+    ok: "Yes. dxe5 wins a pawn because the recapture is tied up by the pin."
+    bad: "Look again at what defends e5, and at whether that defender can move."
+
+p2:
+  caption: "The same position from Black's side (flip: true)"
+  fen: "rn1qkbnr/ppp2ppp/3p4/4p3/3PP1b1/5N2/PPP2PPP/RNBQKB1R w KQkq - 1 4"
+
+teachback:
+  question: "Explain in your own words what a hanging piece is and the question you ask before every move to avoid leaving one."
+  hint: "Who defends it, and can the defender actually do its job?"
+
+source:
+  title: "Sandbox fixture — not a real lesson"
+  note: "Position from Morphy vs Duke Karl and Count Isouard, Paris 1858, verified with Stockfish 18."

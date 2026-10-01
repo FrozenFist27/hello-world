@@ -1,0 +1,20 @@
+{
+  "id": "0003-board-smoke",
+  "tag": "Sandbox · chess",
+  "icon": "crown",
+  "title": "@meta.title",
+  "subtitle": "@meta.subtitle",
+  "concepts": ["sandbox-hanging-piece"],
+  "blocks": [
+    { "component": "analogy", "props": { "label": "@analogy.label", "text": "@analogy.text", "bridge": "@analogy.bridge" } },
+    { "component": "phase", "props": { "id": "1", "title": "@p1.title" },
+      "children": [
+        { "component": "prose", "props": { "text": "@p1.body" } },
+        { "component": "board", "props": { "fen": "@p1.fen", "caption": "@p1.caption", "highlight": "@p1.highlight", "arrows": "@p1.arrows" } },
+        { "component": "recall", "props": { "conceptId": "sandbox-hanging-piece", "phase": "1", "question": "@p1.question", "summary": "@p1.summary", "fallback": "@p1.fallback" } }
+      ] },
+    { "component": "board", "props": { "fen": "@p2.fen", "caption": "@p2.caption", "flip": true } },
+    { "component": "teachback", "props": { "question": "@teachback.question", "conceptIds": ["sandbox-hanging-piece"], "hint": "@teachback.hint" } },
+    { "component": "source", "props": { "title": "@source.title", "note": "@source.note" } }
+  ]
+}
