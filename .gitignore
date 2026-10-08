@@ -6,3 +6,6 @@ __pycache__/
 *.pyc
 .venv/
 .pytest_cache/
+
+# publish variant built by scripts/build_artifact.py
+app/artifact.html
