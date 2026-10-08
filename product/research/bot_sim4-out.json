@@ -1,0 +1,98 @@
+{
+ "s0d1g12": {
+  "score": 7.0,
+  "plies": 1005,
+  "gifts": 24,
+  "gift_rolls": 51,
+  "gift_none": 27,
+  "self_hangs": 37,
+  "opp_took_bot_piece": 28,
+  "bot_took_free": 37,
+  "kinds": {
+   "sampled": 424,
+   "forced": 36,
+   "gift": 24,
+   "guarded": 18
+  },
+  "ends": {
+   "0-1": 2,
+   "resign:player": 3,
+   "resign:bot": 3,
+   "1-0": 2
+  },
+  "games": 10,
+  "secs": 23
+ },
+ "s3d2g12": {
+  "score": 8.0,
+  "plies": 967,
+  "gifts": 25,
+  "gift_rolls": 52,
+  "gift_none": 27,
+  "self_hangs": 34,
+  "opp_took_bot_piece": 33,
+  "bot_took_free": 31,
+  "kinds": {
+   "sampled": 413,
+   "forced": 33,
+   "gift": 25,
+   "guarded": 12
+  },
+  "ends": {
+   "0-1": 2,
+   "1-0": 2,
+   "resign:player": 4,
+   "adj": 1,
+   "resign:bot": 1
+  },
+  "games": 10,
+  "secs": 19
+ },
+ "s6d3g12": {
+  "score": 8.5,
+  "plies": 833,
+  "gifts": 21,
+  "gift_rolls": 52,
+  "gift_none": 31,
+  "self_hangs": 35,
+  "opp_took_bot_piece": 28,
+  "bot_took_free": 35,
+  "kinds": {
+   "sampled": 355,
+   "forced": 30,
+   "gift": 21,
+   "guarded": 11
+  },
+  "ends": {
+   "adj": 2,
+   "resign:bot": 1,
+   "resign:player": 3,
+   "0-1": 2,
+   "1-0": 2
+  },
+  "games": 10,
+  "secs": 21
+ },
+ "s3d2g0": {
+  "score": 10.0,
+  "plies": 750,
+  "gifts": 0,
+  "gift_rolls": 0,
+  "gift_none": 0,
+  "self_hangs": 23,
+  "opp_took_bot_piece": 11,
+  "bot_took_free": 34,
+  "kinds": {
+   "sampled": 344,
+   "forced": 24,
+   "guarded": 6
+  },
+  "ends": {
+   "0-1": 1,
+   "1-0": 2,
+   "resign:player": 7
+  },
+  "games": 10,
+  "secs": 22
+ }
+}

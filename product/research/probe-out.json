@@ -1,0 +1,563 @@
+{
+ "timings": {
+  "warmupMs": 368
+ },
+ "cases": [
+  {
+   "name": "P1 Italian 6...d6",
+   "moves": [
+    {
+     "san": "Nxe5",
+     "expect": "held hanging",
+     "verdictMs": 3,
+     "evalBefore": 32,
+     "evalAfter": -391,
+     "cpLoss": 423,
+     "replyUci": "d6e5",
+     "replySan": "dxe5",
+     "replyIsCapture": true,
+     "replyMate": null,
+     "botSearchMs": 13,
+     "botTop": "d6e5",
+     "botLines": [
+      "d6e5:382",
+      "c6e5:342",
+      "d6d5:-60",
+      "c6d4:-96",
+      "a7a6:-135",
+      "a7a5:-136"
+     ]
+    },
+    {
+     "san": "Bxf7+",
+     "expect": "held",
+     "verdictMs": 4,
+     "evalBefore": 32,
+     "evalAfter": -359,
+     "cpLoss": 391,
+     "replyUci": "f8f7",
+     "replySan": "Rxf7",
+     "replyIsCapture": true,
+     "replyMate": null,
+     "botSearchMs": 6,
+     "botTop": "f8f7",
+     "botLines": [
+      "f8f7:402",
+      "g8f7:303",
+      "g8h8:-90"
+     ]
+    },
+    {
+     "san": "h3",
+     "expect": "clean",
+     "verdictMs": 42,
+     "evalBefore": 32,
+     "evalAfter": -10,
+     "cpLoss": 42,
+     "replyUci": "c6a5",
+     "replySan": "Na5",
+     "replyIsCapture": false,
+     "replyMate": null,
+     "botSearchMs": 38,
+     "botTop": "c6a5",
+     "botLines": [
+      "c6a5:8",
+      "c8e6:-26",
+      "a7a6:-36",
+      "h7h6:-39",
+      "c8d7:-42",
+      "a7a5:-45"
+     ]
+    }
+   ],
+   "pre": {
+    "ms": 120,
+    "best": "a2a4",
+    "evalBefore": 32,
+    "line1": {
+     "depth": 12,
+     "kind": "cp",
+     "val": 32,
+     "pv": "a2a4 c8g4 h2h3 g4h5"
+    },
+    "line2": {
+     "depth": 12,
+     "kind": "cp",
+     "val": 18,
+     "pv": "a2a3 c8g4 h2h3 g4h5"
+    }
+   }
+  },
+  {
+   "name": "P2 Italian 3...Nf6 (tutorial)",
+   "moves": [
+    {
+     "san": "Bxf7+",
+     "expect": "held",
+     "verdictMs": 11,
+     "evalBefore": 30,
+     "evalAfter": -248,
+     "cpLoss": 278,
+     "replyUci": "e8f7",
+     "replySan": "Kxf7",
+     "replyIsCapture": true,
+     "replyMate": null,
+     "botSearchMs": 3,
+     "botTop": "e8f7",
+     "botLines": [
+      "e8f7:248",
+      "e8e7:-157"
+     ]
+    },
+    {
+     "san": "Nxe5",
+     "expect": "held",
+     "verdictMs": 21,
+     "evalBefore": 30,
+     "evalAfter": -241,
+     "cpLoss": 271,
+     "replyUci": "c6e5",
+     "replySan": "Nxe5",
+     "replyIsCapture": true,
+     "replyMate": null,
+     "botSearchMs": 18,
+     "botTop": "c6e5",
+     "botLines": [
+      "c6e5:241",
+      "d8e7:-1",
+      "d7d5:-80",
+      "f8c5:-118",
+      "f6e4:-153",
+      "b7b5:-194"
+     ]
+    },
+    {
+     "san": "d3",
+     "expect": "clean",
+     "verdictMs": 27,
+     "evalBefore": 30,
+     "evalAfter": 22,
+     "cpLoss": 8,
+     "replyUci": "d7d5",
+     "replySan": "d5",
+     "replyIsCapture": false,
+     "replyMate": null,
+     "botSearchMs": 42,
+     "botTop": "d7d5",
+     "botLines": [
+      "d7d5:-19",
+      "f8e7:-19",
+      "f8b4:-24",
+      "f8c5:-26",
+      "h7h6:-32",
+      "a7a6:-32"
+     ]
+    }
+   ],
+   "pre": {
+    "ms": 243,
+    "best": "b1c3",
+    "evalBefore": 30,
+    "line1": {
+     "depth": 12,
+     "kind": "cp",
+     "val": 30,
+     "pv": "b1c3 f8c5 d2d3 d7d6"
+    },
+    "line2": {
+     "depth": 12,
+     "kind": "cp",
+     "val": 19,
+     "pv": "d2d4 e5d4 e1g1 f6e4"
+    }
+   }
+  },
+  {
+   "name": "P3 Ruy 3...a6",
+   "moves": [
+    {
+     "san": "O-O",
+     "expect": "held ignored_attack",
+     "verdictMs": 5,
+     "evalBefore": 37,
+     "evalAfter": -374,
+     "cpLoss": 411,
+     "replyUci": "a6b5",
+     "replySan": "axb5",
+     "replyIsCapture": true,
+     "replyMate": null,
+     "botSearchMs": 16,
+     "botTop": "a6b5",
+     "botLines": [
+      "a6b5:374",
+      "g8e7:-32",
+      "f8d6:-47",
+      "g8f6:-53",
+      "f7f6:-66",
+      "d8f6:-66"
+     ]
+    },
+    {
+     "san": "Ba4",
+     "expect": "clean",
+     "verdictMs": 10,
+     "evalBefore": 37,
+     "evalAfter": 36,
+     "cpLoss": 1,
+     "replyUci": "g8f6",
+     "replySan": "Nf6",
+     "replyIsCapture": false,
+     "replyMate": null,
+     "botSearchMs": 77,
+     "botTop": "g8f6",
+     "botLines": [
+      "g8f6:-36",
+      "f8c5:-41",
+      "f8e7:-43",
+      "d7d5:-44",
+      "b7b5:-55",
+      "d7d6:-56"
+     ]
+    }
+   ],
+   "pre": {
+    "ms": 196,
+    "best": "b5a4",
+    "evalBefore": 37,
+    "line1": {
+     "depth": 12,
+     "kind": "cp",
+     "val": 37,
+     "pv": "b5a4 g8f6 e1g1 f8e7"
+    },
+    "line2": {
+     "depth": 12,
+     "kind": "cp",
+     "val": 28,
+     "pv": "b5c6 d7c6 e1g1 f7f6"
+    }
+   }
+  },
+  {
+   "name": "P4 Italian 4.d3 Nxe4",
+   "moves": [
+    {
+     "san": "Nc3",
+     "expect": "held free_piece_ignored",
+     "verdictMs": 11,
+     "evalBefore": 393,
+     "evalAfter": -149,
+     "cpLoss": 542,
+     "replyUci": "e4c3",
+     "replySan": "Nxc3",
+     "replyIsCapture": true,
+     "replyMate": null,
+     "botSearchMs": 29,
+     "botTop": "e4c3",
+     "botLines": [
+      "e4c3:151",
+      "e4f6:57",
+      "e4d6:24",
+      "d7d5:-7",
+      "b7b5:-83",
+      "e4c5:-98"
+     ]
+    },
+    {
+     "san": "dxe4",
+     "expect": "clean + You looked",
+     "verdictMs": 5,
+     "evalBefore": 393,
+     "evalAfter": 399,
+     "cpLoss": -6,
+     "replyUci": "f8e7",
+     "replySan": "Be7",
+     "replyIsCapture": false,
+     "replyMate": null,
+     "botSearchMs": 7,
+     "botTop": "d7d6",
+     "botLines": [
+      "d7d6:-388",
+      "f8e7:-399",
+      "f8c5:-403",
+      "f8b4:-405",
+      "a7a6:-426",
+      "f7f5:-430"
+     ]
+    }
+   ],
+   "pre": {
+    "ms": 20,
+    "best": "d3e4",
+    "evalBefore": 393,
+    "line1": {
+     "depth": 12,
+     "kind": "cp",
+     "val": 393,
+     "pv": "d3e4 f8e7 a2a4 e8g8"
+    },
+    "line2": {
+     "depth": 12,
+     "kind": "cp",
+     "val": 86,
+     "pv": "c4f7 e8f7 d3e4 d7d6"
+    }
+   }
+  },
+  {
+   "name": "P5 Placement 7...O-O",
+   "moves": [
+    {
+     "san": "Nbd2",
+     "expect": "held free_piece_ignored",
+     "verdictMs": 17,
+     "evalBefore": 349,
+     "evalAfter": 60,
+     "cpLoss": 289,
+     "replyUci": "g4h5",
+     "replySan": "Bh5",
+     "replyIsCapture": false,
+     "replyMate": null,
+     "botSearchMs": 20,
+     "botTop": "g4c8",
+     "botLines": [
+      "g4c8:-59",
+      "g4h5:-60",
+      "g4d7:-67",
+      "g4e6:-73",
+      "g4f3:-98",
+      "d6d5:-147"
+     ]
+    },
+    {
+     "san": "hxg4",
+     "expect": "clean + You looked",
+     "verdictMs": 3,
+     "evalBefore": 349,
+     "evalAfter": 362,
+     "cpLoss": -13,
+     "replyUci": "f6g4",
+     "replySan": "Nxg4",
+     "replyIsCapture": true,
+     "replyMate": null,
+     "botSearchMs": 8,
+     "botTop": "f6g4",
+     "botLines": [
+      "f6g4:-355",
+      "d6d5:-396",
+      "c6a5:-409",
+      "a7a6:-420",
+      "a7a5:-428",
+      "h7h6:-429"
+     ]
+    }
+   ],
+   "pre": {
+    "ms": 18,
+    "best": "h3g4",
+    "evalBefore": 349,
+    "line1": {
+     "depth": 12,
+     "kind": "cp",
+     "val": 349,
+     "pv": "h3g4 f6g4 b1d2 c5b6"
+    },
+    "line2": {
+     "depth": 12,
+     "kind": "cp",
+     "val": 101,
+     "pv": "b2b4 g4f3 d1f3 c5b6"
+    }
+   }
+  },
+  {
+   "name": "P6 After 5...Ng4",
+   "moves": [
+    {
+     "san": "O-O",
+     "expect": "held",
+     "verdictMs": 12,
+     "evalBefore": 376,
+     "evalAfter": 88,
+     "cpLoss": 288,
+     "replyUci": "g4f6",
+     "replySan": "Nf6",
+     "replyIsCapture": false,
+     "replyMate": null,
+     "botSearchMs": 27,
+     "botTop": "g4f6",
+     "botLines": [
+      "g4f6:-83",
+      "g4h6:-132",
+      "h7h5:-169",
+      "g4f2:-186",
+      "c5f2:-192",
+      "b7b5:-205"
+     ]
+    },
+    {
+     "san": "hxg4",
+     "expect": "clean",
+     "verdictMs": 5,
+     "evalBefore": 376,
+     "evalAfter": 423,
+     "cpLoss": -47,
+     "replyUci": "h7h6",
+     "replySan": "h6",
+     "replyIsCapture": false,
+     "replyMate": null,
+     "botSearchMs": 7,
+     "botTop": "h7h6",
+     "botLines": [
+      "h7h6:-429",
+      "d7d6:-430",
+      "c5b6:-436",
+      "e8g8:-453",
+      "a7a5:-460",
+      "a7a6:-466"
+     ]
+    }
+   ],
+   "pre": {
+    "ms": 30,
+    "best": "h3g4",
+    "evalBefore": 376,
+    "line1": {
+     "depth": 12,
+     "kind": "cp",
+     "val": 376,
+     "pv": "h3g4 d7d6 g4g5 c6a5"
+    },
+    "line2": {
+     "depth": 12,
+     "kind": "cp",
+     "val": 249,
+     "pv": "d3d4 g4f2 e1f2 c5d4"
+    }
+   }
+  },
+  {
+   "name": "P7 1.f3 e5",
+   "moves": [
+    {
+     "san": "g4",
+     "expect": "held allowed_mate",
+     "verdictMs": 1,
+     "evalBefore": -71,
+     "evalAfter": -9999,
+     "cpLoss": 9928,
+     "replyUci": "d8h4",
+     "replySan": "Qh4#",
+     "replyIsCapture": false,
+     "replyMate": 1,
+     "botSearchMs": 7,
+     "botTop": "d8h4",
+     "botLines": [
+      "d8h4:M1",
+      "h7h5:315",
+      "d7d5:264",
+      "d7d6:205",
+      "b8c6:193",
+      "f8e7:159"
+     ]
+    }
+   ],
+   "pre": {
+    "ms": 157,
+    "best": "e2e4",
+    "evalBefore": -71,
+    "line1": {
+     "depth": 12,
+     "kind": "cp",
+     "val": -71,
+     "pv": "e2e4 f8c5 c2c3 d7d5"
+    },
+    "line2": {
+     "depth": 12,
+     "kind": "cp",
+     "val": -72,
+     "pv": "b1c3 g8f6 d2d4 e5d4"
+    }
+   }
+  },
+  {
+   "name": "P8 Scholar White",
+   "moves": [
+    {
+     "san": "Qh3",
+     "expect": "held missed_mate",
+     "verdictMs": 4,
+     "evalBefore": 9999,
+     "evalAfter": -549,
+     "cpLoss": 10548,
+     "replyUci": "d7d5",
+     "replySan": "d5",
+     "replyIsCapture": false,
+     "replyMate": null,
+     "botSearchMs": 10,
+     "botTop": "d7d5",
+     "botLines": [
+      "d7d5:549",
+      "f6e4:242",
+      "c6d4:216",
+      "f8e7:143",
+      "c6a5:142",
+      "a7a5:126"
+     ]
+    },
+    {
+     "san": "Qxf7#",
+     "expect": "over",
+     "result": "checkmate (no search)"
+    }
+   ],
+   "pre": {
+    "ms": 11,
+    "best": "h5f7",
+    "evalBefore": 9999,
+    "line1": {
+     "depth": 12,
+     "kind": "mate",
+     "val": 1,
+     "pv": "h5f7"
+    },
+    "line2": {
+     "depth": 12,
+     "kind": "cp",
+     "val": -88,
+     "pv": "h5h4 c6d4 e1d1 d7d5"
+    }
+   }
+  }
+ ],
+ "stopTest": [
+  {
+   "stopAfterMs": 50,
+   "depthReached": 10,
+   "bestmove": "a2a3",
+   "ms": 92
+  },
+  {
+   "stopAfterMs": 300,
+   "depthReached": 12,
+   "bestmove": "a2a4",
+   "ms": 75
+  }
+ ],
+ "botP4": {
+  "ms": 16,
+  "top": "d3e4",
+  "lines": [
+   "d3e4:386",
+   "c4f7:71",
+   "d1e2:-20",
+   "e1g1:-30",
+   "c4b5:-48",
+   "c4d5:-48"
+  ]
+ },
+ "totalMs": 1917,
+ "errors": [
+  "Failed to load resource: the server responded with a status of 404 (File not found)"
+ ]
+}

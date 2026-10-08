@@ -1,0 +1,578 @@
+{
+ "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
+ "best_cp": 39,
+ "best_pv": "4. Ng5 d5 5. exd5 Na5",
+ "rows": [
+  {
+   "san": "Be6",
+   "cp_after": -495,
+   "cp_loss": 534,
+   "reply": "dxe6",
+   "reply_is_capture": true,
+   "reply2": "fxe6",
+   "mech": {
+    "target": "e6",
+    "piece": "B",
+    "undefended": true,
+    "cheapest_attacker": 1,
+    "takers": [
+     "d7",
+     "f7"
+    ],
+    "moved_piece": true
+   }
+  },
+  {
+   "san": "Nd4",
+   "cp_after": -461,
+   "cp_loss": 500,
+   "reply": "exd4",
+   "reply_is_capture": true,
+   "reply2": "Nxd4",
+   "mech": {
+    "target": "d4",
+    "piece": "N",
+    "undefended": true,
+    "cheapest_attacker": 1,
+    "takers": [
+     "c6",
+     "e5"
+    ],
+    "moved_piece": true
+   }
+  },
+  {
+   "san": "Ba6",
+   "cp_after": -426,
+   "cp_loss": 465,
+   "reply": "bxa6",
+   "reply_is_capture": true,
+   "reply2": "Nxe4",
+   "mech": {
+    "target": "a6",
+    "piece": "B",
+    "undefended": true,
+    "cheapest_attacker": 1,
+    "takers": [
+     "b7"
+    ],
+    "moved_piece": true
+   }
+  },
+  {
+   "san": "Bxf7+",
+   "cp_after": -340,
+   "cp_loss": 379,
+   "reply": "Kxf7",
+   "reply_is_capture": true,
+   "reply2": "Ke7",
+   "mech": {
+    "target": "f7",
+    "piece": "B",
+    "undefended": true,
+    "cheapest_attacker": 0,
+    "takers": [
+     "e8"
+    ],
+    "moved_piece": true
+   }
+  },
+  {
+   "san": "Nxe5",
+   "cp_after": -289,
+   "cp_loss": 328,
+   "reply": "Nxe5",
+   "reply_is_capture": true,
+   "reply2": "d5",
+   "mech": {
+    "target": "e5",
+    "piece": "N",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "c6"
+    ],
+    "moved_piece": true
+   }
+  },
+  {
+   "san": "Nh4",
+   "cp_after": -229,
+   "cp_loss": 268,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "Na5",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "Ng1",
+   "cp_after": -202,
+   "cp_loss": 241,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "d5",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "Rf1",
+   "cp_after": -201,
+   "cp_loss": 240,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "d5",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "Rg1",
+   "cp_after": -187,
+   "cp_loss": 226,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "d5",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "g4",
+   "cp_after": -185,
+   "cp_loss": 224,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "d6",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "Ke2",
+   "cp_after": -181,
+   "cp_loss": 220,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "d5",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "Kf1",
+   "cp_after": -172,
+   "cp_loss": 211,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "Be7",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "Na3",
+   "cp_after": -162,
+   "cp_loss": 201,
+   "reply": "Bxa3",
+   "reply_is_capture": true,
+   "reply2": "Nxe4",
+   "mech": {
+    "target": "a3",
+    "piece": "N",
+    "undefended": false,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f8"
+    ],
+    "moved_piece": true
+   }
+  },
+  {
+   "san": "g3",
+   "cp_after": -159,
+   "cp_loss": 198,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "Be7",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "Bf1",
+   "cp_after": -155,
+   "cp_loss": 194,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "Bc5",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "b4",
+   "cp_after": -148,
+   "cp_loss": 187,
+   "reply": "Bxb4",
+   "reply_is_capture": true,
+   "reply2": "Nxe4",
+   "mech": {
+    "target": "b4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "c6",
+     "f8"
+    ],
+    "moved_piece": true
+   }
+  },
+  {
+   "san": "h4",
+   "cp_after": -145,
+   "cp_loss": 184,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "Bc5",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "b3",
+   "cp_after": -127,
+   "cp_loss": 166,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "Bc5",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "Be2",
+   "cp_after": -123,
+   "cp_loss": 162,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "d5",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "a3",
+   "cp_after": -105,
+   "cp_loss": 144,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "Be7",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "Bd3",
+   "cp_after": -95,
+   "cp_loss": 134,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "g5",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": false,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "a4",
+   "cp_after": -95,
+   "cp_loss": 134,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "Bc5",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "Bb3",
+   "cp_after": -90,
+   "cp_loss": 129,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "a5",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "c3",
+   "cp_after": -79,
+   "cp_loss": 118,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "Be7",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "h3",
+   "cp_after": -51,
+   "cp_loss": 90,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "Na5",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "Bb5",
+   "cp_after": -45,
+   "cp_loss": 84,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "Bc5",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "Bd5",
+   "cp_after": -36,
+   "cp_loss": 75,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "Nxd5",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": false,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "O-O",
+   "cp_after": -36,
+   "cp_loss": 75,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "Bc5",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": true,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "Qe2",
+   "cp_after": -20,
+   "cp_loss": 59,
+   "reply": "Bc5",
+   "reply_is_capture": false,
+   "reply2": "Be7",
+   "mech": null
+  },
+  {
+   "san": "Nc3",
+   "cp_after": -15,
+   "cp_loss": 54,
+   "reply": "Nxe4",
+   "reply_is_capture": true,
+   "reply2": "Bc5",
+   "mech": {
+    "target": "e4",
+    "piece": "P",
+    "undefended": false,
+    "cheapest_attacker": 3,
+    "takers": [
+     "f6"
+    ],
+    "moved_piece": false
+   }
+  },
+  {
+   "san": "d4",
+   "cp_after": 2,
+   "cp_loss": 37,
+   "reply": "exd4",
+   "reply_is_capture": true,
+   "reply2": "d6",
+   "mech": {
+    "target": "d4",
+    "piece": "P",
+    "undefended": false,
+    "cheapest_attacker": 1,
+    "takers": [
+     "c6",
+     "e5"
+    ],
+    "moved_piece": true
+   }
+  },
+  {
+   "san": "Ng5",
+   "cp_after": 21,
+   "cp_loss": 18,
+   "reply": "d5",
+   "reply_is_capture": false,
+   "reply2": "Bc5",
+   "mech": null
+  },
+  {
+   "san": "d3",
+   "cp_after": 31,
+   "cp_loss": 8,
+   "reply": "a6",
+   "reply_is_capture": false,
+   "reply2": "Bc5",
+   "mech": null
+  }
+ ]
+}

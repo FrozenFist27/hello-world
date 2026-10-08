@@ -1,0 +1,47 @@
+{
+ "s3d2g12H": {
+  "score": 0.5,
+  "plies": 914,
+  "gifts": 20,
+  "gift_rolls": 52,
+  "gift_none": 32,
+  "self_hangs": 21,
+  "opp_took_bot_piece": 50,
+  "bot_took_free": 6,
+  "kinds": {
+   "sampled": 388,
+   "gift": 20,
+   "guarded": 41,
+   "forced": 6
+  },
+  "ends": {
+   "resign:bot": 7,
+   "1-0": 2,
+   "1/2-1/2": 1
+  },
+  "games": 10,
+  "secs": 21
+ },
+ "s0d1g12H": {
+  "score": 0.0,
+  "plies": 677,
+  "gifts": 14,
+  "gift_rolls": 32,
+  "gift_none": 18,
+  "self_hangs": 23,
+  "opp_took_bot_piece": 47,
+  "bot_took_free": 1,
+  "kinds": {
+   "sampled": 287,
+   "gift": 14,
+   "guarded": 33,
+   "forced": 2
+  },
+  "ends": {
+   "resign:bot": 9,
+   "0-1": 1
+  },
+  "games": 10,
+  "secs": 19
+ }
+}
