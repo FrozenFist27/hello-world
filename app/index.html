@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Hold On</title>
+  <meta name="description" content="Chess that holds your move and asks. You answer on the board.">
+  <link rel="icon" href="data:,">
+  <link rel="preload" href="./assets/fonts/source-serif-4-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="./assets/fonts/ibm-plex-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="./styles.css">
+  <script>
+    // Theme boot: apply the remembered theme before the first paint. Unset follows the system.
+    (function () {
+      try {
+        var t = localStorage.getItem('holdon.v1.theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) { /* storage unavailable: follow the system */ }
+    })();
+  </script>
+</head>
+<body>
+  <!-- The piece set: twelve flat silhouettes, one closed path each, on a shared 64-unit base.
+       The same markup lives in assets/pieces.svg. Zero-sized rather than display:none so that
+       <use> can reference the symbols in every browser. -->
+  <svg id="defs" class="defs" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="pc-wK" viewBox="0 0 100 100"><title>White king</title><path d="M50 90 L18 90 L18 84 Q18 80 24 79 L34 76 Q40 75 40 70 L38 62 L29 60 Q26 60 26 56 Q26 36 47 33 L47 22 L40 22 L40 16 L47 16 L47 7 L50 7 L53 7 L53 16 L60 16 L60 22 L53 22 L53 33 Q74 36 74 56 Q74 60 71 60 L62 62 L60 70 Q60 75 66 76 L76 79 Q82 80 82 84 L82 90 L50 90 Z" style="fill:var(--piece-white,#f4f1e6);stroke:var(--piece-white-edge,#2a2a2a);stroke-width:1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+    <symbol id="pc-wQ" viewBox="0 0 100 100"><title>White queen</title><path d="M50 90 L18 90 L18 84 Q18 80 24 79 L34 76 Q40 75 40 70 L38 62 L26 60 L21 24 L31 44 L36 17 L44 43 L50 13 L56 43 L64 17 L69 44 L79 24 L74 60 L62 62 L60 70 Q60 75 66 76 L76 79 Q82 80 82 84 L82 90 L50 90 Z" style="fill:var(--piece-white,#f4f1e6);stroke:var(--piece-white-edge,#2a2a2a);stroke-width:1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+    <symbol id="pc-wR" viewBox="0 0 100 100"><title>White rook</title><path d="M50 90 L18 90 L18 84 Q18 80 24 79 L34 76 L34 70 L32 68 L32 30 L30 28 L30 16 L40 16 L40 24 L46 24 L46 16 L50 16 L54 16 L54 24 L60 24 L60 16 L70 16 L70 28 L68 30 L68 68 L66 70 L66 76 L76 79 Q82 80 82 84 L82 90 L50 90 Z" style="fill:var(--piece-white,#f4f1e6);stroke:var(--piece-white-edge,#2a2a2a);stroke-width:1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+    <symbol id="pc-wB" viewBox="0 0 100 100"><title>White bishop</title><path d="M50 90 L18 90 L18 84 Q18 80 24 79 L34 76 Q40 75 40 70 L40 64 Q28 56 32 42 Q36 28 46 20 A5 5 0 1 1 54 20 Q58 23 61 27 L53 37 L57 41 L65 32 Q70 46 60 64 L60 70 Q60 75 66 76 L76 79 Q82 80 82 84 L82 90 Z" style="fill:var(--piece-white,#f4f1e6);stroke:var(--piece-white-edge,#2a2a2a);stroke-width:1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+    <symbol id="pc-wN" viewBox="0 0 100 100"><title>White knight</title><path d="M18 90 L18 84 Q18 80 24 79 L34 77 L34 68 Q36 56 44 52 L30 50 Q18 49 16 42 L16 36 Q16 30 22 30 L34 28 Q38 20 42 18 L46 10 L52 18 L58 20 Q74 30 76 50 L72 56 L78 60 Q80 70 76 77 L76 79 Q82 80 82 84 L82 90 Z" style="fill:var(--piece-white,#f4f1e6);stroke:var(--piece-white-edge,#2a2a2a);stroke-width:1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+    <symbol id="pc-wP" viewBox="0 0 100 100"><title>White pawn</title><path d="M50 90 L18 90 L18 84 Q18 80 24 79 L34 76 Q40 75 40 70 L40 60 Q40 52 45 47 A13 13 0 0 1 50 20 A13 13 0 0 1 55 47 Q60 52 60 60 L60 70 Q60 75 66 76 L76 79 Q82 80 82 84 L82 90 L50 90 Z" style="fill:var(--piece-white,#f4f1e6);stroke:var(--piece-white-edge,#2a2a2a);stroke-width:1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+    <symbol id="pc-bK" viewBox="0 0 100 100"><title>Black king</title><path d="M50 90 L18 90 L18 84 Q18 80 24 79 L34 76 Q40 75 40 70 L38 62 L29 60 Q26 60 26 56 Q26 36 47 33 L47 22 L40 22 L40 16 L47 16 L47 7 L50 7 L53 7 L53 16 L60 16 L60 22 L53 22 L53 33 Q74 36 74 56 Q74 60 71 60 L62 62 L60 70 Q60 75 66 76 L76 79 Q82 80 82 84 L82 90 L50 90 Z" style="fill:var(--piece-black,#2b2b2b);stroke:var(--piece-black-edge,#f4f1e6);stroke-width:1" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+    <symbol id="pc-bQ" viewBox="0 0 100 100"><title>Black queen</title><path d="M50 90 L18 90 L18 84 Q18 80 24 79 L34 76 Q40 75 40 70 L38 62 L26 60 L21 24 L31 44 L36 17 L44 43 L50 13 L56 43 L64 17 L69 44 L79 24 L74 60 L62 62 L60 70 Q60 75 66 76 L76 79 Q82 80 82 84 L82 90 L50 90 Z" style="fill:var(--piece-black,#2b2b2b);stroke:var(--piece-black-edge,#f4f1e6);stroke-width:1" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+    <symbol id="pc-bR" viewBox="0 0 100 100"><title>Black rook</title><path d="M50 90 L18 90 L18 84 Q18 80 24 79 L34 76 L34 70 L32 68 L32 30 L30 28 L30 16 L40 16 L40 24 L46 24 L46 16 L50 16 L54 16 L54 24 L60 24 L60 16 L70 16 L70 28 L68 30 L68 68 L66 70 L66 76 L76 79 Q82 80 82 84 L82 90 L50 90 Z" style="fill:var(--piece-black,#2b2b2b);stroke:var(--piece-black-edge,#f4f1e6);stroke-width:1" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+    <symbol id="pc-bB" viewBox="0 0 100 100"><title>Black bishop</title><path d="M50 90 L18 90 L18 84 Q18 80 24 79 L34 76 Q40 75 40 70 L40 64 Q28 56 32 42 Q36 28 46 20 A5 5 0 1 1 54 20 Q58 23 61 27 L53 37 L57 41 L65 32 Q70 46 60 64 L60 70 Q60 75 66 76 L76 79 Q82 80 82 84 L82 90 Z" style="fill:var(--piece-black,#2b2b2b);stroke:var(--piece-black-edge,#f4f1e6);stroke-width:1" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+    <symbol id="pc-bN" viewBox="0 0 100 100"><title>Black knight</title><path d="M18 90 L18 84 Q18 80 24 79 L34 77 L34 68 Q36 56 44 52 L30 50 Q18 49 16 42 L16 36 Q16 30 22 30 L34 28 Q38 20 42 18 L46 10 L52 18 L58 20 Q74 30 76 50 L72 56 L78 60 Q80 70 76 77 L76 79 Q82 80 82 84 L82 90 Z" style="fill:var(--piece-black,#2b2b2b);stroke:var(--piece-black-edge,#f4f1e6);stroke-width:1" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+    <symbol id="pc-bP" viewBox="0 0 100 100"><title>Black pawn</title><path d="M50 90 L18 90 L18 84 Q18 80 24 79 L34 76 Q40 75 40 70 L40 60 Q40 52 45 47 A13 13 0 0 1 50 20 A13 13 0 0 1 55 47 Q60 52 60 60 L60 70 Q60 75 66 76 L76 79 Q82 80 82 84 L82 90 L50 90 Z" style="fill:var(--piece-black,#2b2b2b);stroke:var(--piece-black-edge,#f4f1e6);stroke-width:1" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></symbol>
+  </svg>
+
+  <header id="top" class="top">
+    <span id="brand" class="brand">Hold On</span>
+    <span class="top-right">
+      <button id="giveup" class="link muted" data-action="giveup" type="button">Give up</button>
+      <button id="theme" class="theme-dot" data-action="theme" type="button" aria-label="Switch theme"></button>
+    </span>
+  </header>
+
+  <main class="stage">
+    <p id="coach" class="coach" aria-live="polite">Your move.</p>
+    <nav id="links" class="links" aria-label="Coach">
+      <button class="link" data-action="showme" type="button" hidden>Show me</button>
+      <button class="link" data-action="but" type="button" hidden>Hear me out</button>
+    </nav>
+    <div id="boardwrap" class="boardwrap">
+      <div id="board" class="board" data-state="idle" data-hold="" data-input="move" role="group" aria-label="Board">
+        <div id="squares" class="squares"></div>
+        <div id="pieces" class="pieces"></div>
+        <div id="ghosts" class="ghosts" aria-hidden="true"></div>
+        <div id="loss" class="loss" aria-hidden="true" hidden></div>
+      </div>
+      <div id="edge" class="edge" aria-hidden="true"><span class="edge-dot"></span><span class="edge-caption"></span></div>
+    </div>
+    <div id="actions" class="actions" aria-live="polite"></div>
+    <section id="close" class="close" hidden>
+      <p class="close-sum"></p>
+      <ul class="close-holds"></ul>
+      <button class="btn primary" data-action="again" type="button">Again</button>
+    </section>
+  </main>
+
+  <script type="module" src="./js/game.js"></script>
+</body>
+</html>

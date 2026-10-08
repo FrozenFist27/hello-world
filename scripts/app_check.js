@@ -25,19 +25,32 @@ const SCENARIO = arg('--script', null);
 const SETTLE = Number(arg('--settle', '800'));
 const STUB = !process.argv.includes('--no-stub');
 
+// Every call is recorded on window.__sampleCalls as {input, opts, outcome}; outcome is 'pending'
+// while the call runs, then 'resolved', 'cancelled' (opts.signal aborted during the wait),
+// 'invalid_json' (sample.json could not parse the text) or the code injected through
+// window.__stubErrors = [{code: 'not_granted'}, ...], which is consumed one entry per call: that
+// call rejects with {code, message} after the wait. No test variable lives in page code.
 const STUB_SCRIPT = `
 (() => {
-  const calls = []; window.__sampleCalls = calls; window.__stubReplies = window.__stubReplies || [];
+  const calls = []; window.__sampleCalls = calls; window.__stubReplies = window.__stubReplies || []; window.__stubErrors = window.__stubErrors || [];
   const reply = () => (window.__stubReplies.length ? window.__stubReplies.shift() : 'Stub coach: this is canned text standing in for Claude. The real page asks Claude through the sample capability.');
   const sample = async (input, opts = {}) => {
-    calls.push({ input, opts: { modelTier: opts.modelTier, tools: (opts.tools || []).map(t => t.name), cache: opts.cache } });
+    const rec = { input, opts: { modelTier: opts.modelTier, tools: (opts.tools || []).map(t => t.name), cache: opts.cache }, outcome: 'pending' };
+    calls.push(rec);
     const text = reply();
-    await new Promise(r => setTimeout(r, 150));
-    if (opts.signal && opts.signal.aborted) throw { code: 'cancelled', message: 'aborted' };
+    const err = window.__stubErrors.length ? window.__stubErrors.shift() : null;
+    // the 150 ms wait ends early when the signal aborts during it
+    await new Promise(r => {
+      const t = setTimeout(r, 150);
+      if (opts.signal) opts.signal.addEventListener('abort', () => { clearTimeout(t); r(); }, { once: true });
+    });
+    if (opts.signal && opts.signal.aborted) { rec.outcome = 'cancelled'; throw { code: 'cancelled', message: 'aborted' }; }
+    if (err && err.code) { rec.outcome = err.code; throw { code: err.code, message: 'injected by window.__stubErrors' }; }
     if (opts.onText) { const half = Math.ceil(text.length / 2); opts.onText({ text: text.slice(0, half), delta: text.slice(0, half) }); await new Promise(r => setTimeout(r, 100)); opts.onText({ text, delta: text.slice(half) }); }
+    rec.outcome = 'resolved';
     return { text, truncated: false, modelTierApplied: opts.modelTier || 'default' };
   };
-  sample.json = async (input, opts = {}) => { const r = await sample(input, opts); try { return JSON.parse(r.text); } catch { throw { code: 'invalid_json', message: 'stub reply was not JSON', text: r.text }; } };
+  sample.json = async (input, opts = {}) => { const r = await sample(input, opts); try { return JSON.parse(r.text); } catch { const rec = calls[calls.length - 1]; if (rec) rec.outcome = 'invalid_json'; throw { code: 'invalid_json', message: 'stub reply was not JSON', text: r.text }; } };
   sample.limits = async () => ({ maxPromptBytes: 262144, tools: { maxCount: 16 } });
   window.claude = { use: async (name) => (name === 'sample' ? sample : null) };
 })();`;
@@ -60,7 +73,7 @@ async function main() {
         page.on('requestfailed', r => report.failedRequests.push(`[${vp}/${scheme}] ${r.url()} ${r.failure()?.errorText}`));
         await page.goto(url, { waitUntil: 'networkidle' });
         if (WAIT) await page.waitForSelector(WAIT, { timeout: 60000 });
-        if (SCENARIO) { const fn = require(path.resolve(SCENARIO)); await fn(page, { vp, scheme, report }); }
+        if (SCENARIO) { const fn = require(path.resolve(SCENARIO)); await fn(page, { vp, scheme, report, out: OUT }); }
         await page.waitForTimeout(SETTLE);
         const file = path.join(OUT, `${vp}-${scheme}.png`);
         await page.screenshot({ path: file, fullPage: true });

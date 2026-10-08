@@ -1,0 +1,83 @@
+{
+  "verifiedAt": {
+    "depth": 18,
+    "maxLossCp": 50,
+    "date": "2026-10-08",
+    "engine": "native Stockfish via scripts/engine_check.py",
+    "command": "python3 scripts/engine_check.py move '<fen>' <san> --depth 18"
+  },
+  "entries": {
+    "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq -": {
+      "reply": "e5",
+      "line": "1.e4 e5",
+      "cpLoss": -16,
+      "command": "python3 scripts/engine_check.py move 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1' e5 --depth 18"
+    },
+    "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq -": {
+      "reply": "Nc6",
+      "line": "1.e4 e5 2.Nf3 Nc6",
+      "cpLoss": 1,
+      "command": "python3 scripts/engine_check.py move 'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2' Nc6 --depth 18"
+    },
+    "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq -": {
+      "reply": "Nf6",
+      "line": "1.e4 e5 2.Nf3 Nc6 3.Bc4 Nf6",
+      "cpLoss": -6,
+      "command": "python3 scripts/engine_check.py move 'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3' Nf6 --depth 18"
+    },
+    "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq -": {
+      "reply": "a6",
+      "line": "1.e4 e5 2.Nf3 Nc6 3.Bb5 a6",
+      "cpLoss": 7,
+      "command": "python3 scripts/engine_check.py move 'r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3' a6 --depth 18"
+    },
+    "rnbqkbnr/pppp1ppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR b KQkq -": {
+      "reply": "Nc6",
+      "line": "1.e4 e5 2.Qh5 Nc6",
+      "cpLoss": -1,
+      "command": "python3 scripts/engine_check.py move 'rnbqkbnr/pppp1ppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR b KQkq - 1 2' Nc6 --depth 18"
+    },
+    "r1bqkbnr/pppp1ppp/2n5/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq -": {
+      "reply": "g6",
+      "line": "1.e4 e5 2.Qh5 Nc6 3.Bc4 g6",
+      "cpLoss": 3,
+      "command": "python3 scripts/engine_check.py move 'r1bqkbnr/pppp1ppp/2n5/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 3 3' g6 --depth 18"
+    },
+    "rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR b KQkq -": {
+      "reply": "Nf6",
+      "line": "1.e4 e5 2.Bc4 Nf6",
+      "cpLoss": 14,
+      "command": "python3 scripts/engine_check.py move 'rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR b KQkq - 1 2' Nf6 --depth 18"
+    },
+    "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R b KQkq -": {
+      "reply": "Be7",
+      "line": "1.e4 e5 2.Nf3 Nc6 3.Bc4 Nf6 4.d3 Be7",
+      "cpLoss": 17,
+      "command": "python3 scripts/engine_check.py move 'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R b KQkq - 0 4' Be7 --depth 18"
+    },
+    "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/2N2N2/PPPP1PPP/R1BQK2R b KQkq -": {
+      "reply": "Bc5",
+      "line": "1.e4 e5 2.Nf3 Nc6 3.Bc4 Nf6 4.Nc3 Bc5",
+      "cpLoss": 34,
+      "command": "python3 scripts/engine_check.py move 'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/2N2N2/PPPP1PPP/R1BQK2R b KQkq - 5 4' Bc5 --depth 18"
+    },
+    "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQ1RK1 b kq -": {
+      "reply": "Nxe4",
+      "line": "1.e4 e5 2.Nf3 Nc6 3.Bc4 Nf6 4.O-O Nxe4",
+      "cpLoss": 7,
+      "command": "python3 scripts/engine_check.py move 'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 5 4' Nxe4 --depth 18"
+    },
+    "r1bqkb1r/pppp1ppp/2n2n2/4p3/2BPP3/5N2/PPP2PPP/RNBQK2R b KQkq -": {
+      "reply": "exd4",
+      "line": "1.e4 e5 2.Nf3 Nc6 3.Bc4 Nf6 4.d4 exd4",
+      "cpLoss": 0,
+      "command": "python3 scripts/engine_check.py move 'r1bqkb1r/pppp1ppp/2n2n2/4p3/2BPP3/5N2/PPP2PPP/RNBQK2R b KQkq - 0 4' exd4 --depth 18"
+    },
+    "r1bqkb1r/pppp1ppp/2n2n2/4p1N1/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq -": {
+      "reply": "d5",
+      "line": "1.e4 e5 2.Nf3 Nc6 3.Bc4 Nf6 4.Ng5 d5",
+      "cpLoss": -1,
+      "command": "python3 scripts/engine_check.py move 'r1bqkb1r/pppp1ppp/2n2n2/4p1N1/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq - 5 4' d5 --depth 18"
+    }
+  }
+}

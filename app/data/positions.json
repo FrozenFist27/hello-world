@@ -1,0 +1,2104 @@
+[
+ {
+  "id": "italian_d6",
+  "name": "Italian after 6...d6 (the spec's hold position)",
+  "fen": "r1bq1rk1/ppp1bppp/2np1n2/4p3/2B1P3/2NP1N2/PPP2PPP/R1BQ1RK1 w - - 0 7",
+  "verified": {
+   "depth": 14,
+   "postDepth": 12,
+   "multipv": 2,
+   "hash": 16,
+   "date": "2026-10-08",
+   "engine": "Stockfish 18 (native)",
+   "command": "python3 scripts/record_positions.py",
+   "check": "python3 scripts/engine_check.py eval \"r1bq1rk1/ppp1bppp/2np1n2/4p3/2B1P3/2NP1N2/PPP2PPP/R1BQ1RK1 w - - 0 7\" --depth 14 --multipv 2"
+  },
+  "pre": {
+   "fen": "r1bq1rk1/ppp1bppp/2np1n2/4p3/2B1P3/2NP1N2/PPP2PPP/R1BQ1RK1 w - - 0 7",
+   "evalBefore": 32,
+   "best": {
+    "uci": "a2a4",
+    "san": "a4",
+    "from": "a2",
+    "to": "a4",
+    "piece": "p",
+    "captured": null,
+    "isMate": false
+   },
+   "mateIn": null,
+   "line2": {
+    "uci": "a2a3",
+    "san": "a3",
+    "from": "a2",
+    "to": "a3",
+    "piece": "p",
+    "captured": null
+   },
+   "depth": 14,
+   "stopped": false
+  },
+  "moves": {
+   "Nxe5": {
+    "expect": "held",
+    "category": "hanging_after_move",
+    "variant": "takes_back",
+    "answer": {
+     "squares": [
+      "d6",
+      "c6"
+     ],
+     "best": "d6",
+     "partial": [
+      "c6"
+     ]
+    },
+    "netLoss": 2,
+    "post": {
+     "fen": "r1bq1rk1/ppp1bppp/2np1n2/4N3/2B1P3/2NP4/PPP2PPP/R1BQ1RK1 b - - 0 7",
+     "evalAfter": -413,
+     "lines": [
+      {
+       "reply": {
+        "uci": "d6e5",
+        "san": "dxe5",
+        "from": "d6",
+        "to": "e5",
+        "piece": "p",
+        "captured": "n",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -413,
+       "pv": [
+        "d6e5",
+        "f2f4",
+        "e5f4",
+        "c1f4",
+        "c6d4",
+        "f4e3"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "c6e5",
+        "san": "Nxe5",
+        "from": "c6",
+        "to": "e5",
+        "piece": "n",
+        "captured": "n",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -329,
+       "pv": [
+        "c6e5",
+        "c4b3",
+        "c7c5",
+        "f2f4",
+        "e5c6",
+        "h2h3",
+        "c6d4",
+        "f4f5",
+        "c8d7",
+        "c3d5",
+        "d7c6",
+        "c2c3"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   },
+   "Bxf7+": {
+    "expect": "held",
+    "category": "hanging_after_move",
+    "variant": "takes_back",
+    "answer": {
+     "squares": [
+      "f8",
+      "g8"
+     ],
+     "best": "f8",
+     "partial": [
+      "g8"
+     ]
+    },
+    "netLoss": 2,
+    "post": {
+     "fen": "r1bq1rk1/ppp1bBpp/2np1n2/4p3/4P3/2NP1N2/PPP2PPP/R1BQ1RK1 b - - 0 7",
+     "evalAfter": -439,
+     "lines": [
+      {
+       "reply": {
+        "uci": "f8f7",
+        "san": "Rxf7",
+        "from": "f8",
+        "to": "f7",
+        "piece": "r",
+        "captured": "b",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -439,
+       "pv": [
+        "f8f7",
+        "f3g5",
+        "f7f8",
+        "c3d5",
+        "h7h6",
+        "f2f4",
+        "e5f4",
+        "c1f4",
+        "c6e5",
+        "d3d4",
+        "e5g6",
+        "f4d6",
+        "d8d6",
+        "d5f6",
+        "g7f6"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "g8f7",
+        "san": "Kxf7",
+        "from": "g8",
+        "to": "f7",
+        "piece": "k",
+        "captured": "b",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -412,
+       "pv": [
+        "g8f7",
+        "d3d4",
+        "e5d4",
+        "c3e2",
+        "f7g8",
+        "f3d4",
+        "c6d4",
+        "d1d4",
+        "c7c6",
+        "d4c4",
+        "g8h8"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   },
+   "h3": {
+    "expect": "committed",
+    "reward": null,
+    "post": {
+     "fen": "r1bq1rk1/ppp1bppp/2np1n2/4p3/2B1P3/2NP1N1P/PPP2PP1/R1BQ1RK1 b - - 0 7",
+     "evalAfter": 4,
+     "lines": [
+      {
+       "reply": {
+        "uci": "c6a5",
+        "san": "Na5",
+        "from": "c6",
+        "to": "a5",
+        "piece": "n",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 4,
+       "pv": [
+        "c6a5",
+        "c4b3",
+        "a7a6",
+        "f1e1",
+        "a5b3",
+        "a2b3",
+        "c7c5",
+        "f3h2",
+        "h7h6",
+        "f2f4",
+        "e5f4",
+        "c1f4",
+        "c8e6",
+        "d3d4",
+        "c5d4",
+        "d1d4"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "h7h6",
+        "san": "h6",
+        "from": "h7",
+        "to": "h6",
+        "piece": "p",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 31,
+       "pv": [
+        "h7h6",
+        "a2a3",
+        "f8e8",
+        "f1e1",
+        "e7f8",
+        "c1e3",
+        "a7a6",
+        "c4a2",
+        "c8e6",
+        "a2e6",
+        "e8e6",
+        "c3d5",
+        "e6e8"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   }
+  }
+ },
+ {
+  "id": "tutorial",
+  "name": "Italian after 3...Nf6 (the tutorial position, here with the engine warm)",
+  "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
+  "verified": {
+   "depth": 14,
+   "postDepth": 12,
+   "multipv": 2,
+   "hash": 16,
+   "date": "2026-10-08",
+   "engine": "Stockfish 18 (native)",
+   "command": "python3 scripts/record_positions.py",
+   "check": "python3 scripts/engine_check.py eval \"r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4\" --depth 14 --multipv 2"
+  },
+  "pre": {
+   "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
+   "evalBefore": 30,
+   "best": {
+    "uci": "f3g5",
+    "san": "Ng5",
+    "from": "f3",
+    "to": "g5",
+    "piece": "n",
+    "captured": null,
+    "isMate": false
+   },
+   "mateIn": null,
+   "line2": {
+    "uci": "d2d3",
+    "san": "d3",
+    "from": "d2",
+    "to": "d3",
+    "piece": "p",
+    "captured": null
+   },
+   "depth": 14,
+   "stopped": false
+  },
+  "moves": {
+   "Bxf7+": {
+    "expect": "held",
+    "category": "hanging_after_move",
+    "variant": "takes_back",
+    "answer": {
+     "squares": [
+      "e8"
+     ],
+     "best": "e8",
+     "partial": []
+    },
+    "netLoss": 2,
+    "post": {
+     "fen": "r1bqkb1r/pppp1Bpp/2n2n2/4p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 0 4",
+     "evalAfter": -287,
+     "lines": [
+      {
+       "reply": {
+        "uci": "e8f7",
+        "san": "Kxf7",
+        "from": "e8",
+        "to": "f7",
+        "piece": "k",
+        "captured": "b",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -287,
+       "pv": [
+        "e8f7",
+        "d2d4",
+        "d7d5",
+        "e4d5",
+        "d8d5",
+        "b1c3",
+        "d5d6",
+        "d4d5",
+        "c6e7",
+        "e1g1",
+        "e7g6",
+        "c3b5",
+        "d6d7",
+        "b5c7",
+        "d7c7",
+        "d5d6",
+        "c7d6"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "e8e7",
+        "san": "Ke7",
+        "from": "e8",
+        "to": "e7",
+        "piece": "k",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 195,
+       "pv": [
+        "e8e7",
+        "f7b3",
+        "e7e8",
+        "e1g1",
+        "a7a5",
+        "c2c3",
+        "f6e4"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   },
+   "Nxe5": {
+    "expect": "held",
+    "category": "hanging_after_move",
+    "variant": "takes_back",
+    "answer": {
+     "squares": [
+      "c6"
+     ],
+     "best": "c6",
+     "partial": []
+    },
+    "netLoss": 2,
+    "post": {
+     "fen": "r1bqkb1r/pppp1ppp/2n2n2/4N3/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq - 0 4",
+     "evalAfter": -272,
+     "lines": [
+      {
+       "reply": {
+        "uci": "c6e5",
+        "san": "Nxe5",
+        "from": "c6",
+        "to": "e5",
+        "piece": "n",
+        "captured": "n",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -272,
+       "pv": [
+        "c6e5",
+        "c4b3",
+        "e5g6",
+        "d2d4",
+        "d7d5",
+        "e4d5",
+        "f8e7",
+        "c2c4",
+        "e8g8",
+        "e1g1",
+        "c7c6"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "d7d5",
+        "san": "d5",
+        "from": "d7",
+        "to": "d5",
+        "piece": "p",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 92,
+       "pv": [
+        "d7d5",
+        "e5c6",
+        "b7c6",
+        "e4d5",
+        "c6d5",
+        "c4b5",
+        "c8d7",
+        "b5d7",
+        "d8d7",
+        "e1g1",
+        "f8e7",
+        "f1e1",
+        "e8g8",
+        "d2d4",
+        "a8e8",
+        "b1c3",
+        "c7c6"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   },
+   "d3": {
+    "expect": "committed",
+    "reward": null,
+    "post": {
+     "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R b KQkq - 0 4",
+     "evalAfter": 23,
+     "lines": [
+      {
+       "reply": {
+        "uci": "a7a6",
+        "san": "a6",
+        "from": "a7",
+        "to": "a6",
+        "piece": "p",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 23,
+       "pv": [
+        "a7a6",
+        "c2c3",
+        "f8c5",
+        "e1g1",
+        "c5a7",
+        "c1e3",
+        "a7e3",
+        "f2e3",
+        "e8g8",
+        "a2a4",
+        "d7d6",
+        "b1d2"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "f8c5",
+        "san": "Bc5",
+        "from": "f8",
+        "to": "c5",
+        "piece": "b",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 23,
+       "pv": [
+        "f8c5",
+        "a2a4",
+        "d7d6",
+        "h2h3",
+        "h7h6",
+        "c2c3",
+        "a7a5",
+        "e1g1",
+        "e8g8",
+        "f1e1"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   }
+  }
+ },
+ {
+  "id": "ruy_a6",
+  "name": "Ruy Lopez after 3...a6 (the b5 bishop is attacked)",
+  "fen": "r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4",
+  "verified": {
+   "depth": 14,
+   "postDepth": 12,
+   "multipv": 2,
+   "hash": 16,
+   "date": "2026-10-08",
+   "engine": "Stockfish 18 (native)",
+   "command": "python3 scripts/record_positions.py",
+   "check": "python3 scripts/engine_check.py eval \"r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4\" --depth 14 --multipv 2"
+  },
+  "pre": {
+   "fen": "r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4",
+   "evalBefore": 33,
+   "best": {
+    "uci": "b5a4",
+    "san": "Ba4",
+    "from": "b5",
+    "to": "a4",
+    "piece": "b",
+    "captured": null,
+    "isMate": false
+   },
+   "mateIn": null,
+   "line2": {
+    "uci": "b5c6",
+    "san": "Bxc6",
+    "from": "b5",
+    "to": "c6",
+    "piece": "b",
+    "captured": "n"
+   },
+   "depth": 14,
+   "stopped": false
+  },
+  "moves": {
+   "O-O": {
+    "expect": "held",
+    "category": "ignored_attack",
+    "sub": "already",
+    "answer": {
+     "squares": [
+      "b5"
+     ],
+     "best": "b5",
+     "partial": [
+      "a6"
+     ]
+    },
+    "netLoss": 3,
+    "post": {
+     "fen": "r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 1 4",
+     "evalAfter": -406,
+     "lines": [
+      {
+       "reply": {
+        "uci": "a6b5",
+        "san": "axb5",
+        "from": "a6",
+        "to": "b5",
+        "piece": "p",
+        "captured": "b",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -406,
+       "pv": [
+        "a6b5",
+        "d2d4",
+        "d7d6",
+        "b1c3",
+        "b5b4",
+        "c3b5",
+        "a8a5",
+        "d4d5",
+        "a5b5",
+        "d5c6",
+        "b7c6"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "g8e7",
+        "san": "Nge7",
+        "from": "g8",
+        "to": "e7",
+        "piece": "n",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 14,
+       "pv": [
+        "g8e7",
+        "b5c4",
+        "e7g6",
+        "d2d4",
+        "e5d4",
+        "f3d4",
+        "f8c5",
+        "d4c6",
+        "b7c6"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   },
+   "Ba4": {
+    "expect": "committed",
+    "reward": "escaped",
+    "post": {
+     "fen": "r1bqkbnr/1ppp1ppp/p1n5/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 1 4",
+     "evalAfter": 20,
+     "lines": [
+      {
+       "reply": {
+        "uci": "g8f6",
+        "san": "Nf6",
+        "from": "g8",
+        "to": "f6",
+        "piece": "n",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 20,
+       "pv": [
+        "g8f6",
+        "e1g1",
+        "f6e4",
+        "d2d4",
+        "e5d4",
+        "f1e1",
+        "d7d5",
+        "a4c6",
+        "b7c6",
+        "d1d4",
+        "d8f6"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "f8c5",
+        "san": "Bc5",
+        "from": "f8",
+        "to": "c5",
+        "piece": "b",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 42,
+       "pv": [
+        "f8c5",
+        "c2c3",
+        "g8f6",
+        "d2d4",
+        "c5a7",
+        "e1g1",
+        "e8g8",
+        "c1g5",
+        "h7h6",
+        "g5h4",
+        "d7d6",
+        "a4c6",
+        "b7c6",
+        "d4e5",
+        "d6e5",
+        "d1d8",
+        "f8d8",
+        "f3e5"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   }
+  }
+ },
+ {
+  "id": "italian_nxe4",
+  "name": "Italian after 4.d3 Nxe4 (the e4 knight is free)",
+  "fen": "r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 5",
+  "verified": {
+   "depth": 14,
+   "postDepth": 12,
+   "multipv": 2,
+   "hash": 16,
+   "date": "2026-10-08",
+   "engine": "Stockfish 18 (native)",
+   "command": "python3 scripts/record_positions.py",
+   "check": "python3 scripts/engine_check.py eval \"r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 5\" --depth 14 --multipv 2"
+  },
+  "pre": {
+   "fen": "r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 5",
+   "evalBefore": 436,
+   "best": {
+    "uci": "d3e4",
+    "san": "dxe4",
+    "from": "d3",
+    "to": "e4",
+    "piece": "p",
+    "captured": "n",
+    "isMate": false
+   },
+   "mateIn": null,
+   "line2": {
+    "uci": "c4f7",
+    "san": "Bxf7+",
+    "from": "c4",
+    "to": "f7",
+    "piece": "b",
+    "captured": "p"
+   },
+   "depth": 14,
+   "stopped": false
+  },
+  "moves": {
+   "Nc3": {
+    "expect": "held",
+    "category": "free_piece_ignored",
+    "answer": {
+     "squares": [
+      "e4"
+     ],
+     "best": "e4",
+     "partial": []
+    },
+    "netLoss": 3,
+    "post": {
+     "fen": "r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/2NP1N2/PPP2PPP/R1BQK2R b KQkq - 1 5",
+     "evalAfter": -158,
+     "lines": [
+      {
+       "reply": {
+        "uci": "e4c3",
+        "san": "Nxc3",
+        "from": "e4",
+        "to": "c3",
+        "piece": "n",
+        "captured": "n",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -158,
+       "pv": [
+        "e4c3",
+        "b2c3",
+        "d7d5",
+        "c4b3",
+        "a7a5",
+        "a2a4",
+        "f8e7",
+        "e1g1",
+        "c8e6",
+        "f1e1"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "e4f6",
+        "san": "Nf6",
+        "from": "e4",
+        "to": "f6",
+        "piece": "n",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": -69,
+       "pv": [
+        "e4f6",
+        "e1g1",
+        "f8e7",
+        "c4b5",
+        "c6d4",
+        "f3e5",
+        "c7c6",
+        "b5a4",
+        "e8g8",
+        "a4b3",
+        "d7d5"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   },
+   "dxe4": {
+    "expect": "committed",
+    "reward": "free_taken",
+    "post": {
+     "fen": "r1bqkb1r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPP2PPP/RNBQK2R b KQkq - 0 5",
+     "evalAfter": 428,
+     "lines": [
+      {
+       "reply": {
+        "uci": "f8b4",
+        "san": "Bb4+",
+        "from": "f8",
+        "to": "b4",
+        "piece": "b",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": true
+       },
+       "score": 428,
+       "pv": [
+        "f8b4",
+        "c1d2",
+        "b4d2",
+        "b1d2",
+        "d8e7",
+        "e1g1",
+        "d7d6",
+        "b2b3",
+        "c8g4"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "f7f5",
+        "san": "f5",
+        "from": "f7",
+        "to": "f5",
+        "piece": "p",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 432,
+       "pv": [
+        "f7f5",
+        "e4f5",
+        "e5e4",
+        "f3g5",
+        "d7d5",
+        "c4d5",
+        "c8f5",
+        "d5c6",
+        "b7c6",
+        "d1d8",
+        "a8d8"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   }
+  }
+ },
+ {
+  "id": "placement_oo",
+  "name": "Placement after 7...O-O (the g4 bishop is attacked by the h3 pawn)",
+  "fen": "r2q1rk1/ppp2ppp/2np1n2/2b1p3/2B1P1b1/2PP1N1P/PP3PP1/RNBQ1RK1 w - - 1 8",
+  "verified": {
+   "depth": 14,
+   "postDepth": 12,
+   "multipv": 2,
+   "hash": 16,
+   "date": "2026-10-08",
+   "engine": "Stockfish 18 (native)",
+   "command": "python3 scripts/record_positions.py",
+   "check": "python3 scripts/engine_check.py eval \"r2q1rk1/ppp2ppp/2np1n2/2b1p3/2B1P1b1/2PP1N1P/PP3PP1/RNBQ1RK1 w - - 1 8\" --depth 14 --multipv 2"
+  },
+  "pre": {
+   "fen": "r2q1rk1/ppp2ppp/2np1n2/2b1p3/2B1P1b1/2PP1N1P/PP3PP1/RNBQ1RK1 w - - 1 8",
+   "evalBefore": 395,
+   "best": {
+    "uci": "h3g4",
+    "san": "hxg4",
+    "from": "h3",
+    "to": "g4",
+    "piece": "p",
+    "captured": "b",
+    "isMate": false
+   },
+   "mateIn": null,
+   "line2": {
+    "uci": "b2b4",
+    "san": "b4",
+    "from": "b2",
+    "to": "b4",
+    "piece": "p",
+    "captured": null
+   },
+   "depth": 14,
+   "stopped": false
+  },
+  "moves": {
+   "Nbd2": {
+    "expect": "held",
+    "category": "free_piece_ignored",
+    "answer": {
+     "squares": [
+      "g4"
+     ],
+     "best": "g4",
+     "partial": []
+    },
+    "netLoss": 2,
+    "post": {
+     "fen": "r2q1rk1/ppp2ppp/2np1n2/2b1p3/2B1P1b1/2PP1N1P/PP1N1PP1/R1BQ1RK1 b - - 2 8",
+     "evalAfter": 67,
+     "lines": [
+      {
+       "reply": {
+        "uci": "g4h5",
+        "san": "Bh5",
+        "from": "g4",
+        "to": "h5",
+        "piece": "b",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 67,
+       "pv": [
+        "g4h5",
+        "b2b4",
+        "c5b6",
+        "a2a4",
+        "a7a5",
+        "b4b5",
+        "c6e7",
+        "g2g4",
+        "h5g6",
+        "c4a2",
+        "b6c5",
+        "d2c4",
+        "g8h8",
+        "f3h4",
+        "c7c6",
+        "d3d4",
+        "e5d4",
+        "c3d4"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "g4c8",
+        "san": "Bc8",
+        "from": "g4",
+        "to": "c8",
+        "piece": "b",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 69,
+       "pv": [
+        "g4c8",
+        "b2b4",
+        "c5b6",
+        "a2a4",
+        "a7a6",
+        "f1e1",
+        "h7h6",
+        "a4a5",
+        "b6a7",
+        "c4b3",
+        "c8e6"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   },
+   "hxg4": {
+    "expect": "committed",
+    "reward": "free_taken",
+    "post": {
+     "fen": "r2q1rk1/ppp2ppp/2np1n2/2b1p3/2B1P1P1/2PP1N2/PP3PP1/RNBQ1RK1 b - - 0 8",
+     "evalAfter": 373,
+     "lines": [
+      {
+       "reply": {
+        "uci": "f6g4",
+        "san": "Nxg4",
+        "from": "f6",
+        "to": "g4",
+        "piece": "n",
+        "captured": "p",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": 373,
+       "pv": [
+        "f6g4",
+        "b2b4",
+        "c5b6",
+        "a2a4",
+        "a7a5",
+        "b4b5",
+        "c6e7",
+        "d3d4",
+        "d6d5",
+        "e4d5",
+        "e7d5",
+        "a1a2"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "d6d5",
+        "san": "d5",
+        "from": "d6",
+        "to": "d5",
+        "piece": "p",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 412,
+       "pv": [
+        "d6d5",
+        "c4d5",
+        "f6d5",
+        "e4d5",
+        "f7f5",
+        "d5c6",
+        "f5g4",
+        "d1b3",
+        "g8h8"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   }
+  }
+ },
+ {
+  "id": "italian_ng4",
+  "name": "Italian after 5...Ng4 (the g4 knight is attacked by the h3 pawn)",
+  "fen": "r1bqk2r/pppp1ppp/2n5/2b1p3/2B1P1n1/3P1N1P/PPP2PP1/RNBQK2R w KQkq - 1 6",
+  "verified": {
+   "depth": 14,
+   "postDepth": 12,
+   "multipv": 2,
+   "hash": 16,
+   "date": "2026-10-08",
+   "engine": "Stockfish 18 (native)",
+   "command": "python3 scripts/record_positions.py",
+   "check": "python3 scripts/engine_check.py eval \"r1bqk2r/pppp1ppp/2n5/2b1p3/2B1P1n1/3P1N1P/PPP2PP1/RNBQK2R w KQkq - 1 6\" --depth 14 --multipv 2"
+  },
+  "pre": {
+   "fen": "r1bqk2r/pppp1ppp/2n5/2b1p3/2B1P1n1/3P1N1P/PPP2PP1/RNBQK2R w KQkq - 1 6",
+   "evalBefore": 438,
+   "best": {
+    "uci": "h3g4",
+    "san": "hxg4",
+    "from": "h3",
+    "to": "g4",
+    "piece": "p",
+    "captured": "n",
+    "isMate": false
+   },
+   "mateIn": null,
+   "line2": {
+    "uci": "d3d4",
+    "san": "d4",
+    "from": "d3",
+    "to": "d4",
+    "piece": "p",
+    "captured": null
+   },
+   "depth": 14,
+   "stopped": false
+  },
+  "moves": {
+   "O-O": {
+    "expect": "held",
+    "category": "free_piece_ignored",
+    "answer": {
+     "squares": [
+      "g4"
+     ],
+     "best": "g4",
+     "partial": []
+    },
+    "netLoss": 3,
+    "post": {
+     "fen": "r1bqk2r/pppp1ppp/2n5/2b1p3/2B1P1n1/3P1N1P/PPP2PP1/RNBQ1RK1 b kq - 2 6",
+     "evalAfter": 76,
+     "lines": [
+      {
+       "reply": {
+        "uci": "g4f6",
+        "san": "Nf6",
+        "from": "g4",
+        "to": "f6",
+        "piece": "n",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 76,
+       "pv": [
+        "g4f6",
+        "b1c3",
+        "a7a6",
+        "c1g5",
+        "h7h6",
+        "g5f6",
+        "d8f6",
+        "c3d5",
+        "f6d8",
+        "c2c3",
+        "b7b5"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "g4h6",
+        "san": "Nh6",
+        "from": "g4",
+        "to": "h6",
+        "piece": "n",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 208,
+       "pv": [
+        "g4h6",
+        "b1c3",
+        "e8g8",
+        "c3d5",
+        "c5e7",
+        "d3d4",
+        "d7d6",
+        "c2c3",
+        "c8e6",
+        "d4e5",
+        "c6e5",
+        "f3e5",
+        "d6e5",
+        "d1h5",
+        "e7d6",
+        "c1h6",
+        "g7h6",
+        "h5h6"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   },
+   "hxg4": {
+    "expect": "committed",
+    "reward": "free_taken",
+    "post": {
+     "fen": "r1bqk2r/pppp1ppp/2n5/2b1p3/2B1P1P1/3P1N2/PPP2PP1/RNBQK2R b KQkq - 0 6",
+     "evalAfter": 427,
+     "lines": [
+      {
+       "reply": {
+        "uci": "c6a5",
+        "san": "Na5",
+        "from": "c6",
+        "to": "a5",
+        "piece": "n",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 427,
+       "pv": [
+        "c6a5",
+        "b1c3",
+        "d7d6",
+        "g4g5",
+        "c8g4"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "d7d6",
+        "san": "d6",
+        "from": "d7",
+        "to": "d6",
+        "piece": "p",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 448,
+       "pv": [
+        "d7d6",
+        "f3g5",
+        "h7h6",
+        "c4f7",
+        "e8e7",
+        "f7b3"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   }
+  }
+ },
+ {
+  "id": "f3_e5",
+  "name": "After 1.f3 e5 (g4 allows the fool's mate)",
+  "fen": "rnbqkbnr/pppp1ppp/8/4p3/8/5P2/PPPPP1PP/RNBQKBNR w KQkq e6 0 2",
+  "verified": {
+   "depth": 14,
+   "postDepth": 12,
+   "multipv": 2,
+   "hash": 16,
+   "date": "2026-10-08",
+   "engine": "Stockfish 18 (native)",
+   "command": "python3 scripts/record_positions.py",
+   "check": "python3 scripts/engine_check.py eval \"rnbqkbnr/pppp1ppp/8/4p3/8/5P2/PPPPP1PP/RNBQKBNR w KQkq e6 0 2\" --depth 14 --multipv 2"
+  },
+  "pre": {
+   "fen": "rnbqkbnr/pppp1ppp/8/4p3/8/5P2/PPPPP1PP/RNBQKBNR w KQkq - 0 2",
+   "evalBefore": -74,
+   "best": {
+    "uci": "e2e4",
+    "san": "e4",
+    "from": "e2",
+    "to": "e4",
+    "piece": "p",
+    "captured": null,
+    "isMate": false
+   },
+   "mateIn": null,
+   "line2": {
+    "uci": "e2e3",
+    "san": "e3",
+    "from": "e2",
+    "to": "e3",
+    "piece": "p",
+    "captured": null
+   },
+   "depth": 14,
+   "stopped": false
+  },
+  "moves": {
+   "g4": {
+    "expect": "held",
+    "category": "allowed_mate",
+    "answer": {
+     "squares": [
+      "h4"
+     ],
+     "best": "h4",
+     "partial": []
+    },
+    "post": {
+     "fen": "rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2",
+     "evalAfter": -9999,
+     "lines": [
+      {
+       "reply": {
+        "uci": "d8h4",
+        "san": "Qh4#",
+        "from": "d8",
+        "to": "h4",
+        "piece": "q",
+        "captured": null,
+        "isMate": true,
+        "isCapture": false,
+        "isCheck": true
+       },
+       "score": -9999,
+       "pv": [
+        "d8h4"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "h7h5",
+        "san": "h5",
+        "from": "h7",
+        "to": "h5",
+        "piece": "p",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": -257,
+       "pv": [
+        "h7h5",
+        "f1g2",
+        "h5g4",
+        "f3g4",
+        "d8h4",
+        "e1f1",
+        "b8c6",
+        "b1c3",
+        "h4g4",
+        "d2d3",
+        "g8f6"
+       ]
+      }
+     ],
+     "replyMateIn": 1,
+     "depth": 12
+    }
+   },
+   "e4": {
+    "expect": "committed",
+    "reward": null,
+    "post": {
+     "fen": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5P2/PPPP2PP/RNBQKBNR b KQkq - 0 2",
+     "evalAfter": -78,
+     "lines": [
+      {
+       "reply": {
+        "uci": "f8c5",
+        "san": "Bc5",
+        "from": "f8",
+        "to": "c5",
+        "piece": "b",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": -78,
+       "pv": [
+        "f8c5",
+        "c2c3",
+        "b8c6",
+        "b2b4",
+        "c5b6",
+        "a2a4",
+        "d7d5",
+        "e4d5",
+        "d8d5",
+        "a4a5",
+        "b6g1",
+        "h1g1",
+        "g8f6",
+        "b1a3",
+        "e8g8",
+        "f1c4",
+        "d5d7"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "g8f6",
+        "san": "Nf6",
+        "from": "g8",
+        "to": "f6",
+        "piece": "n",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": -76,
+       "pv": [
+        "g8f6",
+        "d2d4",
+        "e5d4",
+        "d1d4",
+        "b8c6",
+        "d4e3",
+        "b7b6",
+        "b1c3",
+        "f8c5",
+        "e3g5"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   }
+  }
+ },
+ {
+  "id": "scholars_white",
+  "name": "Scholar's mate from White's side (Qxf7 is mate)",
+  "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4",
+  "verified": {
+   "depth": 14,
+   "postDepth": 12,
+   "multipv": 2,
+   "hash": 16,
+   "date": "2026-10-08",
+   "engine": "Stockfish 18 (native)",
+   "command": "python3 scripts/record_positions.py",
+   "check": "python3 scripts/engine_check.py eval \"r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4\" --depth 14 --multipv 2"
+  },
+  "pre": {
+   "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4",
+   "evalBefore": 9999,
+   "best": {
+    "uci": "h5f7",
+    "san": "Qxf7#",
+    "from": "h5",
+    "to": "f7",
+    "piece": "q",
+    "captured": "p",
+    "isMate": true
+   },
+   "mateIn": 1,
+   "line2": {
+    "uci": "h5e2",
+    "san": "Qe2",
+    "from": "h5",
+    "to": "e2",
+    "piece": "q",
+    "captured": null
+   },
+   "depth": 14,
+   "stopped": false
+  },
+  "moves": {
+   "Qh3": {
+    "expect": "held",
+    "category": "missed_mate",
+    "answer": {
+     "squares": [
+      "f7"
+     ],
+     "best": "f7",
+     "partial": []
+    },
+    "post": {
+     "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/7Q/PPPP1PPP/RNB1K1NR b KQkq - 5 4",
+     "evalAfter": -507,
+     "lines": [
+      {
+       "reply": {
+        "uci": "d7d5",
+        "san": "d5",
+        "from": "d7",
+        "to": "d5",
+        "piece": "p",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": -507,
+       "pv": [
+        "d7d5",
+        "h3g3",
+        "d5c4",
+        "b1c3",
+        "a7a6",
+        "g1f3",
+        "c8e6",
+        "f3g5",
+        "c6d4",
+        "g5e6",
+        "f7e6"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "f6e4",
+        "san": "Nxe4",
+        "from": "f6",
+        "to": "e4",
+        "piece": "n",
+        "captured": "p",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -286,
+       "pv": [
+        "f6e4",
+        "h3d3",
+        "e4f6",
+        "d3g3",
+        "g7g6",
+        "d2d4",
+        "e5d4"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   },
+   "Qxf7#": {
+    "expect": "over",
+    "post": {
+     "fen": "r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4",
+     "evalAfter": 10000,
+     "lines": [],
+     "replyMateIn": null,
+     "depth": 0,
+     "terminal": "checkmate"
+    }
+   }
+  }
+ },
+ {
+  "id": "start",
+  "name": "The start position",
+  "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+  "verified": {
+   "depth": 14,
+   "postDepth": 12,
+   "multipv": 2,
+   "hash": 16,
+   "date": "2026-10-08",
+   "engine": "Stockfish 18 (native)",
+   "command": "python3 scripts/record_positions.py",
+   "check": "python3 scripts/engine_check.py eval \"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\" --depth 14 --multipv 2"
+  },
+  "pre": {
+   "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "evalBefore": 37,
+   "best": {
+    "uci": "e2e4",
+    "san": "e4",
+    "from": "e2",
+    "to": "e4",
+    "piece": "p",
+    "captured": null,
+    "isMate": false
+   },
+   "mateIn": null,
+   "line2": {
+    "uci": "d2d4",
+    "san": "d4",
+    "from": "d2",
+    "to": "d4",
+    "piece": "p",
+    "captured": null
+   },
+   "depth": 14,
+   "stopped": false
+  },
+  "moves": {
+   "e4": {
+    "expect": "committed",
+    "reward": null,
+    "post": {
+     "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+     "evalAfter": 38,
+     "lines": [
+      {
+       "reply": {
+        "uci": "e7e5",
+        "san": "e5",
+        "from": "e7",
+        "to": "e5",
+        "piece": "p",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 38,
+       "pv": [
+        "e7e5",
+        "g1f3",
+        "b8c6",
+        "b1c3",
+        "g8f6",
+        "f1b5",
+        "c6d4",
+        "f3e5"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "e7e6",
+        "san": "e6",
+        "from": "e7",
+        "to": "e6",
+        "piece": "p",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 39,
+       "pv": [
+        "e7e6",
+        "d2d4",
+        "d7d5",
+        "b1c3",
+        "g8f6",
+        "e4e5",
+        "f6d7",
+        "g1f3",
+        "c7c5",
+        "c3e2",
+        "c5d4",
+        "e2d4"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   },
+   "Nf3": {
+    "expect": "committed",
+    "reward": null,
+    "post": {
+     "fen": "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+     "evalAfter": 33,
+     "lines": [
+      {
+       "reply": {
+        "uci": "d7d5",
+        "san": "d5",
+        "from": "d7",
+        "to": "d5",
+        "piece": "p",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 33,
+       "pv": [
+        "d7d5",
+        "d2d4",
+        "e7e6",
+        "c2c4",
+        "f8e7",
+        "b1c3",
+        "g8f6",
+        "c1f4"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "e7e6",
+        "san": "e6",
+        "from": "e7",
+        "to": "e6",
+        "piece": "p",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 33,
+       "pv": [
+        "e7e6",
+        "c2c4",
+        "d7d5",
+        "d2d4",
+        "g8f6",
+        "c1g5",
+        "f8e7",
+        "b1c3",
+        "e8g8",
+        "e2e3",
+        "h7h6",
+        "g5h4"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   }
+  }
+ },
+ {
+  "id": "queen_hang",
+  "name": "After 1.e4 e5 2.Qh5 Nc6 (a queen capture that is taken back; netLoss 8 beats the quiet rule)",
+  "fen": "r1bqkbnr/pppp1ppp/2n5/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQkq - 2 3",
+  "verified": {
+   "depth": 14,
+   "postDepth": 12,
+   "multipv": 2,
+   "hash": 16,
+   "date": "2026-10-08",
+   "engine": "Stockfish 18 (native)",
+   "command": "python3 scripts/record_positions.py",
+   "check": "python3 scripts/engine_check.py eval \"r1bqkbnr/pppp1ppp/2n5/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQkq - 2 3\" --depth 14 --multipv 2"
+  },
+  "pre": {
+   "fen": "r1bqkbnr/pppp1ppp/2n5/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQkq - 2 3",
+   "evalBefore": -43,
+   "best": {
+    "uci": "f1c4",
+    "san": "Bc4",
+    "from": "f1",
+    "to": "c4",
+    "piece": "b",
+    "captured": null,
+    "isMate": false
+   },
+   "mateIn": null,
+   "line2": {
+    "uci": "h5d1",
+    "san": "Qd1",
+    "from": "h5",
+    "to": "d1",
+    "piece": "q",
+    "captured": null
+   },
+   "depth": 14,
+   "stopped": false
+  },
+  "moves": {
+   "Qxe5+": {
+    "expect": "held",
+    "category": "hanging_after_move",
+    "variant": "takes_back",
+    "answer": {
+     "squares": [
+      "c6"
+     ],
+     "best": "c6",
+     "partial": []
+    },
+    "netLoss": 8,
+    "post": {
+     "fen": "r1bqkbnr/pppp1ppp/2n5/4Q3/4P3/8/PPPP1PPP/RNB1KBNR b KQkq - 0 3",
+     "evalAfter": -610,
+     "lines": [
+      {
+       "reply": {
+        "uci": "c6e5",
+        "san": "Nxe5",
+        "from": "c6",
+        "to": "e5",
+        "piece": "n",
+        "captured": "q",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -610,
+       "pv": [
+        "c6e5",
+        "b1c3",
+        "e5g6",
+        "g1f3",
+        "c7c6",
+        "e4e5",
+        "d7d5",
+        "c3b5",
+        "c6b5",
+        "f1b5",
+        "c8d7"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "g8e7",
+        "san": "Nge7",
+        "from": "g8",
+        "to": "e7",
+        "piece": "n",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 14,
+       "pv": [
+        "g8e7",
+        "e5h5",
+        "d7d5",
+        "d2d3",
+        "d5e4",
+        "d3e4",
+        "e7g6",
+        "c1g5",
+        "d8d7"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   },
+   "Qxf7+": {
+    "expect": "held",
+    "category": "hanging_after_move",
+    "variant": "takes_back",
+    "answer": {
+     "squares": [
+      "e8"
+     ],
+     "best": "e8",
+     "partial": []
+    },
+    "netLoss": 8,
+    "post": {
+     "fen": "r1bqkbnr/pppp1Qpp/2n5/4p3/4P3/8/PPPP1PPP/RNB1KBNR b KQkq - 0 3",
+     "evalAfter": -581,
+     "lines": [
+      {
+       "reply": {
+        "uci": "e8f7",
+        "san": "Kxf7",
+        "from": "e8",
+        "to": "f7",
+        "piece": "k",
+        "captured": "q",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -581,
+       "pv": [
+        "e8f7",
+        "g1f3",
+        "d7d6",
+        "b1c3",
+        "f7e8",
+        "f1c4"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   },
+   "Bc4": {
+    "expect": "committed",
+    "reward": null,
+    "post": {
+     "fen": "r1bqkbnr/pppp1ppp/2n5/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 3 3",
+     "evalAfter": -40,
+     "lines": [
+      {
+       "reply": {
+        "uci": "g7g6",
+        "san": "g6",
+        "from": "g7",
+        "to": "g6",
+        "piece": "p",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": -40,
+       "pv": [
+        "g7g6",
+        "h5d1",
+        "f8g7",
+        "g1f3",
+        "g8f6",
+        "d2d3",
+        "d7d5",
+        "e4d5",
+        "f6d5",
+        "e1g1",
+        "e8g8",
+        "f1e1",
+        "h7h6",
+        "a2a4",
+        "f8e8",
+        "a4a5",
+        "a7a6",
+        "b1c3"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "d8e7",
+        "san": "Qe7",
+        "from": "d8",
+        "to": "e7",
+        "piece": "q",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": -29,
+       "pv": [
+        "d8e7",
+        "h5d1",
+        "f7f5",
+        "e4f5",
+        "g8f6",
+        "b1c3",
+        "c6d4",
+        "g1e2",
+        "d7d5",
+        "c3d5",
+        "f6d5",
+        "c4d5",
+        "c8f5",
+        "d2d3",
+        "e8c8",
+        "e2d4",
+        "e5d4",
+        "d5e4",
+        "f5e4"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   }
+  }
+ },
+ {
+  "id": "kq_stalemate",
+  "name": "King and queen against king (Qf7 stalemates)",
+  "fen": "7k/8/8/8/8/8/8/K4Q2 w - - 0 1",
+  "verified": {
+   "depth": 14,
+   "postDepth": 12,
+   "multipv": 2,
+   "hash": 16,
+   "date": "2026-10-08",
+   "engine": "Stockfish 18 (native)",
+   "command": "python3 scripts/record_positions.py",
+   "check": "python3 scripts/engine_check.py eval \"7k/8/8/8/8/8/8/K4Q2 w - - 0 1\" --depth 14 --multipv 2"
+  },
+  "pre": {
+   "fen": "7k/8/8/8/8/8/8/K4Q2 w - - 0 1",
+   "evalBefore": 9990,
+   "best": {
+    "uci": "f1g1",
+    "san": "Qg1",
+    "from": "f1",
+    "to": "g1",
+    "piece": "q",
+    "captured": null,
+    "isMate": false
+   },
+   "mateIn": 10,
+   "line2": {
+    "uci": "f1g2",
+    "san": "Qg2",
+    "from": "f1",
+    "to": "g2",
+    "piece": "q",
+    "captured": null
+   },
+   "depth": 14,
+   "stopped": false
+  },
+  "moves": {
+   "Qf7": {
+    "expect": "held",
+    "category": "allowed_stalemate",
+    "answer": {
+     "squares": [
+      "h8"
+     ],
+     "best": "h8",
+     "partial": []
+    },
+    "post": {
+     "fen": "7k/5Q2/8/8/8/8/8/K7 b - - 1 1",
+     "evalAfter": 0,
+     "lines": [],
+     "replyMateIn": null,
+     "depth": 0,
+     "terminal": "draw"
+    }
+   },
+   "Kb2": {
+    "expect": "committed",
+    "reward": null,
+    "post": {
+     "fen": "7k/8/8/8/8/8/1K6/5Q2 b - - 1 1",
+     "evalAfter": 510,
+     "lines": [
+      {
+       "reply": {
+        "uci": "h8g7",
+        "san": "Kg7",
+        "from": "h8",
+        "to": "g7",
+        "piece": "k",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 510,
+       "pv": [
+        "h8g7",
+        "f1g2",
+        "g7f7",
+        "b2b3",
+        "f7f8",
+        "g2d2",
+        "f8g7"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "h8h7",
+        "san": "Kh7",
+        "from": "h8",
+        "to": "h7",
+        "piece": "k",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 9989,
+       "pv": [
+        "h8h7",
+        "f1g2",
+        "h7h6",
+        "g2g4",
+        "h6h7",
+        "g4g5",
+        "h7h8",
+        "b2a2",
+        "h8h7",
+        "a2a3",
+        "h7h8",
+        "a3b4",
+        "h8h7",
+        "b4c5",
+        "h7h8",
+        "c5d6",
+        "h8h7",
+        "d6e6",
+        "h7h8",
+        "e6f6",
+        "h8h7",
+        "g5g7"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   }
+  }
+ }
+]

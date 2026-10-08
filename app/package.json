@@ -1,0 +1,11 @@
+{
+  "name": "hold-on",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hold On: chess that holds your move and asks. You answer on the board.",
+  "type": "module",
+  "scripts": {
+    "serve": "python3 -m http.server 8787 --directory .",
+    "test": "bash ../scripts/test_all.sh"
+  }
+}

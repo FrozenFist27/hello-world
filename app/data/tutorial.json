@@ -1,0 +1,678 @@
+{
+ "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
+ "best": {
+  "san": "Ng5",
+  "cp": 39
+ },
+ "verifiedAt": {
+  "depth": 20,
+  "source": "product/research/tutorial_table.json",
+  "date": "2026-10-08"
+ },
+ "moves": {
+  "Be6": {
+   "held": true,
+   "category": "hanging_after_move",
+   "variant": null,
+   "cpLoss": 534,
+   "cpAfter": -495,
+   "reply": "dxe6",
+   "line": [
+    "dxe6"
+   ],
+   "netLoss": 3,
+   "answer": {
+    "squares": [
+     "d7",
+     "f7"
+    ],
+    "best": "d7",
+    "partial": [
+     "f7"
+    ]
+   },
+   "takers": [
+    {
+     "square": "d7",
+     "type": "p",
+     "value": 1
+    },
+    {
+     "square": "f7",
+     "type": "p",
+     "value": 1
+    }
+   ],
+   "pawnAmongTakers": true,
+   "gained": []
+  },
+  "Nd4": {
+   "held": true,
+   "category": "hanging_after_move",
+   "variant": null,
+   "cpLoss": 500,
+   "cpAfter": -461,
+   "reply": "exd4",
+   "line": [
+    "exd4"
+   ],
+   "netLoss": 3,
+   "answer": {
+    "squares": [
+     "e5",
+     "c6"
+    ],
+    "best": "e5",
+    "partial": [
+     "c6"
+    ]
+   },
+   "takers": [
+    {
+     "square": "e5",
+     "type": "p",
+     "value": 1
+    },
+    {
+     "square": "c6",
+     "type": "n",
+     "value": 3
+    }
+   ],
+   "pawnAmongTakers": true,
+   "gained": []
+  },
+  "Ba6": {
+   "held": true,
+   "category": "hanging_after_move",
+   "variant": null,
+   "cpLoss": 465,
+   "cpAfter": -426,
+   "reply": "bxa6",
+   "line": [
+    "bxa6"
+   ],
+   "netLoss": 3,
+   "answer": {
+    "squares": [
+     "b7"
+    ],
+    "best": "b7",
+    "partial": []
+   },
+   "takers": [
+    {
+     "square": "b7",
+     "type": "p",
+     "value": 1
+    }
+   ],
+   "pawnAmongTakers": true,
+   "gained": []
+  },
+  "Bxf7+": {
+   "held": true,
+   "category": "hanging_after_move",
+   "variant": "takes_back",
+   "cpLoss": 379,
+   "cpAfter": -340,
+   "reply": "Kxf7",
+   "line": [
+    "Kxf7"
+   ],
+   "netLoss": 2,
+   "answer": {
+    "squares": [
+     "e8"
+    ],
+    "best": "e8",
+    "partial": []
+   },
+   "takers": [
+    {
+     "square": "e8",
+     "type": "k",
+     "value": 0
+    }
+   ],
+   "pawnAmongTakers": false,
+   "gained": [
+    "p"
+   ]
+  },
+  "Nxe5": {
+   "held": true,
+   "category": "hanging_after_move",
+   "variant": "takes_back",
+   "cpLoss": 328,
+   "cpAfter": -289,
+   "reply": "Nxe5",
+   "line": [
+    "Nxe5"
+   ],
+   "netLoss": 2,
+   "answer": {
+    "squares": [
+     "c6"
+    ],
+    "best": "c6",
+    "partial": []
+   },
+   "takers": [
+    {
+     "square": "c6",
+     "type": "n",
+     "value": 3
+    }
+   ],
+   "pawnAmongTakers": false,
+   "gained": [
+    "p"
+   ]
+  },
+  "Nh4": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 268,
+   "cpAfter": -229,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "Ng1": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 241,
+   "cpAfter": -202,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "Rf1": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 240,
+   "cpAfter": -201,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "Rg1": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 226,
+   "cpAfter": -187,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "g4": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 224,
+   "cpAfter": -185,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "Ke2": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 220,
+   "cpAfter": -181,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "Kf1": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 211,
+   "cpAfter": -172,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "Na3": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 201,
+   "cpAfter": -162,
+   "reply": "Bxa3",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "g3": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 198,
+   "cpAfter": -159,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "Bf1": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 194,
+   "cpAfter": -155,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "b4": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 187,
+   "cpAfter": -148,
+   "reply": "Bxb4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "h4": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 184,
+   "cpAfter": -145,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "b3": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 166,
+   "cpAfter": -127,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "Be2": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 162,
+   "cpAfter": -123,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "a3": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 144,
+   "cpAfter": -105,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "Bd3": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 134,
+   "cpAfter": -95,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "a4": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 134,
+   "cpAfter": -95,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "Bb3": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 129,
+   "cpAfter": -90,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "c3": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 118,
+   "cpAfter": -79,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "h3": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 90,
+   "cpAfter": -51,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "Bb5": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 84,
+   "cpAfter": -45,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "Bd5": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 75,
+   "cpAfter": -36,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "O-O": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 75,
+   "cpAfter": -36,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "Qe2": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 59,
+   "cpAfter": -20,
+   "reply": "Bc5",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "Nc3": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 54,
+   "cpAfter": -15,
+   "reply": "Nxe4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "d4": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 37,
+   "cpAfter": 2,
+   "reply": "exd4",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "Ng5": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 18,
+   "cpAfter": 21,
+   "reply": "d5",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  },
+  "d3": {
+   "held": false,
+   "category": null,
+   "variant": null,
+   "cpLoss": 8,
+   "cpAfter": 31,
+   "reply": "a6",
+   "line": [],
+   "netLoss": null,
+   "answer": {
+    "squares": [],
+    "best": null,
+    "partial": []
+   },
+   "takers": [],
+   "pawnAmongTakers": false,
+   "gained": []
+  }
+ }
+}
