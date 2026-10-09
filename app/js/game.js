@@ -16,7 +16,7 @@ import { loadBook, bookReply, chooseBotMove, shouldResign, materialExtra } from 
 import { buildFacts, uciToMove } from './facts.js';
 import * as gate from './gate.js';
 import { createHold } from './hold.js';
-import { showMe } from './ghost.js';
+import { showMe, firstFloatLine } from './ghost.js';
 import { createCoach } from './coach.js';
 import { store } from './store.js';
 
@@ -26,6 +26,8 @@ const now = () => (typeof performance !== 'undefined' && performance.now ? perfo
 const byId = (id) => document.getElementById(id);
 // Flags are the string '1' in the store; compare as strings so a parsed number reads the same.
 const flagSet = (key) => String(store.get(key, '')) === '1';
+// the categories where his own piece is lost: the ones that count as 'pieces given away'
+const LOSS_CATEGORIES = ['hanging_after_move', 'ignored_attack'];
 
 // ---------------------------------------------------------------------------------------------
 // Elements
@@ -73,7 +75,7 @@ const coachLine = {
   echo(words) {
     const span = document.createElement('span');
     span.className = DOM.coach.echo;
-    span.textContent = `«${words}»`;
+    span.textContent = words;   // his words, in the muted ink; no marks around them
     coachEl.appendChild(span);
   },
   pulse(on) {
@@ -106,7 +108,7 @@ function sayHeld(text) {
 // State
 // ---------------------------------------------------------------------------------------------
 const S = {
-  state: 'idle', tutorial: false, engineReady: false, hold: null, plies: 0, anyways: 0, playedPairs: [],
+  state: 'idle', tutorial: false, hold: null, plies: 0, anyways: 0, playedPairs: [],
   rewardsSaid: 0, lastRewardPly: -10, mercyOffered: false, mercyStreak: 0, resignStreak: 0, botMoveNo: 0,
   result: null, giftDue: false, lastGift: null, consented: false, coachAvailable: false, resting: false,
   pre: null, lastVerdict: null, forcedReply: null,
@@ -141,6 +143,7 @@ let preToken = 0;
 // tutorial
 let tutorialData = null;
 let tutorialReady = Promise.resolve(null);
+let tutorialHeld = false;           // a tutorial hold was shown this view: the safe line is not repeated
 
 // ---------------------------------------------------------------------------------------------
 // Board, engine, book, hold UI, coach
@@ -151,8 +154,9 @@ const bookReady = loadBook();
 const holdUI = createHold({ board, coachLine, actions: actionsEl, links: linksEl, store, fast: fastNow, reduced: reducedNow });
 let coach = null;
 
+// state().engineReady reads the engine itself, so a Worker that dies after readyok reads false
+Object.defineProperty(S, 'engineReady', { get: () => engine.isReady(), enumerable: true, configurable: true });
 engine.ready.then(() => {
-  S.engineReady = true;
   if (S.state === 'idle' && !S.tutorial && preFen !== chess.fen()) startPre();
 });
 
@@ -290,11 +294,12 @@ function drawEnd() {
 // ---------------------------------------------------------------------------------------------
 function startPre() {
   const fen = chess.fen();
-  preFen = fen;
   preResult = null;
   S.pre = null;
   const token = ++preToken;
-  if (S.tutorial || !engine.isReady() || chess.isGameOver()) { prePromise = Promise.resolve(null); return prePromise; }
+  // no search yet: preFen stays null so the engine.ready hook starts one for this position
+  if (S.tutorial || !engine.isReady() || chess.isGameOver()) { preFen = null; prePromise = Promise.resolve(null); return prePromise; }
+  preFen = fen;
   prePromise = engine.search(fen, { depth: ENGINE.PRE_DEPTH, multipv: ENGINE.MULTIPV, skill: ENGINE.FULL_SKILL, newGame: true })
     .then((r) => {
       if (token !== preToken) return null;
@@ -352,7 +357,8 @@ function pickSquare(sq) {
 function onBoardTap(sq, info) {
   if (!SQUARE_RE.test(String(sq))) return;
   if (S.state === 'held') {
-    if (ghost) ghost.abort();
+    // a tap during Show me only rewinds it; it is not an answer
+    if (ghost) { abortGhost(); return; }
     holdUI.tap(sq);
     return;
   }
@@ -387,6 +393,12 @@ function drop(mv) {
   });
   dropPromise = run;
   return run;
+}
+// A drop overtaken by load(), newGame() or the end of the game: the board shows the truth again
+// (the slid piece goes home when the game was ended under it) and nothing of the drop is kept.
+function abandoned() {
+  try { board.setPosition(chess); paint(); } catch { /* the next state will redraw */ }
+  return 'illegal';
 }
 async function dropNow(mv) {
   const token = turnToken;
@@ -432,15 +444,20 @@ async function dropNow(mv) {
       // a pre-search for this fen that started after the stop (it was queued) is stopped too
       while (engine.current() && engine.current().fen === preFenNow) await engine.stop();
       let raw = await prePromise;
+      if (token !== turnToken || S.state !== 'pending') return abandoned();
       const kept = preResult && preResult.fen === preFenNow ? preResult : null;
       if (!raw || raw.fen !== preFenNow || (kept && kept.depth > raw.depth)) raw = kept;
       if (!raw || raw.depth < ENGINE.PRE_MIN_DEPTH) {
         raw = await engine.search(preFenNow, { depth: ENGINE.PRE_RESEARCH_DEPTH, multipv: ENGINE.MULTIPV, skill: ENGINE.FULL_SKILL });
+        if (token !== turnToken || S.state !== 'pending') return abandoned();
       }
-      preResult = raw;
-      pre = toPre(raw);
-      S.pre = pre;
-      if (pre) noteMercy(pre.evalBefore);
+      // a dead Worker answers empty results: the move commits without a verdict (the cold path)
+      if (raw && raw.lines && raw.lines.length) {
+        preResult = raw;
+        pre = toPre(raw);
+        S.pre = pre;
+        if (pre) noteMercy(pre.evalBefore);
+      }
       after = buildFacts(scratch, { player: PLAYER });
       let post = null;
       if (scratch.isGameOver()) {
@@ -451,7 +468,7 @@ async function dropNow(mv) {
       }
       if (pre && post) {
         try {
-          verdict = gate.verdict(pre, post, before, after, { move: applied, anyways: S.anyways, playedPairs: S.playedPairs });
+          verdict = gate.verdict(pre, post, before, after, { move: applied, anyways: S.anyways, playedPairs: S.playedPairs, lastMove });
         } catch { verdict = null; }
       }
     }
@@ -459,13 +476,14 @@ async function dropNow(mv) {
     clearTimeout(dotTimer);
     board.pending(null);
   }
-  if (token !== turnToken || S.state !== 'pending') return 'illegal';
+  if (token !== turnToken || S.state !== 'pending') return abandoned();
   S.lastVerdict = verdict;
   if (!after) after = buildFacts(scratch, { player: PLAYER });
 
   if (verdict && verdict.held) {
     await slide;
     openHold(applied, verdict, before, after, scratch, { tint: baseMarks().tint });
+    if (wasTutorial) tutorialHeld = true;
     return 'held';
   }
   return commit(applied, { verdict, pre, before, after, droppedAt, wasTutorial, slide });
@@ -474,8 +492,11 @@ async function dropNow(mv) {
 // ---------------------------------------------------------------------------------------------
 // Commit and the reply
 // ---------------------------------------------------------------------------------------------
-async function commit(applied, { verdict = null, pre = null, before = null, after = null, droppedAt = now(), wasTutorial = false, slide = null, anyway = false, sawIt = false, anywayLine = null } = {}) {
+// `anywayLine(replyMove)` phrases the play-anyway sentence once the reply is known; `loss` is the
+// hold (or suppressed verdict) whose piece counts as given away when the reply takes it.
+async function commit(applied, { verdict = null, pre = null, before = null, after = null, droppedAt = now(), wasTutorial = false, slide = null, anyway = false, anywayLine = null, loss = null } = {}) {
   const token = turnToken;
+  const prevMove = lastMove;   // the opponent's last move, for the reward's net-exchange test
   const real = chess.move({ from: applied.from, to: applied.to, promotion: applied.promotion });
   if (!real) return 'illegal';
   S.plies += 1;
@@ -486,15 +507,24 @@ async function commit(applied, { verdict = null, pre = null, before = null, afte
 
   if (wasTutorial) {
     S.tutorial = false;
-    sayHeld(COPY.TUTORIAL_SAFE);
+    // the promise is made once: not again after the tutorial has already stopped his hand
+    if (!tutorialHeld) sayHeld(COPY.TUTORIAL_SAFE);
   } else if (anyway) {
     // the anyway sentence is said after the reply
   } else if (verdict && verdict.suppressed) {
-    if (typeof verdict.netLoss === 'number' && verdict.netLoss >= GATE.NET_MIN) givenAway += 1;
+    if (LOSS_CATEGORIES.includes(verdict.category) && typeof verdict.netLoss === 'number' && verdict.netLoss >= GATE.NET_MIN) {
+      loss = { category: verdict.category, target: verdict.target, netLoss: verdict.netLoss };
+    }
   } else if (pre && before && after && !(verdict && verdict.held)) {
     const cpOk = !verdict || verdict.cpLoss == null || verdict.cpLoss < GATE.HOLD_CP;
     let rw = verdict && verdict.reward ? verdict.reward : null;
-    if (!rw && cpOk) { try { rw = gate.reward(pre, before, after, applied); } catch { rw = null; } }
+    if (!rw && cpOk) { try { rw = gate.reward(pre, before, after, applied, prevMove); } catch { rw = null; } }
+    // the opponent's own verified gift, taken: free by construction, whatever the pre-search's
+    // first line preferred
+    const gift = S.lastGift;
+    if (cpOk && (!rw || rw.kind !== 'free_taken') && gift && gift.verified && applied.captured && applied.to === gift.square) {
+      rw = { kind: 'free_taken', piece: applied.captured, square: applied.to };
+    }
     if (rw) applyReward(rw, real);
   }
 
@@ -502,9 +532,12 @@ async function commit(applied, { verdict = null, pre = null, before = null, afte
   if (drawEnd()) { endGame('draw', COPY.ENDS.DRAW); return 'over'; }
 
   const outcome = await reply({ droppedAt, anyway, token });
+  // given away: a hold played anyway, or an unheld loss, whose piece the reply really took
+  if (loss && LOSS_CATEGORIES.includes(loss.category) && typeof loss.netLoss === 'number' && loss.netLoss >= GATE.NET_MIN
+    && lastMove && lastMove.to === loss.target && lastMove.color !== PLAYER) givenAway += 1;
   if (outcome === 'cancelled') return 'illegal';
   if (outcome === 'over') return 'over';
-  if (anyway && anywayLine) sayHeld(anywayLine);
+  if (anyway && anywayLine) sayHeld(typeof anywayLine === 'function' ? anywayLine(lastMove) : anywayLine);
   else if (!lineHold) coachLine.say(COPY.YOUR_MOVE);
   return 'committed';
 }
@@ -560,7 +593,7 @@ async function reply({ droppedAt = now(), anyway = false, token = turnToken } = 
     if (book) chosen = { ...book, how: 'book', botEval: null, gift: null, checked: 0 };
   }
   if (!chosen) {
-    if (!engine.isReady()) {
+    if (!engine.isReady() && !engine.dead()) {
       edge(true, COPY.WARMING);
       await engine.ready;
       if (token !== turnToken) { edge(false); return 'cancelled'; }
@@ -742,12 +775,14 @@ async function playAnyway() {
   if (!hold || S.state !== 'held') return;
   abortGhost();
   abortHoldCalls(hold);
-  const sawIt = hold.taps.some((t) => t.grade === 'right' || t.grade === 'partial');
+  // 'You saw it coming' is true of his look at the hold's own question, not of a K2 look at
+  // something else (a safe square is not the taker)
+  const ownAsk = (kind) => !kind || (hold.asks || []).some((a) => a && a.kind === kind && a.own);
+  const sawIt = hold.taps.some((t) => (t.grade === 'right' || t.grade === 'partial') && ownAsk(t.ask));
   holdUI.close();
   S.hold = null;
   S.anyways += 1;
   S.playedPairs.push(`${hold.piece}${hold.to}`);
-  if (typeof hold.netLoss === 'number' && hold.netLoss >= GATE.NET_MIN) givenAway += 1;
   logHold(hold, 'anyway');
   S.state = 'pending';
   board.setState('pending', null);
@@ -759,17 +794,26 @@ async function playAnyway() {
   }
   let line = null;
   try { line = hold.copy.anyway(sawIt); } catch { line = null; }
+  let tail = '';
+  if (sawIt) tail = COPY.ANYWAY.saw_it;
+  else if (line) { const i = line.indexOf('Next time'); if (i >= 0) tail = line.slice(i); }
   const k1 = hold.claude && hold.claude.k1Lines;
   if (k1 && typeof k1.anyway === 'string' && k1.anyway.trim()) {
-    let suffix = '';
-    if (sawIt) suffix = COPY.ANYWAY.saw_it;
-    else if (line) { const i = line.indexOf('Next time'); if (i >= 0) suffix = line.slice(i); }
-    line = suffix ? `${k1.anyway.trim()} ${suffix}` : k1.anyway.trim();
+    line = tail ? `${k1.anyway.trim()} ${tail}` : k1.anyway.trim();
     hold.claude.coachShown = true;
     const rec = holdLog[holdLog.length - 1];
     if (rec) rec.coachShown = true;
   }
-  await commit(hold.move, { verdict: hold.verdict, pre: S.pre, before: hold.factsBefore, after: hold.factsAfter, anyway: true, sawIt, anywayLine: line });
+  // the sentence names what happened: when the reply did not take the hold's piece, it says so
+  const target = hold.verdict && hold.verdict.target;
+  const anywayLine = (replyMove) => {
+    if (LOSS_CATEGORIES.includes(hold.category) && target && replyMove && replyMove.to !== target) {
+      return `${fill(COPY.ANYWAY.elsewhere, { piece: wordOf(hold.verdict.targetPiece) })} ${tail}`.trim();
+    }
+    return line;
+  };
+  const loss = { category: hold.category, target, netLoss: hold.netLoss };
+  await commit(hold.move, { verdict: hold.verdict, pre: S.pre, before: hold.factsBefore, after: hold.factsAfter, anyway: true, anywayLine: line ? anywayLine : null, loss });
 }
 
 // The tutorial's play-anyway: the move lands, the refutation takes for real, the '-N' floats,
@@ -797,12 +841,16 @@ async function tutorialAnyway(hold) {
     paint();
   }
   if (token !== turnToken) return;
-  sayHeld(COPY.TUTORIAL_ANYWAY);
   if (typeof hold.netLoss === 'number' && hold.netLoss > 0) {
+    // the first float a browser sees is named once in words, here as on Show me
+    if (!flagSet(KEYS.FIRST_FLOAT_SEEN)) {
+      try { sayHeld(firstFloatLine(hold.move, hold.netLoss)); } catch { /* the float is decoration */ }
+      store.set(KEYS.FIRST_FLOAT_SEEN, '1');
+    }
     try { await board.float(`-${hold.netLoss}`, { reduced: reducedNow(), fast: fastNow() }); } catch { /* the float is decoration */ }
-    store.set(KEYS.FIRST_FLOAT_SEEN, '1');
   }
   if (token !== turnToken) return;
+  sayHeld(COPY.TUTORIAL_ANYWAY);
   resetGame();   // 'Here is a fresh game.': nothing from the tutorial carries into it
   await startGame(START_FEN, { line: COPY.TUTORIAL_ANYWAY, keepLine: true });
 }
@@ -814,8 +862,9 @@ async function doShowMe() {
   const hold = S.hold;
   if (!hold || S.state !== 'held') return;
   if (ghost) { abortGhost(); return; }
+  const fromBefore = !!(hold.verdict && hold.verdict.refutationFrom === 'pre');
   const g = showMe({
-    board, chess, move: hold.move, refutation: hold.refutation, netLoss: hold.netLoss,
+    board, chess, move: hold.move, refutation: hold.refutation, netLoss: fromBefore ? null : hold.netLoss, fromBefore,
     fast: fastNow(), reduced: reducedNow(), firstFloat: !flagSet(KEYS.FIRST_FLOAT_SEEN), coachLine, store,
   });
   ghost = g;
@@ -876,7 +925,9 @@ async function sendHearMeOut(textIn) {
     S.resting = true;
     if (restingTimer) clearTimeout(restingTimer);
     restingTimer = setTimeout(() => { restingTimer = null; S.resting = false; applyLinkPolicy(); }, T('RESTING_MS'));
-    sayHeld(COPY.RESTING);
+    // 'Coach is resting.' for a moment, then the open question comes back under him
+    coachLine.say(COPY.RESTING);
+    setTimeout(() => { if (S.hold === hold && S.state === 'held' && coachLine.text() === COPY.RESTING) coachLine.say(lineBefore); }, T('REWARD_MS'));
     applyLinkPolicy();
     return;
   }
@@ -986,7 +1037,8 @@ function fillCloseCard() {
     times: timesWord(holdLog.length), back: timesWord(backs), g: String(givenAway),
     last: before ? fill(COPY.CLOSE.LAST, { n: String(before.givenAway) }) : '', f: String(freeTaken),
   };
-  if (sum) sum.textContent = fill(holdLog.length ? COPY.CLOSE.SUMMARY : COPY.CLOSE.SUMMARY_NONE, vars);
+  const template = !holdLog.length ? COPY.CLOSE.SUMMARY_NONE : backs === 0 ? COPY.CLOSE.SUMMARY_NO_BACKS : COPY.CLOSE.SUMMARY;
+  if (sum) sum.textContent = fill(template, vars);
   if (list) {
     list.textContent = '';
     for (const rec of holdLog) {
@@ -999,6 +1051,11 @@ function fillCloseCard() {
     }
   }
   closeEl.hidden = false;
+  // on a phone the card can run past the fold when a game had many holds: bring Again into view
+  try {
+    const again = closeEl.querySelector('[data-action="again"]');
+    if (again && again.getBoundingClientRect().bottom > window.innerHeight) again.scrollIntoView({ block: 'end' });
+  } catch { /* no layout: nothing to scroll */ }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1043,6 +1100,7 @@ function dropEverything() {
   actionsEl.textContent = '';
   if (closeEl) closeEl.hidden = true;
   try { document.body.classList.remove('typing'); } catch { /* ignore */ }
+  try { if (window.scrollY) window.scrollTo(0, 0); } catch { /* ignore */ }
 }
 // Put a position on the board and go idle. `tutorial` opens the tutorial on it.
 async function startGame(fen, { line = null, tutorial = false, keepLine = false } = {}) {
@@ -1157,7 +1215,7 @@ const app = {
   tap(square) {
     if (!SQUARE_RE.test(String(square))) return null;
     if (S.state === 'held') {
-      if (ghost) abortGhost();
+      if (ghost) { abortGhost(); return null; }   // a tap during Show me only rewinds it
       return holdUI.tap(square);
     }
     if (S.state === 'idle') {

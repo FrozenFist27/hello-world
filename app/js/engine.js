@@ -17,7 +17,11 @@
 //
 // A go is sent only after the previous bestmove has arrived; each search carries an integer id and a
 // bestmove that does not belong to the running id is discarded. Nothing in here throws: a missing or
-// silent Worker leaves isReady() false for ever, and a broken message is ignored.
+// silent Worker leaves isReady() false for ever, and a broken message is ignored. A Worker that dies
+// after readyok (an 'error' event, or a running search that goes silent for ENGINE.WATCHDOG_MS) is
+// torn down like terminate(): isReady() turns false, the running and queued searches resolve empty
+// and stopped, and the page's cold-engine policy takes over (no verdict, no reward, a book or
+// fallback reply) instead of a drop that never resolves.
 
 import { ENGINE } from './contract.js';
 
@@ -59,6 +63,29 @@ export function createEngine({ workerUrl = ENGINE.WORKER_URL, Worker = globalThi
   const sentOptions = {};        // last value sent per option name
   let readyResolve = null;
   const ready = new Promise((resolve) => { readyResolve = resolve; });
+  let watchdog = null;           // the liveness timer of the running search
+
+  function stopWatchdog() {
+    if (watchdog) { clearTimeout(watchdog); watchdog = null; }
+  }
+  function armWatchdog() {
+    stopWatchdog();
+    if (!running || !(ENGINE.WATCHDOG_MS > 0)) return;
+    watchdog = setTimeout(() => { watchdog = null; if (running) die(); }, ENGINE.WATCHDOG_MS);
+  }
+  // The Worker is gone: the engine is cold from here on; everything pending resolves at once.
+  function die() {
+    if (terminated) return;
+    terminated = true;
+    readyFlag = false;
+    stopWatchdog();
+    try { if (worker && typeof worker.terminate === 'function') worker.terminate(); } catch { /* ignore */ }
+    worker = null;
+    const req = running;
+    running = null;
+    if (req) { req.stopped = true; finish(req, null, null); }
+    while (queue.length) { const q = queue.shift(); q.resolve(emptyResult(q, true)); }
+  }
 
   function send(s) {
     if (!worker || terminated) return;
@@ -99,6 +126,7 @@ export function createEngine({ workerUrl = ENGINE.WORKER_URL, Worker = globalThi
     send(`position fen ${req.fen}`);
     req.t0 = now();
     send(`go depth ${req.depth}`);
+    armWatchdog();
   }
 
   function finish(req, bestmove, ponder) {
@@ -143,11 +171,13 @@ export function createEngine({ workerUrl = ENGINE.WORKER_URL, Worker = globalThi
       const req = running;
       if (!req) return;                       // a bestmove with no running search: discarded
       running = null;
+      stopWatchdog();
       finish(req, t[1] || null, t[2] === 'ponder' ? t[3] || null : null);
       startNext();
       return;
     }
     if (line.startsWith('info ') && running) {
+      armWatchdog();                          // the search is alive
       const info = parseInfo(line);
       if (!info) return;
       const prev = running.lines.get(info.multipv);
@@ -174,9 +204,11 @@ export function createEngine({ workerUrl = ENGINE.WORKER_URL, Worker = globalThi
     try {
       if (typeof worker.addEventListener === 'function') {
         worker.addEventListener('message', onMessage);
-        worker.addEventListener('error', () => { /* a broken worker is a cold engine */ });
+        worker.addEventListener('error', () => { if (phase === 'ready') die(); else { terminated = true; readyFlag = false; } });
+        worker.addEventListener('messageerror', () => { if (phase === 'ready') die(); });
       } else {
         worker.onmessage = onMessage;
+        worker.onerror = () => { if (phase === 'ready') die(); else { terminated = true; readyFlag = false; } };
       }
     } catch { /* ignore */ }
     phase = 'uci';
@@ -186,6 +218,7 @@ export function createEngine({ workerUrl = ENGINE.WORKER_URL, Worker = globalThi
   const engine = {
     ready,
     isReady: () => readyFlag && !terminated,
+    dead: () => terminated,
     setOptions(opts = {}) {
       for (const [k, v] of Object.entries(opts || {})) pendingOptions[k] = v;
       if (!running) startNext();
@@ -211,17 +244,7 @@ export function createEngine({ workerUrl = ENGINE.WORKER_URL, Worker = globalThi
       });
     },
     current: () => (running ? { id: running.id, fen: running.fen } : null),
-    terminate() {
-      if (terminated) return;
-      terminated = true;
-      readyFlag = false;
-      try { if (worker && typeof worker.terminate === 'function') worker.terminate(); } catch { /* ignore */ }
-      worker = null;
-      const req = running;
-      running = null;
-      if (req) { req.stopped = true; finish(req, null, null); }
-      while (queue.length) { const q = queue.shift(); q.resolve(emptyResult(q, true)); }
-    },
+    terminate: die,
   };
 
   boot();

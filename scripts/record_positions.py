@@ -26,7 +26,7 @@ OUT = os.path.join(ROOT, "app", "data", "positions.json")
 MATE_SCORE = 10000
 PRE_DEPTH, POST_DEPTH, MULTIPV, HASH_MB = 14, 12, 2, 16
 HOLD_CP, MARGIN_CP = 200, 70
-DATE = "2026-10-08"
+DATE = "2026-10-09"
 
 # id, name, fen, moves: san -> expectation (expect, category?, sub?, variant?, answer?, reward?, note?)
 POSITIONS = [
@@ -51,6 +51,8 @@ POSITIONS = [
                       "answer": {"squares": ["e8"], "best": "e8", "partial": []}, "netLoss": 2},
             "Nxe5": {"expect": "held", "category": "hanging_after_move", "variant": "takes_back",
                      "answer": {"squares": ["c6"], "best": "c6", "partial": []}, "netLoss": 2},
+            "Be6": {"expect": "held", "category": "hanging_after_move", "netLoss": 3,
+                    "note": "two equal takers (the d7 and f7 pawns): both are right, neither is partial"},
             "d3": {"expect": "committed", "reward": None},
         },
     },
@@ -61,6 +63,9 @@ POSITIONS = [
         "moves": {
             "O-O": {"expect": "held", "category": "ignored_attack", "sub": "already",
                     "answer": {"squares": ["b5"], "best": "b5", "partial": ["a6"]}, "netLoss": 3},
+            "Ng5": {"expect": "held", "category": "ignored_attack", "sub": "already",
+                    "answer": {"squares": ["b5", "g5"], "best": "b5", "partial": ["a6"]}, "netLoss": 3,
+                    "note": "two pieces hang: the bishop (already) and the knight he moved; tapping either is right"},
             "Ba4": {"expect": "committed", "reward": "escaped"},
         },
     },
@@ -133,6 +138,55 @@ POSITIONS = [
             "Qxf7+": {"expect": "held", "category": "hanging_after_move", "variant": "takes_back",
                       "answer": {"squares": ["e8"], "best": "e8", "partial": []}, "netLoss": 8},
             "Bc4": {"expect": "committed", "reward": None},
+        },
+    },
+    {
+        "id": "nc4_rook",
+        "name": "A knight steps off the d-file and the d8 rook hits the queen (ignored_attack, opened_line)",
+        "fen": "r2r2k1/ppp1qppp/2n2n2/4p3/4P1b1/5N2/PPPNBPPP/R1BQ1RK1 w - - 0 10",
+        "moves": {
+            "Nc4": {"expect": "held", "category": "ignored_attack", "sub": "opened_line",
+                    "answer": {"squares": ["d1"], "best": "d1", "partial": ["d8"]}, "netLoss": 4},
+            "Nb3": {"expect": "held", "category": "ignored_attack", "sub": "opened_line",
+                    "answer": {"squares": ["d1"], "best": "d1", "partial": ["d8"]}, "netLoss": 4},
+            "h3": {"expect": "committed", "reward": None},
+        },
+    },
+    {
+        "id": "italian_bg5",
+        "name": "Italian with ...Bh5 pinning the f3 knight (a pinned knight that moves opens the line to the queen)",
+        "fen": "r2qk2r/ppp1bppp/2np1n2/4p2b/2B1P3/2NP1N1P/PPP2PP1/R1BQ1RK1 w kq - 1 8",
+        "moves": {
+            "Nh4": {"expect": "held", "category": "ignored_attack", "sub": "opened_line",
+                    "answer": {"squares": ["d1"], "best": "d1", "partial": ["h5"]}},
+            "Nd5": {"expect": "committed", "reward": None},
+        },
+    },
+    {
+        "id": "two_knights_bxd5",
+        "name": "Two Knights 6.Bxd5?! (the loss is Qxd5, an even trade on the moved piece; Qxg5 is not the story)",
+        "fen": "r1bqkb1r/ppp2ppp/2n5/3np1N1/2B5/8/PPPP1PPP/RNBQK2R w KQkq - 0 6",
+        "moves": {
+            "Bxd5": {"expect": "committed", "reward": None,
+                     "note": "line 2's Qxg5 costs under 200 cp on its own, so it explains no loss; no category"},
+        },
+    },
+    {
+        "id": "two_mates",
+        "name": "Two rooks on the back rank: after Qc7 both Ra1 and Rb1 are mate",
+        "fen": "rr4k1/5ppp/8/4Q3/8/8/2P2PPP/6K1 w - - 0 30",
+        "moves": {
+            "Qc7": {"expect": "held", "category": "allowed_mate",
+                    "note": "answer squares are a1 and b1 in the engine's order; test_gate asserts the set"},
+            "h3": {"expect": "committed", "reward": None},
+        },
+    },
+    {
+        "id": "only_move",
+        "name": "A lost ending whose only legal move is Kb1 (nothing to hold, nothing to take back to)",
+        "fen": "8/6pk/4p2p/1p2P3/P7/2p4P/3q1PP1/2K5 w - - 1 37",
+        "moves": {
+            "Kb1": {"expect": "committed", "reward": None},
         },
     },
     {

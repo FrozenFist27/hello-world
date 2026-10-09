@@ -43,7 +43,10 @@ export const CATEGORIES = [
   'free_piece_ignored',
   'allowed_stalemate',
 ];
-export const SUBCASES = { ALREADY: 'already', LOST_GUARD: 'lost_guard' };
+// ignored_attack sub-cases: the piece was attacked before his move (already); it was attacked and
+// defended and his move removed the guard (lost_guard); it was not attacked at all and his move
+// opened an enemy line onto it, a pinned piece moving or a piece stepping off a file (opened_line).
+export const SUBCASES = { ALREADY: 'already', LOST_GUARD: 'lost_guard', OPENED_LINE: 'opened_line' };
 // Categories that still hold after the second play-anyway (plus any hold with netLoss >= BIG_LOSS).
 export const ALWAYS_HOLD = ['allowed_mate', 'missed_mate', 'allowed_stalemate'];
 export const GATE = {
@@ -52,6 +55,7 @@ export const GATE = {
   BIG_LOSS: 5,           // a hold with netLoss >= 5 ignores the quiet-after-two rule
   STALEMATE_AHEAD: 5,    // allowed_stalemate only when he is this many points up
   MATE_SCORE: 10000,     // mate N maps to +/-(MATE_SCORE - N) on the player's side
+  STILL_WINNING_CP: 300, // a mate-scored pre-search followed by a plain cp post at or above this is no loss (cpLoss 0)
   QUIET_AFTER_ANYWAYS: 2,
 };
 export const REWARDS = {
@@ -73,6 +77,7 @@ export const ENGINE = {
   FULL_SKILL: 20,
   VERDICT_BUDGET_MS: 300,  // headless budget from drop to verdict (600 on a phone); informational
   WAIT_READY_MS: 20000,    // __app.waitEngine() gives up after this
+  WATCHDOG_MS: 4000,       // a running search silent (no info line, no bestmove) for this long: the Worker is dead, the engine goes cold (a live depth-14 search prints a line every few ms)
 };
 export const BOT = {
   GIFT_RATE: 0.12,                 // probability of a gift roll per bot move from GIFT_FROM_MOVE
@@ -83,7 +88,8 @@ export const BOT = {
   GIFT_MIN_GAIN_CP: 200,           // the player's best reply must gain this much (his side)
   GIFT_CAP_CP: 900,                // and leave him under this
   LOOK_DEPTH: 8,                   // full-strength look, multipv 2
-  FORCED_LEAD_CP: 150,             // a capture leading line 2 by this much is played always
+  FORCED_LEAD_CP: 150,             // a capture leading line 2 by this much is played always ...
+  FORCED_NET: 2,                   // ... as is a capture winning this much material by count (the recapture on the same square deducted)
   SKILL: 3,                        // the sampler's Skill Level
   SAMPLE_DEPTH: 2,                 // the sampler's depth
   SAMPLE_RETRIES: 2,               // re-picks when the guards reject the sample
@@ -170,6 +176,7 @@ export const DOM = {
   pc: {
     base: 'pc', picked: 'picked', lifted: 'lifted', pending: 'pending', captured: 'captured',
     ghost: 'ghost',   // pieces on the #ghosts layer
+    taken: 'taken',   // a real piece a ghost capture has landed on (hidden while the ghost stands there)
   },
   coach: { base: 'coach', echo: 'echo', looking: 'looking', first: 'first', long: 'long' },  // long: more than LONG_LINE_WORDS words (phone: 17 px, five lines in the same box)
   states: ['idle', 'pending', 'held', 'reply', 'over'],  // #board[data-state]
@@ -189,7 +196,7 @@ export const PIECE_SYMBOL_PREFIX = 'pc-'; // <symbol id="pc-wN"> ... <use href="
 export const CLAUDE = {
   TIER: 'quick',
   PROMPT_VERSION: 'v2',
-  K2_MAX_WORDS: 20, K2_MAX_SENTENCES: 2, K2_MAX_SQUARES: 3,
+  K2_MAX_WORDS: 32, K2_MAX_WORDS_PER_SENTENCE: 20, K2_MAX_SENTENCES: 2, K2_MAX_SQUARES: 3,   // 32 in all so the say plus the 8-word ask question fits the four-line box at 400 px
   K1_MAX_WORDS: 20, K1_WRONG_MAX_WORDS: 14, K1_AND_THEN_MAX_WORDS: 12,
   ASK_QUESTION_MAX_WORDS: 8,
   TEMPLATE_MAX_WORDS: 16,
@@ -201,12 +208,24 @@ export const CLAUDE = {
 };
 // The looks chess.js can compute for a hold. K2 may choose one; the page asks its question and
 // grades the next tap against the look's answer set. 'question' is the page's own words (<= 8).
+// A look that is not the category's own carries its own follow-up lines (copy): the hold's lines
+// are written for the hold's look and would be false for it. {piece} is the piece on the tapped
+// square ({piece} is the moved piece for safe_square), {square} the square the line names.
 export const ASKS = {
   what_takes_it: { question: 'Tap the piece that takes it.', meaning: 'the piece that takes the {piece} on {square}' },
   what_takes_back: { question: 'Tap what takes back.', meaning: 'the piece that takes back on {square}' },
-  safe_square: { question: 'Tap a square where the {piece} is safe.', meaning: 'a square the {piece} can go to instead where nothing takes it and no pawn can kick it' },
-  what_is_free: { question: 'Tap the piece of theirs that is free.', meaning: 'a piece of theirs that is free right now' },
-  attacked_piece: { question: 'Tap the piece of yours under attack.', meaning: 'the piece of yours that is under attack right now' },
+  safe_square: {
+    question: 'Tap a square where the {piece} is safe.', meaning: 'a square the {piece} can go to instead where nothing takes it and no pawn can kick it',
+    copy: { if_right: 'Yes, the {piece} is safe there.', if_wrong: 'Not that one. Something of theirs reaches that square.', named: 'The {piece} is safe on {square}.' },
+  },
+  what_is_free: {
+    question: 'Tap the piece of theirs that is free.', meaning: 'a piece of theirs that is free right now',
+    copy: { if_right: 'Yes, their {piece}. Nothing of theirs guards it.', if_wrong: 'Not that one. Look at their pieces nothing is guarding.', named: 'Their {piece} on {square} is free.' },
+  },
+  attacked_piece: {
+    question: 'Tap the piece of yours under attack.', meaning: 'the piece of yours that is under attack right now',
+    copy: { if_right: 'Yes, your {piece}. Something of theirs reaches it.', if_wrong: 'Not that one. Look at what their pieces reach.', named: 'Your {piece} on {square} is under attack.' },
+  },
   their_check: { question: 'Tap where their check lands.', meaning: 'the square their checking piece lands on' },
   your_mate: { question: 'Tap where your checkmate lands.', meaning: 'the square your mating piece lands on' },
   their_king: { question: 'Tap their king.', meaning: 'their king' },
@@ -224,7 +243,7 @@ export const COPY = {
   WARMING: 'Warming up the other side...',
   LOOKING: 'Looking...',
 
-  TUTORIAL_OPEN: 'Try one. Most people take the pawn in front of the king here. Go on.',
+  TUTORIAL_OPEN: 'Try one. Most people take the pawn beside the king with the bishop here. Go on.',
   TUTORIAL_BACK: 'Good. That is all I do: I hold the move, I ask, you decide. Your move.',
   TUTORIAL_ANYWAY: 'Now you have felt it. Here is a fresh game.',
   TUTORIAL_SAFE: 'Safe. I will stop your hand the first time a piece is about to be given away.',
@@ -238,6 +257,7 @@ export const COPY = {
     hanging_after_move_takes_back: 'Hold on. Before you take there: what takes back? Tap it.',
     ignored_attack_already: 'Hold on. One of yours is already under attack. Tap it.',
     ignored_attack_lost_guard: 'Hold on. Something of yours just lost its guard. Tap it.',
+    ignored_attack_opened_line: 'Hold on. Your move opens a line to something of yours. Tap it.',
     free_piece_ignored: 'Hold on. Something of theirs is free right now. Tap it.',
     allowed_mate: 'Hold on. Their {piece} has a check next move. Where does it land? Tap it.',
     missed_mate: 'Hold on. You have a checkmate on the board. Tap the square.',
@@ -247,6 +267,7 @@ export const COPY = {
     hanging_after_move: 'Yes, the {taker}. A {piece} for {gained}.',
     ignored_attack_already: 'Yes, the {piece}. The {attacker} takes it next move.',
     ignored_attack_lost_guard: 'Yes, the {piece}. Your move took its guard away.',
+    ignored_attack_opened_line: 'Yes, the {piece}. The piece you moved was standing in the {attacker}\'s way.',
     free_piece_ignored: 'Yes, the {piece}. It was yours for the taking.',
     allowed_mate: 'Yes, there. Their {piece} lands and the king has no way out.',
     missed_mate: 'Yes, there. Your {piece} lands and it is checkmate.',
@@ -262,6 +283,7 @@ export const COPY = {
     hanging_after_move_pawn: 'Not that one. Look at the pawns next to it.',
     hanging_after_move: 'Not that one. Look at what reaches that square.',
     ignored_attack: 'Not that one. Look at what their last move pointed at.',
+    ignored_attack_opened_line: 'Not that one. Look along the line your piece just left.',
     free_piece_ignored: 'Not that one. Look at their pieces nothing is guarding.',
     allowed_mate: 'Not that one. Look at the squares around your king.',
     missed_mate: 'Not that one. Look at the squares around their king.',
@@ -282,10 +304,11 @@ export const COPY = {
     missed_mate: 'There it goes. The checkmate was there.',
     allowed_mate: 'There it goes.',     // the mate's own line follows at game over
     allowed_stalemate: 'There it goes.', // the draw's own line follows at game over
+    elsewhere: 'There it goes. They chose something else; your {piece} is still there.',  // the reply did not land on the hold's piece
     saw_it: 'You saw it coming; that counts.',
     next_time: 'Next time, {look} first.',
   },
-  LOOK_WORDS: { pawn: 'the pawns', check: 'the check', other: 'their {piece}' },
+  LOOK_WORDS: { pawn: 'the pawns', check: 'the check', king: 'what takes back', stalemate: 'their king\'s squares', other: 'their {piece}' },
 
   REWARD_FREE: 'Free {piece}. You looked.',
   REWARD_ESCAPED: 'You looked. The {attacker} was on your {piece}.',
@@ -321,6 +344,7 @@ export const COPY = {
   CLOSE: {
     // {times} 'once' | 'twice' | '3 times'; {back} same; {g} numeral; {last} '' | ' (last game 4)'; {f} numeral
     SUMMARY: 'I stopped your hand {times}; you took it back {back}. Pieces given away: {g}{last}. Free pieces you took: {f}.',
+    SUMMARY_NO_BACKS: 'I stopped your hand {times}; you played every one. Pieces given away: {g}{last}. Free pieces you took: {f}.',
     SUMMARY_NONE: 'I never stopped your hand. Pieces given away: {g}{last}. Free pieces you took: {f}.',
     LAST: ' (last game {n})',
     // one caption per hold: '{Piece} to {square}, {waiting}: {outcome}.'

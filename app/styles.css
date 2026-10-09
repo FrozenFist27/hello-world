@@ -22,14 +22,14 @@
 :root {
   --bg: #f3f4f1;
   --ink: #1f2430;
-  --muted: #6b7280;
+  --muted: #646b78;          /* 4.86:1 on --bg: AA for the 12 px notes and captions */
   --coach: #243b6b;
   --on-coach: #ffffff;
   --hold: #c98a1b;
   --ok: #4f7a4a;
   --square-light: #e9e5d8;
   --square-dark: #8f9a7e;
-  --tint: rgba(36, 59, 107, .22);
+  --tint: rgba(45, 79, 158, .30);   /* the coach hue, strong enough to read as a tint and not as grey */
   --dim: rgba(0, 0, 0, .12);
   --piece-white: #f4f1e6;
   --piece-white-edge: #2a2a2a;
@@ -37,7 +37,7 @@
   --piece-black-edge: #f4f1e6;
   /* derived from the palette (they follow the theme on their own) */
   --line: color-mix(in srgb, var(--muted) 20%, transparent);   /* the board hairline, rules */
-  --dot: color-mix(in srgb, var(--ink) 35%, transparent);      /* legal dots and capture rings */
+  --dot: rgba(0, 0, 0, .4);             /* legal dots and capture rings: always darker than the square, in both themes */
   --glow: color-mix(in srgb, var(--hold) 25%, transparent);    /* the answer glow */
   --theme-dot-fill: var(--ink);         /* the theme dot: filled in light, hollow in dark */
   --theme-dot-ring: 0;
@@ -68,7 +68,7 @@
     --ok: #7fae78;
     --square-light: #b8b4a0;
     --square-dark: #5c6b5a;
-    --tint: rgba(157, 180, 232, .28);
+    --tint: rgba(157, 180, 232, .36);
     --dim: rgba(0, 0, 0, .28);
     --theme-dot-fill: transparent;
     --theme-dot-ring: 2px;
@@ -85,7 +85,7 @@
   --ok: #7fae78;
   --square-light: #b8b4a0;
   --square-dark: #5c6b5a;
-  --tint: rgba(157, 180, 232, .28);
+  --tint: rgba(157, 180, 232, .36);
   --dim: rgba(0, 0, 0, .28);
   --theme-dot-fill: transparent;
   --theme-dot-ring: 2px;
@@ -197,9 +197,16 @@ button { font: inherit; color: inherit; }
 }
 .link.muted { color: var(--muted); }
 .links .link {
-  height: 44px;              /* the 44 px target grows upward; the row stays 24 px */
+  position: relative;
+  height: 20px;              /* 4 px of air under a four-line coach box; the focus ring hugs the words */
+  line-height: 20px;
   display: inline-flex;
   align-items: flex-end;
+}
+.links .link::before {       /* the 44 px target grows upward from the words, invisibly */
+  content: '';
+  position: absolute;
+  left: -8px; right: -8px; top: -24px; bottom: 0;
 }
 .top .link { height: 44px; padding: 0 12px; display: inline-flex; align-items: center; }
 
@@ -253,13 +260,14 @@ body.typing .board { width: min(100vw - 32px, 62vh, calc(var(--vvh, 100vh) - 260
   pointer-events: none;
 }
 .coord.rank { left: 3px; top: 3px; }
-.coord.file { right: 3px; bottom: 2px; }
+.coord.file { right: 2px; bottom: 1px; }
 .sq.light .coord { color: var(--square-dark); }
 .sq.dark .coord { color: var(--square-light); }
 
 /* marks (back to front): tint, dots and rings, dim, amber, ok, glow, lit */
-.sq.tint { --l-tint: linear-gradient(var(--tint), var(--tint)); }
-.sq.glow { --l-glow: linear-gradient(var(--glow), var(--glow)); }
+.sq.tint { --l-tint: linear-gradient(var(--tint), var(--tint)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--coach) 45%, transparent); }
+/* the answer glow: the amber fill at 25 percent with an inset amber ring, so it reads on sage too */
+.sq.glow { --l-glow: linear-gradient(var(--glow), var(--glow)); box-shadow: inset 0 0 0 3px var(--hold); }
 .sq.dot::before { background: radial-gradient(circle at center, var(--dot) 5px, transparent 5.5px); }
 .sq.ring::before { inset: 3px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--dot); }
 .sq.lit::before {
@@ -274,16 +282,18 @@ body.typing .board { width: min(100vw - 32px, 62vh, calc(var(--vvh, 100vh) - 260
   background-repeat: no-repeat;
 }
 .board[data-state="held"] .sq:not(.amber)::after { background: var(--dim); }
+/* rings carry a 1 px --bg hairline inside them so they keep an edge on the square they match in
+   luminance (amber on sage in light, on sand in dark) */
 .sq.amber {
-  box-shadow: inset 0 0 0 3px var(--hold), inset 0 0 14px 4px var(--hold);
+  box-shadow: inset 0 0 0 1px var(--bg), inset 0 0 0 4px var(--hold), inset 0 0 14px 4px var(--hold);
   animation: breathe var(--breathe) ease-in-out infinite;
 }
 @keyframes breathe {
-  0%, 100% { box-shadow: inset 0 0 0 2px var(--hold), inset 0 0 8px 2px var(--hold); }
-  50% { box-shadow: inset 0 0 0 3px var(--hold), inset 0 0 18px 7px var(--hold); }
+  0%, 100% { box-shadow: inset 0 0 0 1px var(--bg), inset 0 0 0 3px var(--hold), inset 0 0 8px 2px var(--hold); }
+  50% { box-shadow: inset 0 0 0 1px var(--bg), inset 0 0 0 4px var(--hold), inset 0 0 18px 7px var(--hold); }
 }
-.sq.ok { box-shadow: inset 0 0 0 3px var(--ok); }
-.sq.ok.amber { box-shadow: inset 0 0 0 3px var(--ok), inset 0 0 14px 4px var(--hold); animation: none; }
+.sq.ok { box-shadow: inset 0 0 0 1px var(--bg), inset 0 0 0 4px var(--ok); }
+.sq.ok.amber { box-shadow: inset 0 0 0 1px var(--bg), inset 0 0 0 4px var(--ok), inset 0 0 14px 4px var(--hold); animation: none; }
 
 /* pieces */
 .pieces, .ghosts {
@@ -303,7 +313,7 @@ body.typing .board { width: min(100vw - 32px, 62vh, calc(var(--vvh, 100vh) - 260
   will-change: transform;
 }
 .pc { cursor: pointer; z-index: 1; border-radius: 4px; outline-offset: -2px; pointer-events: auto; }
-.pc svg, .ghost svg { display: block; position: absolute; inset: 7%; width: 86%; height: 86%; overflow: visible; pointer-events: none; }
+.pc svg, .ghost svg { display: block; position: absolute; inset: 8%; width: 84%; height: 84%; overflow: visible; pointer-events: none; }
 .pc.picked {
   transform: translate(var(--tx, 0%), var(--ty, 0%)) translateY(-6px) scale(1.06);
   filter: drop-shadow(var(--shadow));
@@ -324,32 +334,30 @@ body.typing .board { width: min(100vw - 32px, 62vh, calc(var(--vvh, 100vh) - 260
   opacity: .7;
 }
 .pc.captured { opacity: 0; pointer-events: none; z-index: 0; }
+.pc.taken { opacity: 0; }   /* a ghost capture has landed on it: the ghost replaces it until the rewind */
 .ghost { opacity: .5; }
 
-/* the -N float */
+/* the -N float: a plated 28 px serif label in the board's wrapper, outside the board itself, at
+   the player's edge on the h-file side (clear of the action bar's centred buttons); it rises
+   24 px from under the board up to its bottom edge and never crosses a square */
 .loss {
   position: absolute;
-  left: 50%; bottom: 10px;
-  transform: translateX(-50%);
+  right: 0; top: calc(100% + 26px);
   z-index: 4;
   pointer-events: none;
   font: 400 28px/1 var(--serif);
   color: var(--ink);
-  text-shadow: 0 0 8px var(--bg), 0 0 4px var(--bg), 0 0 2px var(--bg), 0 0 1px var(--bg);
-}
-.loss[hidden] { display: none; }
-.loss.rising { animation: rise var(--float) ease-out forwards; }
-.loss.static {
-  bottom: 8px;
   padding: 2px 12px 4px;
   border-radius: 6px;
   background: var(--bg);
   box-shadow: 0 0 0 1px var(--line);
-  text-shadow: none;
 }
+.loss[hidden] { display: none; }
+.loss.rising { animation: rise var(--float) ease-out forwards; }
+.loss.static { top: calc(100% + 2px); }   /* reduced motion: the same label, beside the board, held still */
 @keyframes rise {
-  from { opacity: 1; transform: translateX(-50%) translateY(0); }
-  to { opacity: 0; transform: translateX(-50%) translateY(-24px); }
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-24px); }
 }
 
 /* the opponent's edge */
@@ -392,7 +400,7 @@ body.typing .board { width: min(100vw - 32px, 62vh, calc(var(--vvh, 100vh) - 260
   display: flex;
   gap: 8px;
   width: 100%;
-  margin: 0;
+  margin: 4px 0 0;   /* the focus ring clears the board's edge */
 }
 .say-input {
   flex: 1 1 auto;
@@ -415,8 +423,11 @@ body.typing .board { width: min(100vw - 32px, 62vh, calc(var(--vvh, 100vh) - 260
 
 /* ------------------------------------------------------------ close card */
 
+/* once the game is over the empty action bar gives its 56 px to the card, so at 400 x 800 the
+   card and Again sit above the fold for a game of up to four holds */
+.stage:has(#board[data-state="over"]) .actions:empty { min-height: 0; padding: 0; }
 .close {
-  margin: 8px 0 24px;
+  margin: 0 0 24px;
   padding: 16px 0 0;
   border-top: 1px solid var(--line);
 }
@@ -439,9 +450,9 @@ body.typing .board { width: min(100vw - 32px, 62vh, calc(var(--vvh, 100vh) - 260
 /* ------------------------------------------------------- reduced motion */
 
 @media (prefers-reduced-motion: reduce) {
-  .sq.amber { animation: none; box-shadow: inset 0 0 0 3px var(--hold); }
+  .sq.amber { animation: none; box-shadow: inset 0 0 0 1px var(--bg), inset 0 0 0 4px var(--hold); }
   .coach.looking { animation: none; }
   .loss.rising { animation: none; }
 }
-html[data-fast="1"] .sq.amber { animation: none; box-shadow: inset 0 0 0 3px var(--hold); }
+html[data-fast="1"] .sq.amber { animation: none; box-shadow: inset 0 0 0 1px var(--bg), inset 0 0 0 4px var(--hold); }
 html[data-fast="1"] .coach.looking { animation: none; }

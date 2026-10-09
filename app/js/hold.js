@@ -5,7 +5,7 @@
 // the Hear me out input, the Looking echo, the validated say with its lit squares and the link
 // states. game.js owns the state machine and calls in; this file only draws and grades.
 
-import { COPY, DOM, KEYS, timing } from './contract.js';
+import { COPY, DOM, KEYS, PIECE_WORDS, fill, timing } from './contract.js';
 import { grade as gradeTap } from './gate.js';
 
 const SQUARE_RE = /^[a-h][1-8]$/;
@@ -84,7 +84,7 @@ export function createHold({ board, coachLine, actions, links, store, fast = () 
     if (showme) showme.hidden = !hold;
     const but = linkEl('but');
     if (but) {
-      const state = hold ? linkState.but : 'hidden';
+      const state = hold && !inputOpen ? linkState.but : 'hidden';
       but.hidden = state === 'hidden';
       but.textContent = state === 'retry' ? COPY.LINKS.TRY_AGAIN : COPY.LINKS.HEAR_ME_OUT;
     }
@@ -96,13 +96,27 @@ export function createHold({ board, coachLine, actions, links, store, fast = () 
   }
 
   // ---- grading -------------------------------------------------------------------------------
+  function activeAsk() {
+    if (!hold || !hold.ask || !Array.isArray(hold.asks)) return null;
+    return hold.asks.find((a) => a && a.kind === hold.ask) || null;
+  }
   function activeAnswer() {
     if (!hold) return null;
-    if (hold.ask && Array.isArray(hold.asks)) {
-      const ask = hold.asks.find((a) => a && a.kind === hold.ask);
-      if (ask) return { squares: ask.squares || [], best: ask.best || null, partial: ask.partial || [] };
-    }
+    const ask = activeAsk();
+    if (ask) return { squares: ask.squares || [], best: ask.best || null, partial: ask.partial || [] };
     return hold.answer || { squares: [], best: null, partial: [] };
+  }
+  // The lines for the tap: the K2 look's own copy when Claude chose a look that is not the
+  // hold's (its {piece} is the piece on the square, {square} the square named), else the hold's
+  // own lines (K1's when they arrived, and only for the hold's own best square).
+  function pieceWordOn(square) {
+    const f = hold && (hold.factsAfter || hold.factsBefore);
+    const p = f && f.bySquare && f.bySquare[square];
+    return p && p.type in PIECE_WORDS ? PIECE_WORDS[p.type] : 'piece';
+  }
+  function askCopy() {
+    const ask = activeAsk();
+    return ask && !ask.own && ask.copy ? ask.copy : null;
   }
 
   function firstHoldSentence(text) {
@@ -144,40 +158,50 @@ export function createHold({ board, coachLine, actions, links, store, fast = () 
   function showButtons() {
     if (!hold) return;
     stopTimer();
-    if (hold.buttonsShown && !inputOpen && actions && actions.querySelector('[data-action="takeback"]')) return;
     hold.buttonsShown = true;
+    // the open Hear me out input keeps the bar (closeInput() draws the buttons when it closes), as
+    // does a Give up confirm (Keep playing restores them); the bar is never rebuilt under either
+    if (inputOpen) return;
+    if (actions && actions.querySelector('[data-action="giveup-yes"]')) return;
+    if (actions && actions.querySelector('[data-action="takeback"]')) return;
     renderBar();
   }
 
   function tap(square) {
     if (!hold || !SQUARE_RE.test(String(square))) return null;
     const answer = activeAnswer();
+    const ac = askCopy();
     const g = gradeTap(answer, square);
+    // K1's lines are written for the hold's own look and its best square
+    const useK1 = (key) => !ac && k1 && k1[key] && (g !== 'right' || answer.best === null || square === answer.best);
     let result = g;
     let line;
     if (g === 'right') {
-      line = k1 && k1.if_right ? k1.if_right : hold.copy.if_right(square);
-      if (k1 && k1.and_then) line = `${line} ${k1.and_then}`;
+      if (ac) line = fill(ac.if_right, { piece: pieceWordOn(square), square });
+      else line = useK1('if_right') ? k1.if_right : hold.copy.if_right(square);
+      if (useK1('if_right') && k1.and_then) line = `${line} ${k1.and_then}`;
       marks.ok = [square];
       marks.glow = null;
       hold.answered = true;
     } else if (g === 'partial') {
-      line = k1 && k1.if_partial ? k1.if_partial : hold.copy.if_partial(square);
+      if (ac) line = fill(ac.if_partial || ac.if_wrong, { piece: pieceWordOn(square), square });
+      else line = useK1('if_partial') ? k1.if_partial : hold.copy.if_partial(square);
       hold.answered = true;
     } else {
       wrongs += 1;
       if (wrongs < 2) {
-        line = k1 && k1.if_wrong ? k1.if_wrong : hold.copy.if_wrong;
+        if (ac) line = fill(ac.if_wrong, { piece: pieceWordOn(square), square });
+        else line = useK1('if_wrong') ? k1.if_wrong : hold.copy.if_wrong;
       } else {
         result = 'named';
         const best = answer.best || (answer.squares && answer.squares[0]) || null;
         marks.glow = best;
-        line = hold.copy.named;
+        line = ac ? fill(ac.named, { piece: pieceWordOn(best), square: best }) : hold.copy.named;
         hold.answered = true;
       }
     }
-    const fromClaude = !!(k1 && ((g === 'right' && (k1.if_right || k1.and_then)) || (g === 'partial' && k1.if_partial) || (g === 'wrong' && wrongs < 2 && k1.if_wrong)));
-    hold.taps.push({ square, grade: result });
+    const fromClaude = !ac && !!(k1 && ((g === 'right' && (useK1('if_right') || k1.and_then)) || (g === 'partial' && useK1('if_partial')) || (g === 'wrong' && wrongs < 2 && useK1('if_wrong'))));
+    hold.taps.push({ square, grade: result, ask: hold.ask || null });
     paint();
     if (result === 'right' || result === 'partial' || result === 'named') {
       line = firstHoldSentence(line);
@@ -235,6 +259,7 @@ export function createHold({ board, coachLine, actions, links, store, fast = () 
     if (!hold || inputOpen) return;
     inputOpen = true;
     renderBar();
+    applyLinks();   // the open input is the Hear me out affordance: the link steps aside
     try { document.body.classList.add('typing'); } catch { /* no body: nothing to mark */ }
     if (inputEl) { try { inputEl.focus({ preventScroll: true }); } catch { /* courtesy */ } }
   }
@@ -245,6 +270,7 @@ export function createHold({ board, coachLine, actions, links, store, fast = () 
     try { document.body.classList.remove('typing'); } catch { /* ignore */ }
     if (hold) renderBar();
     else clearBar();
+    applyLinks();
   }
   function inputValue() {
     return inputEl ? inputEl.value : '';

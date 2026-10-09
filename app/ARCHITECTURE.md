@@ -85,8 +85,8 @@ from the app except `contract.js` (and chess.js where noted). `hold.js`, `ghost.
         </div>
         <div id="ghosts" class="ghosts" aria-hidden="true">  <!-- <div class="ghost" data-square data-piece> during Show me -->
         </div>
-        <div id="loss" class="loss" aria-hidden="true" hidden></div>  <!-- the 28 px serif '-N' float -->
       </div>
+      <div id="loss" class="loss" aria-hidden="true" hidden></div>  <!-- the 28 px serif '-N' label: in the wrapper, outside the board (overflow hidden), so it rises from under the board and never crosses a square -->
       <div id="edge" class="edge" aria-hidden="true"><span class="edge-dot"></span><span class="edge-caption"></span></div>
     </div>
     <div id="actions" class="actions" aria-live="polite"></div>   <!-- 56 px; empty until a decision is needed -->
@@ -103,7 +103,7 @@ from the app except `contract.js` (and chess.js where noted). `hold.js`, `ghost.
 Action bar contents (game.js/hold.js write them; shell styles them; everything is a `<button type=button data-action=…>` or the one `<input>`):
 
 - hold answered: `<button class="btn primary" data-action="takeback">Take it back</button> <button class="btn quiet" data-action="anyway">Play it anyway</button>`; takeback receives focus.
-- Hear me out open: `<form class="say"><input id="say" class="say-input" type="text" enterkeyhint="done" autocomplete="off" maxlength="120" placeholder="Say what you were going for"><button class="btn primary" data-action="send" type="submit">Send</button></form><p class="note">The first time, your browser will ask whether the coach may think. That is all it is.</p>` — the two decision buttons are hidden while the input is open and come back when it closes.
+- Hear me out open: `<form class="say"><input id="say" class="say-input" type="text" enterkeyhint="done" autocomplete="off" maxlength="120" placeholder="Say what you were going for"><button class="btn primary" data-action="send" type="submit">Send</button></form><p class="note">The first time, your browser will ask whether the coach may think. That is all it is.</p>` — the two decision buttons are hidden while the input is open and come back when it closes; the bar is never rebuilt under the open input (the buttons timer and a tap that answers the hold only set `buttonsShown`), so what he typed and his focus survive; the 'Hear me out' link hides while its input is open.
 - give up: `<span class="ask">Give up this one?</span> <button class="btn primary" data-action="giveup-yes">Yes</button> <button class="btn quiet" data-action="keep">Keep playing</button>`
 - mercy: the line says 'This one is gone. Start again?'; the bar holds `[data-action=startagain]` (primary) and `[data-action=keep]`.
 - over: the bar is empty; the close card holds `[data-action=again]`.
@@ -115,7 +115,7 @@ Action bar contents (game.js/hold.js write them; shell styles them; everything i
 - `html[data-fast="1"]` is set by game.js when `window.__app.fast` is true so CSS durations are 0 in test runs.
 - The board edge for the opponent (`#edge`) sits above the board (Black at the top).
 - Theme dot: 12 px circle, filled `--ink` in light, hollow (2 px ring) in dark; 44 px target.
-- The coach line's echo during Hear me out: `#coach` gets class `looking`, its text is 'Looking...' followed by `<span class="echo">«his words»</span>` on the next line in `--muted`.
+- The coach line's echo during Hear me out: `#coach` gets class `looking`, its text is 'Looking...' followed by his words with no marks around them (the guillemets live only inside the prompt), `<span class="echo">his words</span>` on the next line in `--muted`.
 - Fonts: Source Serif 4 and IBM Plex Sans (latin subsets, OFL) are served from `app/assets/fonts/` through `@font-face` in styles.css with the fallback stacks from the spec. **Integration change**: the Google Fonts `<link>` was dropped because the harness's Chromium cannot verify the proxy's CA here (ERR_CERT_AUTHORITY_INVALID made `report.ok` false on every run) and because the page then makes no request outside its own files.
 
 ## 4. The state machine (game.js)
@@ -133,7 +133,7 @@ idle (player to move; pre-search running or cached)
   drop ─> pending
 pending (input locked; dot on the piece after 250 ms)
   tutorial     ─> tutorial.json verdict (0 ms)
-  engine cold  ─> commit, no verdict, no reward
+  engine cold or dead ─> commit, no verdict, no reward (dead: an 'error' event after readyok, or a search silent for ENGINE.WATCHDOG_MS; isReady() turns false)
   else         ─> engine.stop(); maybe re-search pre; post search depth 12 mpv 2; facts; gate.verdict()
   verdict.held ─> held           verdict clean ─> commit ─> reward? ─> reply
 held (piece lifted, amber, dim, question at 0 ms, action bar empty, links Show me [+ Hear me out])
@@ -161,18 +161,25 @@ new game id, without touching localStorage flags.
 1. `board.move(move)` animates; `data-state=pending`, `data-input=locked`; the 250 ms dot timer starts.
 2. Tutorial: look up `tutorial.json.moves[san]`; held rows become a verdict with the canned answer set
    and refutation; everything else commits; no engine. Any path sets `KEYS.TUTORIAL_SEEN`.
-3. Not ready (`engine.isReady()` false): commit with `verdict=null` (no reward, no hold, not counted).
+3. Not ready (`engine.isReady()` false, including a Worker that died after readyok): commit with
+   `verdict=null` (no reward, no hold, not counted). A drop overtaken by `load()`, `newGame()` or the end
+   of the game returns 'illegal' after `board.setPosition(chess)` and keeps nothing (no pre, no mercy tick).
 4. Ready: `await engine.stop()` (the stopped pre-search result is kept if its depth >= 8, otherwise
    `search(preFen, {depth: 10, multipv: 2})` runs first); build `factsBefore` (cached from the pre
    position) and `factsAfter` (scratch Chess with the move applied); `search(postFen, {depth: 12,
    multipv: 2})`; `gate.verdict(pre, post, factsBefore, factsAfter, gameState)`.
-5. `verdict.held` → `hold.open(...)`; else commit, `gate.reward(...)` under the quiet budget, then the reply.
+5. `verdict.held` → `hold.open(...)`; else commit, `gate.reward(..., lastMove)` under the quiet budget (the
+   opponent's own verified gift, taken, is `free_taken` by construction whatever the pre-search's first
+   line preferred), then the reply.
 
 ### The quiet budget
 
 `rewardsSaid` counts reward lines this game; a reward line shows only if `rewardsSaid < 4` and the last
 reward was not on the previous player move (`lastRewardPly !== ply - 2`). Otherwise the ring shows
-without words (reward 1) or nothing (reward 2). Reward 1 (free piece taken) wins when both apply.
+without words (reward 1) or nothing (reward 2). Reward 1 (free piece taken) wins when both apply, and
+counts what his capture wins net of what the opponent's last capture on that square took (`lastMove`), so
+an even trade (…Nxe3 fxe3, …Qxe5 dxe5) is never 'Free knight'; `load(fen)` has no last move, so the
+FEN-derivable rule stands there.
 
 ### Play-anyway bookkeeping
 
@@ -180,7 +187,14 @@ without words (reward 1) or nothing (reward 2). Reward 1 (free piece taken) wins
   that are not held again this game.
 - After `anyways >= 2` the gate holds only `ALWAYS_HOLD` categories and holds with `netLoss >= 5`.
 - `givenAway` counts: play-anyways whose hold had `netLoss >= 2`, plus committed moves whose verdict
-  matched a category but was suppressed (pair rule or quiet rule) with `netLoss >= 2`.
+  matched a category but was suppressed (pair rule or quiet rule) with `netLoss >= 2`; only for the
+  categories where his own piece is lost (hanging_after_move, ignored_attack), and only when the reply
+  really landed on the hold's target square (a missed free piece played anyway is not 'given away').
+- The play-anyway sentence is phrased after the reply: when the reply did not land on the hold's piece
+  (it chose something else) the base line is `COPY.ANYWAY.elsewhere` ('They chose something else; your
+  knight is still there.') with the same saw_it / next_time tail; 'You saw it coming' counts only taps
+  graded against the hold's own look (an ask that is not the category's own, e.g. safe_square, is a
+  different look). The first '-N' a browser sees is named once on this path too (`firstFloatLine`).
 
 ### Mercy and resignation
 
@@ -259,13 +273,14 @@ post = { fen, evalAfter,                                        // player side (
 ### Verdict (gate.js)
 
 ```
-{ held: boolean, category: string|null, sub: 'already'|'lost_guard'|null, variant: 'takes_back'|null,
+{ held: boolean, category: string|null, sub: 'already'|'lost_guard'|'opened_line'|null, variant: 'takes_back'|null,
   cpLoss: number|null, netLoss: number|null,            // netLoss positive = his loss in piece points over the refutation
   target: square|null,                                  // the piece the question is about (his moved piece, his attacked piece, their free piece, their king, the landing square)
   targetPiece: type|null, targetColor: 'w'|'b'|null,
   answer: { squares: [sq], best: sq|null, partial: [sq] },      // squares = right taps; best = the one named after two wrongs; partial = legitimate-but-not-best taps
   takers: [{ square, type, value }],                    // for hanging: the legal takers; for ignored_attack: the attackers
   refutation: [uci, uci?],                              // ghost plies: the capture, and the recapture when the pv's next ply recaptures on the same square
+  refutationFrom: 'post'|'pre',                         // 'pre' for free_piece_ignored: the plies play from the position before his move (the capture he walked past)
   gained: [type],                                       // what he gets back over the refutation (his capture + the recapture), for 'A knight for a pawn'
   pawnAmongTakers: boolean,
   suppressed: null | 'pair' | 'quiet',                  // category matched but the hold is not shown
@@ -275,27 +290,40 @@ post = { fen, evalAfter,                                        // player side (
 `verdict()` fires the first matching category in `CATEGORIES` order; `suppressed` is set instead of
 `held` when the pair rule or the quiet rule applies (the category is still reported so `givenAway` can
 count it). `reward(pre, factsBefore, factsAfter, move)` is a separate pure export used only when
-`held` is false and `cpLoss < 200`.
+`held` is false and `cpLoss < 200`; its fifth argument `lastMove` (the opponent's last verbose move, or
+null) makes reward 1 net of an exchange on that square. Two guards run before the table: the only legal
+move is never held ('clean: the only legal move'), and a mate-scored pre-search against a plain-cp post
+at or above `GATE.STILL_WINNING_CP` (300) reads cpLoss 0 (the win stands; letting it go keeps the raw
+loss). A reply from post line 2 counts only when its own score is a hold-sized loss too
+(`pre.evalBefore - line.score >= 200`): the story the page tells must be the one that happens.
 
 Category tests, exactly (player = White; "reply" = `post.lines[0].reply`, "either line" = lines 0 or 1):
-1. allowed_mate: `post.replyMateIn === 1` → answer: that reply's `to`; partial: none; netLoss null.
+1. allowed_mate: `post.replyMateIn === 1` → answer: that reply's `to` (best) plus every other mating
+   destination chess.js finds in the post position (`factsAfter.mateInOne`); partial: none; netLoss null.
 2. missed_mate: `pre.mateIn === 1 && !factsAfter.isCheckmate` → answer: `pre.best.to`; if several
    mating moves exist (facts.mateInOne of the pre position) all their `to` squares are right, best is
    `pre.best.to`.
 3. ignored_attack: `cpLoss >= 200`, either line's reply captures a White piece with value >= 2 that is
    not on `move.to`, and in `factsAfter` that piece is hanging → sub `already` if it was hanging in
-   `factsBefore` (same square, same piece) else `lost_guard`; answer: the piece's square; partial: the
-   attackers' squares (legal takers in the post position); netLoss = value − (the pv's recapture gain
-   if the next ply recaptures on that square, else 0).
+   `factsBefore` (same square, same piece); `opened_line` if it was not attacked at all before (his move
+   opened an enemy line onto it: a pinned piece moved, a piece stepped off a file; the defenders are
+   unchanged); else `lost_guard` (it was attacked and defended; a guard left); answer: the piece's
+   square (best), plus `move.to` when the other reply line takes the piece he moved for a net loss >= 2
+   too (both hang: tapping either is right, the victim stays best so the named square and the ghost
+   agree); partial: the attackers' squares (legal takers in the post position); netLoss = value − (the
+   pv's recapture gain if the next ply recaptures on that square, else 0).
 4. hanging_after_move: `cpLoss >= 200`, either line's reply captures on `move.to`, the moved piece is
    hanging in `factsAfter`, netLoss >= 2 where netLoss = `material(before) − material(after refutation)`
    from White's side (his own capture counted in his favour) → answer: all legal takers' squares; best =
-   the capturing reply's `from`; partial = the other takers; `variant='takes_back'` when his move
+   the capturing reply's `from`; partial = only the takers dearer than the best (or a king when the best
+   is not the king): equal takers (two pawns) are both right; `variant='takes_back'` when his move
    captured; `pawnAmongTakers`.
 5. free_piece_ignored: `pre.best` captures a Black piece with value >= 2 that is free in
    `factsBefore` (still on the board after his move), `cpLoss >= 200`, and his move is not that capture
    → answer: that square; partial: other free Black pieces (value >= 2) in `factsBefore`; netLoss = value
-   if undefended else value − cheapest attacker value.
+   if undefended else value − cheapest attacker value; refutation = `[pre.best.uci]` with
+   `refutationFrom: 'pre'` (Show me plays the capture he walked past, his own piece, from the position
+   before his move, and floats nothing: there is no exchange to count).
 6. allowed_stalemate: `factsAfter.isStalemate && factsBefore.material.diff >= 5` → answer: the Black
    king's square.
 Then: clean when none matched or `cpLoss < 200` for 3-5 (mates and stalemate ignore cpLoss).
@@ -312,12 +340,14 @@ Built from `COPY` with piece words; `if_right` for hanging uses `gained`; `if_pa
 the `_king` variant when the tapped taker is a king or not dearer than the best; `if_wrong` picks the
 `_pawn` variant when a pawn is among the takers; `anyway(sawIt)` appends `ANYWAY.saw_it` or
 `ANYWAY.next_time` with `LOOK_WORDS` keyed by the best answer's piece (pawn → 'the pawns', mate
-categories → 'the check', else 'their {piece}').
+categories → 'the check', a king taker → 'what takes back', stalemate → 'their king's squares', else
+'their {piece}'). `if_right(square)` for ignored_attack answers for the tapped square: the second hanging
+piece (the one he moved) gets 'Yes, the knight. The queen takes it next move.' from its own cheapest taker.
 
 ### Asks (gate.js `asksFor(verdict, factsBefore, factsAfter, move)`)
 
 ```
-[{ kind: ASK_KIND, question, squares: [sq], best: sq|null, partial: [sq] }]
+[{ kind: ASK_KIND, question, squares: [sq], best: sq|null, partial: [sq], own: boolean, copy?: { if_right, if_wrong, named, if_partial? } }]
 ```
 Offered per category: the category's own look (hanging → what_takes_it / what_takes_back; ignored →
 attacked_piece; free → what_is_free; allowed_mate → their_check; missed_mate → your_mate; stalemate →
@@ -325,14 +355,19 @@ their_king), plus `safe_square` when the moved piece is not a king and has at le
 plus `what_is_free` when a free Black piece worth >= 2 exists in factsBefore and it is not already the
 category's look, plus `attacked_piece` when a White piece worth >= 2 hangs in factsBefore and it is not
 already the look. Grading an ask: a tap in `squares` is right (`best` null means any), in `partial` is
-partial, else wrong; the copy for ask grades is the hold's own if_right/if_partial/if_wrong.
+partial, else wrong. `own` marks the category's own look; its grades use the hold's own lines (and K1's
+when they arrived). Any other look carries its own follow-up copy from `ASKS[kind].copy` ({piece} is the
+piece on the tapped square, or the moved piece for safe_square; {square} the square named), and the
+second wrong tap glows `best || squares[0]` and names that same square ('The knight is safe on f3.'):
+the hold's lines ('Yes, the pawn. A knight for a pawn.') would be false for a safe square. The K1 lines
+are used only for the hold's own look and, for if_right, only on its best square.
 
 ### Hold (game.js state; `state().hold`)
 
 ```
 { category, sub, variant, san, from, to, piece, captured, answer: {squares, best, partial}, answerSquares: [sq],  // answerSquares mirrors answer.squares for the tests
   question, copy: HoldCopy, asks: [Ask], ask: ASK_KIND|null,                 // ask set after a K2 reply
-  taps: [{ square, grade: 'right'|'partial'|'wrong'|'named' }], answered: boolean, buttonsShown: boolean,
+  taps: [{ square, grade: 'right'|'partial'|'wrong'|'named', ask: ASK_KIND|null }], answered: boolean, buttonsShown: boolean,   // ask: the look the tap answered
   netLoss, refutation: [uci], tutorial: boolean, firstHold: boolean,
   claude: { k2: 'none'|'asking'|'shown'|'failed', k1: 'none'|'pending'|'ready'|'failed'|'late', k1Lines: K1|null, coachShown: boolean },
   openedAt: number }
@@ -341,7 +376,7 @@ partial, else wrong; the copy for ask grades is the hold's own if_right/if_parti
 ### HoldRecord (log; `holds()`; stored under KEYS.HOLDS with gameId)
 
 ```
-{ fen, san, category, sub, taps: [{square, grade}], outcome: 'back'|'anyway'|'ended', coachShown: boolean, netLoss, piece, to, best, ply, gameId }
+{ fen, san, category, sub, taps: [{square, grade, ask}], outcome: 'back'|'anyway'|'ended', coachShown: boolean, netLoss, piece, to, best, ply, gameId }
 ```
 `coachShown` is true when any validated Claude text (K2 say or a K1 line) was shown in this hold.
 
@@ -361,7 +396,7 @@ partial, else wrong; the copy for ask grades is the hold's own if_right/if_parti
 ### State snapshot (`state()`, the live object; tests may set `giftDue`)
 
 ```
-{ state, tutorial, engineReady, hold: Hold|null, plies, anyways, playedPairs: [string], rewardsSaid, lastRewardPly,
+{ state, tutorial, engineReady /* a getter: engine.isReady(), false again once the Worker died */, hold: Hold|null, plies, anyways, playedPairs: [string], rewardsSaid, lastRewardPly,
   mercyOffered, mercyStreak, resignStreak, botMoveNo, result: null|string, giftDue: boolean, lastGift: null|{ san, verified, square, piece, how },
   consented: boolean, coachAvailable: boolean, resting: boolean, pre: pre|null, lastVerdict: Verdict|null, forcedReply: san|null }
 ```
@@ -403,7 +438,8 @@ by chess.js in node and asserts `expect`, `category`, `answer`, `reward`.
 ### K2 and K1 contracts (coach.js, validate.js)
 
 K2 reply: `{ say: string, ask: ASK_KIND|null, squares: [square] }`. Valid when `say` has at most two
-sentences, at most 20 words, no question mark; `ask` is null or one of the hold's offered kinds;
+sentences of at most 20 words each and at most 32 words in all (`CLAUDE.K2_MAX_WORDS`; the spec's 31-word
+example passes; 32 plus the 8-word ask question is what fits the four-line box at 400 px), no question mark; `ask` is null or one of the hold's offered kinds;
 `squares` is at most three, each in the allowed set (fact-sheet squares, every occupied square, the held
 piece's legal destinations). K1 reply: `{ if_right, if_partial, if_wrong, and_then, anyway }`, each at
 most 20 words (if_wrong 14, and_then 12 or empty), squares only from the fact-sheet set, if_wrong naming
@@ -420,10 +456,15 @@ target, and the refutation's squares.
 
 ### The K2 prompt (coach.js builds it, about 1.6 KB, three blocks)
 
-Block 1 fixed (`CLAUDE.PROMPT_VERSION` v2), block 2 the fact sheet rendered in the spec's words
-('Position (FEN): … Player is White. Move being held: knight from f3 to e5, taking a pawn. If it lands:
-the pawn on d6 takes the knight (the knight on c6 could also). Nothing of White's takes back. Net: a
-knight for a pawn. Pieces on the board: … Squares you may name: … Moves you may name: none. Looks you
+Block 1 fixed (`CLAUDE.PROMPT_VERSION` v2): `PERSONA` (the coach, the plain-words rules, 'use only the
+facts below; if nothing in their idea is true here, say so plainly and invent no merit') plus `K2_TASK`
+(answer their idea, two sentences of 20 words each, choose one look); `K2_FIXED` is the two joined and K1
+carries `PERSONA` only, never the K2 task. Block 2 the fact sheet rendered in the spec's words, where the
+FEN and the piece list describe the same position, the one on the board with the held move made
+('Position (FEN, with the held move made): … Player is White. Move being held: knight from f3 to e5,
+taking a pawn (f3 is now empty). If it lands: the pawn on d6 takes the knight (the knight on c6 could
+also). Nothing of White's takes back. Net: a knight for a pawn. Pieces on the board with the held move
+made: … Squares you may name: …'; a held move that gives check adds 'It gives check.' after the held-move line, and the fact sheet continues '… Moves you may name: none. Looks you
 may choose (kind: meaning): … This game so far: 1 hold, taken back. The player wrote: «…».'), block 3
 the JSON contract. K1 swaps the instruction and the contract as the spec words them. Calls:
 `sample.json(prompt, { modelTier: 'quick', cache: false, signal })` for K2; `sample.json(prompt,
@@ -461,7 +502,8 @@ chess.js; it only draws what it is told.
 export function createEngine({ workerUrl = ENGINE.WORKER_URL, Worker = globalThis.Worker } = {}): Engine
 Engine = {
   ready: Promise<void>,                 // uci → uciok → setoption Hash/MultiPV → isready → readyok → ucinewgame
-  isReady(): boolean,
+  isReady(): boolean,                   // false before readyok and again once the Worker died
+  dead(): boolean,                      // the Worker died after readyok (error/messageerror event, or a search silent for ENGINE.WATCHDOG_MS = 4 s): every running and queued search resolved empty and stopped; the page's cold policy applies
   setOptions(opts: { 'Skill Level'?: number, MultiPV?: number, UCI_LimitStrength?: boolean, UCI_Elo?: number }): void,  // queued setoption lines
   newGame(): void,                      // queues ucinewgame
   search(fen: string, { depth, multipv = 1, skill = 20, newGame = false }): Promise<SearchResult>,  // serialized: sent only after the previous bestmove; the promise resolves with the lines seen so far when stopped (stopped: true)
@@ -487,7 +529,11 @@ export function shouldResign({ botEvals: number[], botMoveNo, chess, player }): 
 export function materialExtra(chess, player): { q, r, b, n, p }   // player count minus bot count per type, negatives 0
 ```
 Order inside `chooseBotMove`: book (any `botMoveNo`) → `anyway` (Skill 20, depth 12, line 1) →
-full-strength look (Skill 20, depth 8, multipv 2) → forced capture/mate → gift roll (when `giftDue` or
+full-strength look (Skill 20, depth 8, multipv 2) → forced capture/mate (the top move is a capture that
+leads line 2 by `BOT.FORCED_LEAD_CP` = 150, or line 2 captures on the same square, or the capture wins
+`BOT.FORCED_NET` = 2 or more by count (`captureNet`: the captured value minus the capturer's when the
+pv's next ply takes back on that square), or a mate; so two hanging pieces or a queen hanging to a rook
+are taken too) → gift roll (when `giftDue` or
 `random() < giftRate`, and `botMoveNo >= 3`) → sampler (Skill 3, depth 2, up to 2 re-picks) → guarded
 top move. `botEval` is the look's top score; book moves return null and do not count for resignation.
 When `giftDue` is true and no candidate verifies, `gift` is null and `how` continues down the ladder.
@@ -529,7 +575,7 @@ export function closeCaption(record: HoldRecord): string
 export function createHold({ board, coachLine, actions, links, store, fast: () => boolean, reduced: () => boolean }): HoldUI
 HoldUI = {
   open(hold: Hold): void,                   // lift, amber, dim, answer mode, question at 0 ms, links, start the 8 s timer
-  tap(square): 'right'|'partial'|'wrong'|'named'|null,   // grades against hold.ask (if set) else hold.answer; writes the line (template or K1); ok/glow marks; shows buttons after right/partial/second wrong
+  tap(square): 'right'|'partial'|'wrong'|'named'|null,   // grades against hold.ask (if set) else hold.answer; writes the line (the ask's own copy for a look that is not the hold's, else template or K1); ok/glow marks; shows buttons after right/partial/second wrong (never over the open input or the give-up confirm)
   showButtons(): void,                      // [Take it back] focused + [Play it anyway]; idempotent
   setK1(lines: K1|null): void,              // validated K1 follow-ups to use after the tap
   showSay(reply: { say, ask, squares }, askQuestion: string): void,   // K2: say + lit squares + the page's question; sets hold.ask
@@ -543,11 +589,16 @@ HoldUI = {
 ### ghost.js (hold)
 
 ```
-export function showMe({ board, chess /* the pre-move Chess */, move: VerboseMove, refutation: [uci], netLoss, fast, reduced, firstFloat: boolean, coachLine, store }): { done: Promise<void>, abort(): void }
+export function showMe({ board, chess /* the pre-move Chess */, move: VerboseMove, refutation: [uci], netLoss, fromBefore = false, fast, reduced, firstFloat: boolean, coachLine, store }): { done: Promise<void>, abort(): void }
 ```
 Plays his move already on the board (it is), then each refutation ply as ghosts at 50 percent while the
-real layer dims to 35 percent (`board.ghosts.setDim(true)`), floats `-${netLoss}` when the capture
-lands, names it once if `firstFloat` (sets KEYS.FIRST_FLOAT_SEEN), beat, rewind; `abort()` rewinds at once.
+real layer dims to 35 percent (`board.ghosts.setDim(true)`); the real piece a ghost capture lands on gets
+class `taken` (hidden) so the ghost replaces it; floats `-${netLoss}` when the capture lands, names it
+once if `firstFloat` (sets KEYS.FIRST_FLOAT_SEEN), beat, rewind; `abort()` rewinds at once. With
+`fromBefore` (free_piece_ignored) the plies play from the position before his move and nothing floats.
+The '-N' label (`#loss`, in the board's wrapper) rises 24 px from under the board on the h-file side and
+never crosses a square; under reduced motion it is the same plated label, static, just under the board.
+A tap during Show me only aborts it: game.js does not grade it.
 State stays `held`; `#board[data-ghost=1]` during play.
 
 ### coach.js (coach)
@@ -629,10 +680,21 @@ window.__coachRejects = 0
 - **The remembered line** shows only when `KEYS.GAMES` has at least one game; it is `COPY.REMEMBERED`
   keyed by the last game's hold count and whether every hold was a hanging hold with a pawn among the takers.
 - **Close caption outcome words**: 'taken back' / 'played anyway' / 'the game ended'.
-- **'Give up' confirm** replaces whatever the action bar holds; Keep playing restores it (a hold's
-  buttons come back if they were shown).
+- **'Give up' confirm** replaces whatever the action bar holds and owns it until Yes or Keep playing:
+  hold.js never rebuilds the bar while `[data-action=giveup-yes]` is in it; Keep playing restores it (a
+  hold's buttons come back if they were shown, including when the timer fired under the confirm).
+- **Only one legal move**: never held (the gate returns clean), so the close card never calls it 'played anyway'.
+- **rate_limited** shows 'Coach is resting.' for REWARD_MS and then puts the open hold question back; the link stays hidden for RESTING_MS.
+- **The tutorial's 'Safe.' line** is said once: after the tutorial has already stopped his hand, a safe move reads 'Your move.'
+- **Close card**: with holds and no take-backs the summary is `COPY.CLOSE.SUMMARY_NO_BACKS` ('you played every one'); once the game is over the empty action bar gives up its 56 px (`.stage:has(#board[data-state=over]) .actions:empty`) and, if Again still sits below the fold, `fillCloseCard()` scrolls it into view.
 - **Theme dot** writes `data-theme` on `<html>` and `KEYS.THEME`; unset follows the system.
-- **Coordinates**: inside the a-file and rank-1 squares, 11 px Plex Sans, in the opposite square tint.
+- **Coordinates**: inside the a-file and rank-1 squares, 11 px Plex Sans, in the opposite square tint; the
+  board's parity is a tournament board's (`(file + rank) % 2 === 0` is light: a1 dark, h1 light).
+- **Palette amendments** (styles.css, mirrored in PRODUCT.md): light `--muted` #646b78 (AA on the
+  background), `--tint` rgba(45,79,158,.30) light / rgba(157,180,232,.36) dark with a 1.5 px inset edge so
+  an empty origin square reads as deliberate, `--dot` rgba(0,0,0,.4) in both themes, the hold/ok rings
+  and the answer glow carry a 1 px `--bg` hairline (or an inset amber ring for the glow) so they keep an
+  edge on the square they match in luminance.
 - **Promotion** auto-queens; the piece button swaps its `<use>` and `data-piece`.
 - **Copy source**: templates live in `contract.js` (COPY), not in a `data/copy.json`; copy_check runs
   validate's template rules over COPY and scans `app/index.html`, `app/js/*` (except validate.js),

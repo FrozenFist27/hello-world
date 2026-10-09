@@ -80,7 +80,9 @@ export function createBoard(root, { onTap } = {}) {
   const squaresEl = q(DOM.ids.squares) || root.appendChild(Object.assign(document.createElement('div'), { id: DOM.ids.squares, className: 'squares' }));
   const piecesEl = q(DOM.ids.pieces) || root.appendChild(Object.assign(document.createElement('div'), { id: DOM.ids.pieces, className: 'pieces' }));
   const ghostsEl = q(DOM.ids.ghosts) || root.appendChild(Object.assign(document.createElement('div'), { id: DOM.ids.ghosts, className: 'ghosts' }));
-  const lossEl = q(DOM.ids.loss) || root.appendChild(Object.assign(document.createElement('div'), { id: DOM.ids.loss, className: 'loss' }));
+  // the '-N' float sits outside the board (overflow: hidden) in its wrapper, so it never crosses a square
+  const lossEl = (root.ownerDocument || document).getElementById(DOM.ids.loss)
+    || (root.parentElement || root).appendChild(Object.assign(document.createElement('div'), { id: DOM.ids.loss, className: 'loss', hidden: true }));
 
   // ---- squares -------------------------------------------------------------------------------
   const squares = new Map();
@@ -88,7 +90,7 @@ export function createBoard(root, { onTap } = {}) {
   for (let r = 8; r >= 1; r--) {
     for (let f = 0; f < 8; f++) {
       const sq = FILES[f] + r;
-      const light = (f + r) % 2 === 1;
+      const light = (f + r) % 2 === 0;   // a1 (f 0, r 1) is dark; h1 light: 'light on the right'
       const b = document.createElement('button');
       b.type = 'button';
       b.className = `${DOM.sq.base} ${light ? DOM.sq.light : DOM.sq.dark}`;
@@ -288,6 +290,14 @@ export function createBoard(root, { onTap } = {}) {
     setDim(on) {
       if (on) root.dataset.ghost = '1';
       else delete root.dataset.ghost;
+    },
+    // the real piece a ghost capture lands on is hidden (class taken) so the ghost replaces it
+    take(square, on = true) {
+      const el = square ? pieceAt(square) : null;
+      if (el) el.classList.toggle(DOM.pc.taken, !!on);
+    },
+    untakeAll() {
+      for (const el of piecesEl.querySelectorAll(`.${DOM.pc.taken}`)) el.classList.remove(DOM.pc.taken);
     },
   };
 

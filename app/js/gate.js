@@ -93,12 +93,35 @@ function pieceAtFen(fen, square) {
   return null;
 }
 
+// A reply from line 2 explains the measured loss only when its own score is a hold-sized loss
+// too; otherwise the story the page would tell is not the one that happens on the board.
+function explainsLoss(index, line, pre) {
+  if (index === 0) return true;
+  if (!pre || !Number.isFinite(pre.evalBefore) || !line || !Number.isFinite(line.score)) return false;
+  return pre.evalBefore - line.score >= GATE.HOLD_CP;
+}
+// The net loss when either reply line takes the piece he just moved (hanging_after_move's own
+// test), or null when no line does or the loss is under NET_MIN.
+function hangingMovedLoss(ctx) {
+  const { pre, post, fa, move } = ctx;
+  const moved = fa.bySquare[move.to];
+  if (!moved || moved.color !== 'w' || !moved.hanging) return null;
+  for (const [i, line] of ((post && post.lines) || []).slice(0, 2).entries()) {
+    const r = line && line.reply;
+    if (!r || !r.captured || r.to !== move.to || !explainsLoss(i, line, pre)) continue;
+    const back = recaptures(line.pv && line.pv[1], move.to);
+    const netLoss = value(move.piece) - (move.captured ? value(move.captured) : 0) - (back ? value(r.piece) : 0);
+    if (netLoss >= GATE.NET_MIN) return netLoss;
+  }
+  return null;
+}
+
 function blank(extra = {}) {
   return {
     held: false, category: null, sub: null, variant: null, cpLoss: null, netLoss: null,
     target: null, targetPiece: null, targetColor: null,
     answer: { squares: [], best: null, partial: [] },
-    takers: [], refutation: [], gained: [], pawnAmongTakers: false,
+    takers: [], refutation: [], refutationFrom: 'post', gained: [], pawnAmongTakers: false,
     suppressed: null, reward: null, reason: '',
     ...extra,
   };
@@ -115,9 +138,11 @@ function matchCategory(category, ctx) {
 
   if (category === 'allowed_mate') {
     if (!post || post.replyMateIn !== 1 || !reply0) return null;
+    // every mating destination chess.js finds in the post position is right; the engine's is best
+    const mates = (fa.mateInOne || []).map((m) => m.to);
     return {
       target: reply0.to, targetPiece: reply0.piece, targetColor: 'b', netLoss: null,
-      answer: { squares: [reply0.to], best: reply0.to, partial: [] },
+      answer: { squares: uniq([reply0.to, ...mates]), best: reply0.to, partial: [] },
       takers: [], refutation: [reply0.uci], gained: [], pawnAmongTakers: false,
       reason: `allowed_mate: ${word(reply0.piece)} to ${reply0.to} is mate next move`,
     };
@@ -137,14 +162,19 @@ function matchCategory(category, ctx) {
 
   if (category === 'ignored_attack') {
     if (cpLoss === null || cpLoss < GATE.HOLD_CP) return null;
-    for (const line of lines.slice(0, 2)) {
+    for (const [i, line] of lines.slice(0, 2).entries()) {
       const r = line && line.reply;
       if (!r || !r.captured || value(r.captured) < GATE.NET_MIN || r.to === move.to) continue;
+      if (!explainsLoss(i, line, pre)) continue;
       const victim = fa.bySquare[r.to];
       if (!victim || victim.color !== 'w' || !victim.hanging) continue;
       const before = fb.bySquare[r.to];
-      const sub = before && before.type === victim.type && before.color === 'w' && before.hanging
-        ? SUBCASES.ALREADY : SUBCASES.LOST_GUARD;
+      const same = before && before.type === victim.type && before.color === 'w';
+      // not attacked at all before his move: he opened the line onto it (a pinned piece moved,
+      // a piece stepped off a file); attacked and defended before: a guard left; else: already
+      let sub = SUBCASES.LOST_GUARD;
+      if (same && before.hanging) sub = SUBCASES.ALREADY;
+      else if (same && before.attackers.length === 0) sub = SUBCASES.OPENED_LINE;
       const takers = takersFrom(fa, r.to);
       if (!takers.some((t) => t.square === r.from)) takers.unshift({ square: r.from, type: r.piece, value: value(r.piece) });
       const next = line.pv && line.pv[1];
@@ -153,9 +183,13 @@ function matchCategory(category, ctx) {
       if (move.captured) gained.push(move.captured);
       if (back) gained.push(r.piece);
       const netLoss = victim.value - (back ? value(r.piece) : 0);
+      // a second piece hangs: the one he moved, when the other reply line takes it for a net loss
+      // (tapping it is right too; the victim stays best so the named square and the ghost agree)
+      const squares = [r.to];
+      if (hangingMovedLoss(ctx) !== null) squares.push(move.to);
       return {
         sub, target: r.to, targetPiece: victim.type, targetColor: 'w', netLoss,
-        answer: { squares: [r.to], best: r.to, partial: takers.map((t) => t.square) },
+        answer: { squares, best: r.to, partial: takers.map((t) => t.square) },
         takers, refutation: back ? [r.uci, next] : [r.uci], gained,
         pawnAmongTakers: takers.some((t) => t.type === 'p'),
         reason: `ignored_attack (${sub}): ${word(victim.type)} on ${r.to} taken by ${word(r.piece)} from ${r.from}, net ${netLoss}, cpLoss ${cpLoss}`,
@@ -168,9 +202,10 @@ function matchCategory(category, ctx) {
     if (cpLoss === null || cpLoss < GATE.HOLD_CP) return null;
     const moved = fa.bySquare[move.to];
     if (!moved || moved.color !== 'w' || !moved.hanging) return null;
-    for (const line of lines.slice(0, 2)) {
+    for (const [i, line] of lines.slice(0, 2).entries()) {
       const r = line && line.reply;
       if (!r || !r.captured || r.to !== move.to) continue;
+      if (!explainsLoss(i, line, pre)) continue;
       const next = line.pv && line.pv[1];
       const back = recaptures(next, move.to);
       // material before his move minus material after the refutation, from White's side:
@@ -179,14 +214,20 @@ function matchCategory(category, ctx) {
       if (netLoss < GATE.NET_MIN) continue;
       const takers = takersFrom(fa, move.to);
       if (!takers.some((t) => t.square === r.from)) takers.unshift({ square: r.from, type: r.piece, value: value(r.piece) });
-      const others = takers.map((t) => t.square).filter((sq) => sq !== r.from).sort();
+      const bestTaker = takers.find((t) => t.square === r.from);
+      const others = takers.filter((t) => t.square !== r.from).sort((a, b) => (a.square < b.square ? -1 : 1));
+      // every taker is right; a dearer one (or the king, when the engine's taker is not the king)
+      // is partial: 'is there something cheaper?'
+      const partial = others
+        .filter((t) => (t.type === 'k' ? bestTaker.type !== 'k' : t.value > bestTaker.value))
+        .map((t) => t.square);
       const gained = [];
       if (move.captured) gained.push(move.captured);
       if (back) gained.push(r.piece);
       return {
         variant: move.captured ? 'takes_back' : null,
         target: move.to, targetPiece: moved.type, targetColor: 'w', netLoss,
-        answer: { squares: [r.from, ...others], best: r.from, partial: others },
+        answer: { squares: [r.from, ...others.map((t) => t.square)], best: r.from, partial },
         takers, refutation: back ? [r.uci, next] : [r.uci], gained,
         pawnAmongTakers: takers.some((t) => t.type === 'p'),
         reason: `hanging_after_move: ${word(moved.type)} on ${move.to} taken by ${word(r.piece)} from ${r.from}, net ${netLoss}, cpLoss ${cpLoss}`,
@@ -210,11 +251,12 @@ function matchCategory(category, ctx) {
     const netLoss = free.defenders.length === 0 ? free.value : free.value - (free.cheapestAttacker === null ? 0 : free.cheapestAttacker);
     const takers = takersFrom(fb, b.to);
     if (!takers.some((t) => t.square === b.from)) takers.unshift({ square: b.from, type: b.piece, value: value(b.piece) });
-    const reply = reply0 ? [reply0.uci] : [];
+    // Show me plays the capture he walked past, from the position before his move (there is no
+    // exchange to float: the free piece is simply still there)
     return {
       target: b.to, targetPiece: free.type, targetColor: 'b', netLoss,
       answer: { squares: [b.to, ...others], best: b.to, partial: others },
-      takers, refutation: reply, gained: [], pawnAmongTakers: takers.some((t) => t.type === 'p'),
+      takers, refutation: [b.uci], refutationFrom: 'pre', gained: [], pawnAmongTakers: takers.some((t) => t.type === 'p'),
       reason: `free_piece_ignored: ${word(free.type)} on ${b.to} was free (${b.san}), he played ${move.san}, net ${netLoss}, cpLoss ${cpLoss}`,
     };
   }
@@ -241,7 +283,17 @@ export function verdict(pre, post, factsBefore, factsAfter, gameState = {}) {
   if (!pre || !post) {
     return blank({ reason: 'clean: engine cold' });
   }
-  const cpLoss = Number.isFinite(pre.evalBefore) && Number.isFinite(post.evalAfter) ? pre.evalBefore - post.evalAfter : null;
+  // the only legal move is nothing to hold: there is nothing to take it back to
+  if (factsBefore && Array.isArray(factsBefore.legal) && factsBefore.legal.length === 1) {
+    return blank({ reason: 'clean: the only legal move' });
+  }
+  let cpLoss = Number.isFinite(pre.evalBefore) && Number.isFinite(post.evalAfter) ? pre.evalBefore - post.evalAfter : null;
+  // a mate-scored pre-search against a plain-cp post-search is not a loss of a hundred pawns:
+  // a move that keeps a winning position is clean; one that lets the win go keeps the raw loss
+  if (cpLoss !== null && typeof pre.mateIn === 'number' && pre.mateIn > 0 && post.replyMateIn === null
+    && Math.abs(post.evalAfter) < GATE.MATE_SCORE - 1000 && post.evalAfter >= GATE.STILL_WINNING_CP) {
+    cpLoss = 0;
+  }
   const ctx = { pre, post, fb: factsBefore, fa: factsAfter, move, cpLoss };
   for (const category of CATEGORIES) {
     let hit = null;
@@ -263,7 +315,7 @@ export function verdict(pre, post, factsBefore, factsAfter, gameState = {}) {
     return v;
   }
   const v = blank({ cpLoss, reason: cpLoss === null ? 'clean: no score' : `clean: cpLoss ${cpLoss}` });
-  if (cpLoss !== null && cpLoss < GATE.HOLD_CP) v.reward = reward(pre, factsBefore, factsAfter, move);
+  if (cpLoss !== null && cpLoss < GATE.HOLD_CP) v.reward = reward(pre, factsBefore, factsAfter, move, gameState.lastMove || null);
   return v;
 }
 
@@ -271,12 +323,18 @@ export function verdict(pre, post, factsBefore, factsAfter, gameState = {}) {
 // Rewards (clean moves only; the caller applies the quiet budget)
 // --------------------------------------------------------------------------------------------
 
-export function reward(pre, factsBefore, factsAfter, move) {
+// `lastMove` (the opponent's last move, a verbose move, or null after load(fen)) keeps an even
+// trade from being called a free piece: what his capture wins is counted net of what their
+// capture on the same square just took.
+export function reward(pre, factsBefore, factsAfter, move, lastMove = null) {
   if (!move || !factsBefore || !factsAfter) return null;
-  // Reward 1: his capture took a piece that facts and the pre-search both called free.
+  // Reward 1: his capture took a piece that facts and the pre-search both called free, and the
+  // exchange nets him two points or more.
   if (move.captured && value(move.captured) >= REWARDS.MIN_VALUE && pre && pre.best) {
     const taken = factsBefore.bySquare[move.to];
-    if (taken && taken.color === 'b' && taken.hanging && pre.best.from === move.from && pre.best.to === move.to) {
+    const gaveUp = lastMove && lastMove.captured && lastMove.to === move.to ? value(lastMove.captured) : 0;
+    const net = value(move.captured) - gaveUp;
+    if (taken && taken.color === 'b' && taken.hanging && pre.best.from === move.from && pre.best.to === move.to && net >= REWARDS.MIN_VALUE) {
       return { kind: 'free_taken', piece: move.captured, square: move.to };
     }
   }
@@ -317,11 +375,12 @@ export function grade(answer, square) {
 function lookWords(v) {
   if (MATE.includes(v.category)) return COPY.LOOK_WORDS.check;
   let type = null;
+  if (v.category === 'allowed_stalemate') return COPY.LOOK_WORDS.stalemate;
   if (v.category === 'hanging_after_move') type = bestTaker(v)?.type;
   else if (v.category === 'ignored_attack') type = attackerOf(v)?.type;
   else if (v.category === 'free_piece_ignored') type = v.targetPiece;
-  else if (v.category === 'allowed_stalemate') type = 'k';
   if (type === 'p') return COPY.LOOK_WORDS.pawn;
+  if (type === 'k') return COPY.LOOK_WORDS.king;   // 'their king first' reads as nonsense after Bxf7+ Kxf7
   return fill(COPY.LOOK_WORDS.other, { piece: word(type || 'piece') });
 }
 function bestTaker(v) {
@@ -354,10 +413,13 @@ export function holdCopy(v, factsAfter, move = null) {
 
   let questionKey = c;
   if (c === 'hanging_after_move' && v.variant === 'takes_back') questionKey = 'hanging_after_move_takes_back';
-  if (c === 'ignored_attack') questionKey = v.sub === SUBCASES.LOST_GUARD ? 'ignored_attack_lost_guard' : 'ignored_attack_already';
+  const subKey = `ignored_attack_${v.sub === SUBCASES.LOST_GUARD ? 'lost_guard' : v.sub === SUBCASES.OPENED_LINE ? 'opened_line' : 'already'}`;
+  if (c === 'ignored_attack') questionKey = subKey;
   const question = fill(COPY.QUESTION[questionKey] || COPY.QUESTION[c] || '', { piece });
 
-  const wrongKey = c === 'hanging_after_move' && v.pawnAmongTakers ? 'hanging_after_move_pawn' : c;
+  let wrongKey = c;
+  if (c === 'hanging_after_move' && v.pawnAmongTakers) wrongKey = 'hanging_after_move_pawn';
+  if (c === 'ignored_attack' && v.sub === SUBCASES.OPENED_LINE) wrongKey = 'ignored_attack_opened_line';
   const if_wrong = fill(COPY.IF_WRONG[wrongKey] || COPY.IF_WRONG[c] || '', { piece });
 
   const if_right = (square) => {
@@ -366,8 +428,13 @@ export function holdCopy(v, factsAfter, move = null) {
       return fill(COPY.IF_RIGHT[c], { taker: t ? word(t.type) : takerWord, piece, gained });
     }
     if (c === 'ignored_attack') {
-      const key = v.sub === SUBCASES.LOST_GUARD ? 'ignored_attack_lost_guard' : 'ignored_attack_already';
-      return fill(COPY.IF_RIGHT[key], { piece, attacker: attackerWord });
+      if (square && square !== best && (v.answer.squares || []).includes(square)) {
+        // the second hanging piece (the one he moved): what takes it next move
+        const p = pieceOn(v, factsAfter, square);
+        const a = cheapest(takersFrom(factsAfter, square));
+        return fill(COPY.IF_RIGHT.ignored_attack_already, { piece: p ? word(p.type) : piece, attacker: a ? word(a.type) : 'piece' });
+      }
+      return fill(COPY.IF_RIGHT[subKey], { piece, attacker: attackerWord });
     }
     if (c === 'free_piece_ignored') {
       const p = (v.answer.squares || []).includes(square) && square !== best ? pieceOn(v, factsAfter, square) : null;
@@ -429,11 +496,19 @@ export function asksFor(v, factsBefore, factsAfter, move, chessBefore) {
     missed_mate: 'your_mate',
     allowed_stalemate: 'their_king',
   }[v.category];
-  const push = (kind, squares, best, partial, vars) => {
+  // own: the category's own look, graded and answered with the hold's own lines; any other look
+  // carries its own follow-up copy (ASKS[kind].copy, {piece}/{square} filled by the hold at tap time,
+  // {piece} already the moved piece for safe_square)
+  const push = (kind, squares, best, partial, vars, isOwn = false) => {
     if (!ASKS[kind] || !squares.length || asks.some((a) => a.kind === kind)) return;
-    asks.push({ kind, question: fill(ASKS[kind].question, vars), squares: [...squares], best, partial: [...partial] });
+    const ask = { kind, question: fill(ASKS[kind].question, vars), squares: [...squares], best, partial: [...partial], own: isOwn };
+    if (!isOwn && ASKS[kind].copy) {
+      ask.copy = {};
+      for (const [k, t] of Object.entries(ASKS[kind].copy)) ask.copy[k] = kind === 'safe_square' ? fill(t, vars) : t;
+    }
+    asks.push(ask);
   };
-  if (own) push(own, v.answer.squares, v.answer.best, v.answer.partial, { piece });
+  if (own) push(own, v.answer.squares, v.answer.best, v.answer.partial, { piece }, true);
 
   if (move && move.piece && move.piece !== 'k' && chessBefore) {
     let safe = [];

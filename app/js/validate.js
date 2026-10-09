@@ -142,13 +142,15 @@ export function validateText(text, ctx = {}, { maxWords = Infinity, maxSentences
   return { ok: true, masked };
 }
 
-// K2: { say, ask, squares }. say: at most two sentences of at most twenty words each, no
-// question mark; ask: null or one of the offered kinds; squares: at most three, each allowed.
+// K2: { say, ask, squares }. say: at most two sentences of at most twenty words each and 32 words
+// in all (the spec's 31-word example passes; 32 plus the 8-word ask question is what fits the
+// four-line box at 400 px), no question mark; ask: null or one of the offered kinds; squares: at
+// most three, each allowed. CLAUDE.K2_MAX_WORDS / K2_MAX_WORDS_PER_SENTENCE mirror these numbers.
 export function validateK2(reply, ctx = {}) {
   if (!reply || typeof reply !== 'object' || Array.isArray(reply)) return { ok: false, reason: 'reply is not an object' };
   const say = tidy(reply.say);
   if (!say) return { ok: false, reason: 'say is empty' };
-  const r = validateText(say, ctx, { maxSentences: 2, maxWordsPerSentence: 20, maxWords: 40, noQuestion: true });
+  const r = validateText(say, ctx, { maxSentences: 2, maxWordsPerSentence: 20, maxWords: 32, noQuestion: true });
   if (!r.ok) return { ok: false, reason: `say: ${r.reason}` };
   let ask = reply.ask == null || reply.ask === '' ? null : reply.ask;
   if (ask !== null) {

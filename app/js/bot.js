@@ -178,6 +178,16 @@ function shuffle(arr, random) {
   return arr;
 }
 
+// What a capture wins by count: the captured piece's value minus the capturing piece's value when
+// the line's next ply takes back on the same square.
+export function captureNet(chess, mv, line) {
+  if (!mv || !mv.captured) return 0;
+  let net = VALUES[mv.captured] || 0;
+  const next = line && line.pv && line.pv[1];
+  if (next && next.slice(2, 4) === mv.to) net -= VALUES[mv.piece] || 0;
+  return net;
+}
+
 function firstMove(result) {
   const l1 = result && result.lines && result.lines[0];
   return (l1 && l1.pv && l1.pv[0]) || (result && result.bestmove) || null;
@@ -195,6 +205,8 @@ export async function chooseBotMove(engine, chess, { botMoveNo = 1, giftRate = B
   const bot = chess.turn();
   const legal = chess.moves({ verbose: true });
   if (!legal.length) return null;
+  // a dead engine answers nothing: any legal move rather than always the a-file's first
+  const anyLegal = () => legal[Math.floor(random() * legal.length)] || legal[0];
 
   // (0) the book, at any move number
   const fromBook = bookReply(chess);
@@ -203,7 +215,7 @@ export async function chooseBotMove(engine, chess, { botMoveNo = 1, giftRate = B
   // (1) play it anyway: the true best reply so the punishment is certain
   if (anyway) {
     const r = await engine.search(fen, { depth: BOT.ANYWAY_DEPTH, multipv: 1, skill: ENGINE.FULL_SKILL });
-    const mv = uciToMove(chess, firstMove(r)) || legal[0];
+    const mv = uciToMove(chess, firstMove(r)) || anyLegal();
     const botEval = r.lines[0] ? sideScore(r.lines[0].score) : null;
     return answer(mv, 'anyway', botEval, null, 0);
   }
@@ -212,15 +224,18 @@ export async function chooseBotMove(engine, chess, { botMoveNo = 1, giftRate = B
   const look = await engine.search(fen, { depth: BOT.LOOK_DEPTH, multipv: ENGINE.MULTIPV, skill: ENGINE.FULL_SKILL });
   const l1 = look.lines[0] || null;
   const l2 = look.lines[1] || null;
-  const topMove = uciToMove(chess, firstMove(look)) || legal[0];
+  const topMove = l1 ? uciToMove(chess, firstMove(look)) || anyLegal() : anyLegal();
   const botEval = l1 ? sideScore(l1.score) : 0;
   const runner = l2 ? sideScore(l2.score) : -Infinity;
   const isMate = !!(l1 && typeof l1.score.mate === 'number' && l1.score.mate > 0);
   // Punish-always: the top move is a capture that leads line 2 by FORCED_LEAD_CP, or a mate. When line 2
-  // captures on the same square the piece is taken either way, so that counts as a lead too.
+  // captures on the same square the piece is taken either way, so that counts as a lead too. A capture
+  // that wins material by count (what it takes minus what takes back on that square, FORCED_NET or
+  // more) is played whatever line 2 scores: every piece he leaves is taken, even when two of them
+  // hang at once and line 2 takes the other.
   const second = l2 ? uciToMove(chess, l2.pv[0]) : null;
   const sameSquare = !!(second && second.captured && second.to === topMove.to);
-  if ((topMove.captured && (botEval - runner >= BOT.FORCED_LEAD_CP || sameSquare)) || isMate) {
+  if ((topMove.captured && (botEval - runner >= BOT.FORCED_LEAD_CP || sameSquare || captureNet(chess, topMove, l1) >= BOT.FORCED_NET)) || isMate) {
     return answer(topMove, 'forced', botEval, null, 0);
   }
 

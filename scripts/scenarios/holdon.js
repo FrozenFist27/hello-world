@@ -26,6 +26,9 @@ const FEN = {
   ng4: 'r1bqk2r/pppp1ppp/2n5/2b1p3/2B1P1n1/3P1N1P/PPP2PP1/RNBQK2R w KQkq - 1 6',
   f3e5: 'rnbqkbnr/pppp1ppp/8/4p3/8/5P2/PPPPP1PP/RNBQKBNR w KQkq e6 0 2',
   scholars: 'r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4',
+  // Two Knights 4.Ng5 d5 5.exd5 Nxd5: 6.Bxd5 loses to the even trade Qxd5, a loss no one-move look
+  // explains (line 2's Qxg5 costs under 200 on its own), so it commits
+  twoKnights: 'r1bqkb1r/ppp2ppp/2n5/3np1N1/2B5/8/PPPP1PPP/RNBQK2R w KQkq - 0 6',
   // Black without its queen and rooks (a queen alone is about 640 cp at depth 8 for this engine,
   // under the -900 resignation rule); three quiet White moves make the bot give up.
   resign: '1n2kbn1/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQ - 0 10',
@@ -57,6 +60,9 @@ const K2_BAD = [
   ['an unoffered ask', '{"say":"You are, and the bishop on c4 points at their king. But the pawn on d6 takes the knight.","ask":"their_check","squares":["d6"]}'],
   ['a wrong piece on a square', '{"say":"You are, and the rook on c4 points at their king. But the pawn on d6 takes the knight.","ask":"safe_square","squares":["d6"]}'],
 ];
+// A validator-accepted K2 say at the cap (32 words: 15 + 17) and one word over it (16 + 17).
+const K2_32 = '{"say":"You are, and the bishop on c4 points right at the pawn before their king. But it is their move first, and the pawn on d6 simply takes the knight away now.","ask":"safe_square","squares":["d6","c4"]}';
+const K2_33 = '{"say":"You are, and the bishop on c4 points at the pawn in front of their king. But it is their move first, and the pawn on d6 simply takes the knight away now.","ask":"safe_square","squares":["d6","c4"]}';
 const LONG_LINE = 'Hold on. If the knight lands there, what takes it? Tap it. The knight on the other side could too, and the pawn beside it reaches that square.';
 const PIECES = ['wK', 'wQ', 'wR', 'wB', 'wN', 'wP', 'bK', 'bQ', 'bR', 'bB', 'bN', 'bP'];
 
@@ -126,6 +132,7 @@ module.exports = async function holdon(page, ctx = {}) {
   const tap = (sq) => app((s) => window.__app.tap(s), sq);
   const action = (name) => app((n) => window.__app.action(n), name);
   const newGame = () => app(() => window.__app.newGame());
+  const bar = () => app(() => Array.from(document.querySelectorAll('#actions [data-action]')).map((x) => x.dataset.action));
   const holdState = () => app(() => { const h = window.__app.state().hold; return h ? { answerSquares: h.answerSquares, best: h.answer && h.answer.best, partial: h.answer && h.answer.partial, question: h.question, category: h.category, ask: h.ask } : null; });
 
   // ---- page setup after every goto/reload ------------------------------------------------------
@@ -173,14 +180,17 @@ module.exports = async function holdon(page, ctx = {}) {
 
   // Reload with the storage prepared: cold silences the Worker (sessionStorage flag read by the
   // init script), clear empties localStorage, flags are written before the load.
-  async function reload({ cold = false, clear = false, flags = null } = {}) {
-    await app(([c, cl, fl]) => {
+  // crash: 'error' | 'silent' kills the real Worker on its first search after readyok (with an error
+  // event, or in silence), the shape of a wasm abort or an OS kill on a phone.
+  async function reload({ cold = false, clear = false, flags = null, crash = null } = {}) {
+    await app(([c, cl, fl, cr]) => {
       try {
         sessionStorage.setItem('holdon.test.cold', c ? '1' : '0');
+        sessionStorage.setItem('holdon.test.crash', cr || '');
         if (cl) localStorage.clear();
         if (fl) for (const [k, v] of Object.entries(fl)) localStorage.setItem(k, v);
       } catch { /* storage blocked: the page copes */ }
-    }, [cold, clear, flags]);
+    }, [cold, clear, flags, crash]);
     await page.reload({ waitUntil: 'load' });
     await page.waitForFunction(() => !!(window.__app && window.__app.state), null, { timeout: 15000 });
     await install();
@@ -200,6 +210,22 @@ module.exports = async function holdon(page, ctx = {}) {
           set onerror(f) {}
           set onmessageerror(f) {}
         };
+      } else {
+        const crash = sessionStorage.getItem('holdon.test.crash');
+        if (crash === 'error' || crash === 'silent') {
+          const Real = window.Worker;
+          window.Worker = class extends Real {
+            postMessage(msg) {
+              if (typeof msg === 'string' && msg.startsWith('go ') && !this._dead) {
+                this._dead = true;
+                super.terminate();
+                if (crash === 'error') { try { this.dispatchEvent(new ErrorEvent('error', { message: 'simulated engine abort' })); } catch { /* no ErrorEvent */ } }
+                return;
+              }
+              super.postMessage(msg);
+            }
+          };
+        }
       }
     } catch { /* no sessionStorage: the real Worker stands */ }
   });
@@ -251,6 +277,7 @@ module.exports = async function holdon(page, ctx = {}) {
   await reload({ cold: true, clear: true });
   {
     expect(await play('Bxf7+') === 'held', 'Bxf7+ in the tutorial was not held');
+    expect(!(await visible('[data-action="but"]')), 'Hear me out is shown on the tutorial hold');
     const g = await tap('e8');
     expect(g === 'right', `tap e8 -> ${g}`);
     const c = await coach();
@@ -259,14 +286,22 @@ module.exports = async function holdon(page, ctx = {}) {
     expect((await coach()).includes('That is all I do'), `after the tutorial take-back the line is '${await coach()}'`);
     expect(await fen() === FEN.tutorial, `after the take-back fen is ${await fen()}`);
     expect(await boardState() === 'idle', `after the take-back state is ${await boardState()}`);
+    // the promise is made once: after the tutorial has already stopped his hand, a safe move reads 'Your move.'
+    expect(await play('d3') === 'committed', 'd3 after the tutorial hold was not committed');
+    expect(await coach() === 'Your move.', `after a safe move following the tutorial hold the line is '${await coach()}'`);
   }
   await reload({ cold: true, clear: true });
   {
     expect(await play('Bxf7+') === 'held', 'Bxf7+ in the tutorial was not held (anyway path)');
     await tap('e8');
+    await record();
     await action('anyway');
+    const rec = await recorded();
     expect(await fen() === FEN.start, `after the tutorial play-anyway fen is ${await fen()}`);
     expect((await coach()).includes('fresh game'), `after the tutorial play-anyway the line is '${await coach()}'`);
+    // the first float this browser sees is named once, on this path too
+    expect(rec.some((e) => e.kind === 'coach' && e.text.startsWith('Minus two')), `the first float was not named on the anyway path (lines: ${rec.filter((e) => e.kind === 'coach').map((e) => e.text).join(' | ')})`);
+    expect(await app((k) => localStorage.getItem(k), KEYS.firstFloatSeen) === '1', 'firstFloatSeen not set by the tutorial play-anyway');
   }
   // the real Worker again, the tutorial flag set, nothing else remembered
   await reload({ cold: false, clear: true, flags: { [KEYS.tutorialSeen]: '1' } });
@@ -278,6 +313,8 @@ module.exports = async function holdon(page, ctx = {}) {
   // ==============================================================================================
   mark('2 board');
   expect(await app(() => document.querySelectorAll('.pc').length) === 32, 'not 32 pieces on the start position');
+  // a tournament board: a1 dark, h1 light ('light on the right'), a8 light, h8 dark
+  expect(await cls('a1', 'dark') && await cls('h1', 'light') && await cls('a8', 'light') && await cls('h8', 'dark') && await cls('e4', 'light') && await cls('d4', 'dark'), 'the square colours are inverted (a1 must be dark, h1 light)');
   expect(await app(() => Array.from(document.querySelectorAll('.pc')).every((el) => el.tagName === 'BUTTON')), 'a piece is not a button');
   {
     // a focus ring on a piece reached by the keyboard
@@ -336,6 +373,33 @@ module.exports = async function holdon(page, ctx = {}) {
   // ==============================================================================================
   mark('3 engine');
   expect(await app(() => window.__app.waitEngine()) === true, 'the engine never became ready');
+  if (!quick) {
+    // a Worker that dies after readyok (an error event on its first search): the engine goes cold at
+    // once, the move commits with no verdict, the reply still comes, and newGame() resolves
+    await reload({ crash: 'error', flags: { [KEYS.tutorialSeen]: '1' } });
+    expect(await app(() => window.__app.waitEngine()) === true, 'the engine never became ready before the simulated crash');
+    const r = await timedPlay('e4');
+    expect(r.r === 'committed', `e4 with a dead Worker -> ${r.r}`);
+    expect(r.ms < 3000, `e4 with a dead Worker took ${Math.round(r.ms)} ms`);
+    expect(await app(() => window.__app.state().engineReady) === false, 'a dead Worker still reads engineReady');
+    expect(await boardState() === 'idle' && (await fen()).split(' ')[1] === 'w', `after the dead-Worker move the state is ${await boardState()}, fen ${await fen()}`);
+    expect(await play('Nc3') === 'committed', 'a second move with a dead Worker did not commit');
+    await newGame();
+    expect(await fen() === FEN.start && await boardState() === 'idle', 'newGame() with a dead Worker did not open the start position');
+    if (full) {
+      // the same Worker gone silent with no event at all: the watchdog ends the search and the engine goes cold
+      await reload({ crash: 'silent', flags: { [KEYS.tutorialSeen]: '1' } });
+      expect(await app(() => window.__app.waitEngine()) === true, 'the engine never became ready before the silent death');
+      const r2 = await timedPlay('e4');
+      expect(r2.r === 'committed', `e4 with a silent Worker -> ${r2.r}`);
+      expect(r2.ms < 7000, `e4 with a silent Worker took ${Math.round(r2.ms)} ms (watchdog 4 s)`);
+      expect(await app(() => window.__app.state().engineReady) === false, 'a silent Worker still reads engineReady');
+      await newGame();
+      expect(await fen() === FEN.start, 'newGame() after the silent death did not resolve to the start position');
+    }
+    await reload({ cold: false, flags: { [KEYS.tutorialSeen]: '1' } });
+    expect(await app(() => window.__app.waitEngine()) === true, 'the engine never became ready after the crash checks');
+  }
 
   // ==============================================================================================
   // 4. The gate
@@ -410,6 +474,12 @@ module.exports = async function holdon(page, ctx = {}) {
     await committedCase(FEN.tutorial, 'd3');
   }
   await holdCase(FEN.ruy, 'O-O', { category: 'ignored_attack', answer: ['b5'], partial: ['a6'] });
+  if (!quick) {
+    // two pieces hang after Ng5: the bishop (already attacked) stays best, the knight he moved is right too
+    await holdCase(FEN.ruy, 'Ng5', { category: 'ignored_attack', answer: ['b5', 'g5'], best: 'b5', partial: ['a6'] });
+    // a loss that no one-move look explains (the even trade Qxd5; line 2's Qxg5 is cheap) commits
+    await committedCase(FEN.twoKnights, 'Bxd5');
+  }
   await newGame();   // load() keeps the game's reward budget; the three reward cases start fresh
   await rewardCase(FEN.ruy, 'Ba4', { words: ['You looked', 'bishop'], within: 300, backWithin: 3000 });
   await holdCase(FEN.nxe4, 'Nc3', { category: 'free_piece_ignored' });
@@ -510,6 +580,20 @@ module.exports = async function holdon(page, ctx = {}) {
     const ms = Date.now() - t0;
     expect(ms >= 250 && ms <= 1200, `the buttons came after ${ms} ms (fast timer is 300)`);
   }
+  {
+    // the Give up confirm owns the bar: the buttons timer never overwrites it; Keep playing restores the buttons
+    await load(FEN.d6);
+    expect(await play('Nxe5') === 'held', 'Nxe5 was not held (give-up confirm)');
+    await action('giveup');
+    expect(JSON.stringify(await bar()) === '["giveup-yes","keep"]', `after Give up the bar is ${JSON.stringify(await bar())}`);
+    await sleep(500);
+    expect(JSON.stringify(await bar()) === '["giveup-yes","keep"]', `after the buttons timer the confirm is gone: ${JSON.stringify(await bar())}`);
+    expect(await boardState() === 'held', `the hold ended under the confirm: ${await boardState()}`);
+    await action('keep');
+    expect(JSON.stringify(await bar()) === '["takeback","anyway"]', `after Keep playing the bar is ${JSON.stringify(await bar())}`);
+    await action('takeback');
+    expect(await boardState() === 'idle', 'the take-back after Keep playing did not work');
+  }
 
   // ==============================================================================================
   // 6. Tap-to-answer
@@ -536,6 +620,16 @@ module.exports = async function holdon(page, ctx = {}) {
   expect((await coach()).includes('Now tap the piece it reaches'), `after a6 the line is '${await coach()}'`);
   expect(await tap('b5') === 'right', 'b5 is not right in the Ruy');
   expect((await coach()).includes('Yes') && await cls('b5', 'ok'), `after b5 the line is '${await coach()}' and ok=${await cls('b5', 'ok')}`);
+  if (!quick) {
+    // Ng5 hangs the knight too: tapping it is right, in its own words; the bishop keeps its line
+    await load(FEN.ruy);
+    expect(await play('Ng5') === 'held', 'Ng5 was not held');
+    expect(await tap('g5') === 'right', 'g5 is not right after Ng5');
+    expect((await coach()).startsWith('Yes, the knight. The queen takes it next move.'), `after g5 the line is '${await coach()}'`);
+    await load(FEN.ruy);
+    await play('Ng5');
+    expect(await tap('b5') === 'right' && (await coach()).startsWith('Yes, the bishop. The pawn takes it next move.'), `after b5 (Ng5) the line is '${await coach()}'`);
+  }
   if (!quick) {
     await load(FEN.f3e5);
     await play('g4');
@@ -590,6 +684,76 @@ module.exports = async function holdon(page, ctx = {}) {
     await waitFor(() => document.getElementById('board').dataset.state === 'idle', null, 3000, 'idle after the interrupted Show me');
     expect(await fen() === loaded, `after the interrupted Show me fen is ${await fen()}`);
     expect(await app(() => document.querySelectorAll('.ghost').length === 0 && !document.getElementById('board').dataset.ghost), 'ghosts remain after the interrupted Show me');
+  }
+  {
+    // free_piece_ignored: Show me plays the capture he walked past (his own pawn, d3 to e4), floats
+    // no loss and says nothing; the board shows the same position after it
+    const loaded = await load(FEN.nxe4);
+    expect(await play('Nc3') === 'held', 'Nc3 was not held (Show me)');
+    await record();
+    await action('showme');
+    const rec = await recorded();
+    expect(rec.some((e) => e.kind === 'ghost' && e.square === 'e4' && e.piece === 'wP'), `no white pawn ghost reached e4 (ghost events: ${JSON.stringify(rec.filter((e) => e.kind === 'ghost'))})`);
+    expect(!rec.some((e) => e.kind === 'ghost' && String(e.piece || '').startsWith('b')), 'a black ghost moved during the free-piece Show me');
+    expect(!rec.some((e) => e.kind === 'loss' && !e.hidden && /^-/.test(e.text)), `a loss floated on the free-piece Show me: ${JSON.stringify(rec.filter((e) => e.kind === 'loss'))}`);
+    expect(!rec.some((e) => e.kind === 'coach'), `the line changed during the free-piece Show me: ${rec.filter((e) => e.kind === 'coach').map((e) => e.text).join(' | ')}`);
+    expect(await boardState() === 'held' && await fen() === loaded && await app(() => document.querySelectorAll('.ghost').length) === 0, 'the free-piece Show me did not rewind cleanly');
+  }
+  if (!quick) {
+    // a tap during Show me only rewinds it: it is not graded and not recorded
+    await load(FEN.d6);
+    expect(await play('Nxe5') === 'held', 'Nxe5 was not held (tap during Show me)');
+    const h = await holdState();
+    await app(() => { window.__app.fast = false; window.__app.action('showme'); });
+    await sleep(250);
+    expect(await app(() => !!document.getElementById('board').dataset.ghost), 'Show me did not start');
+    const g = await tap('a1');
+    expect(g === null, `a tap during Show me was graded '${g}'`);
+    expect(await app(() => window.__app.state().hold.taps.length) === 0, 'a tap during Show me was recorded as an answer');
+    expect(await coach() === h.question, `after the aborting tap the line is '${await coach()}'`);
+    await waitFor(() => document.querySelectorAll('.ghost').length === 0 && !document.getElementById('board').dataset.ghost, null, 3000, 'the rewind after the aborting tap');
+    await app(() => { window.__app.fast = true; });
+    expect(await tap('d6') === 'right', 'd6 is not right after the aborted Show me');
+    await action('takeback');
+  }
+  if (!quick) {
+    // the '-N' label never crosses a square: it rises outside the board at real speed, and under
+    // reduced motion it is the same 28 px label, static, beside the board, with no ghost transition
+    const sampleLoss = () => app(async () => {
+      const loss = document.getElementById('loss');
+      const sqs = Array.from(document.querySelectorAll('.sq')).map((q) => q.getBoundingClientRect());
+      const crosses = (r) => sqs.some((q) => r.left < q.right && r.right > q.left && r.top < q.bottom && r.bottom > q.top);
+      const samples = [];
+      const t0 = performance.now();
+      while (performance.now() - t0 < 2600) {
+        if (!loss.hidden && loss.textContent) {
+          const gh = document.querySelector('.ghost');
+          samples.push({ cls: loss.className, text: loss.textContent, crosses: crosses(loss.getBoundingClientRect()), font: getComputedStyle(loss).fontSize, ghostT: gh ? getComputedStyle(gh).transitionDuration : null });
+        }
+        await new Promise((r) => setTimeout(r, 40));
+      }
+      return samples;
+    });
+    await app(() => { window.__app.fast = false; });
+    await load(FEN.d6);
+    expect(await play('Nxe5') === 'held', 'Nxe5 was not held (float placement)');
+    let pending = app(() => window.__app.action('showme'));
+    let samples = await sampleLoss();
+    await pending;
+    expect(samples.length > 0 && samples.some((x) => /rising/.test(x.cls)), `no rising '-N' float was seen (${samples.length} samples)`);
+    expect(samples.every((x) => x.text === '-2' && x.font === '28px' && !x.crosses), `the float crossed a square or changed: ${JSON.stringify(samples.slice(0, 3))}`);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await load(FEN.d6);
+    expect(await play('Nxe5') === 'held', 'Nxe5 was not held (reduced motion)');
+    pending = app(() => window.__app.action('showme'));
+    samples = await sampleLoss();
+    await pending;
+    expect(samples.length > 0 && samples.every((x) => /static/.test(x.cls)), `under reduced motion the label is not static: ${JSON.stringify(samples.slice(0, 2))}`);
+    expect(samples.every((x) => x.text === '-2' && x.font === '28px' && !x.crosses), `the static label crossed a square: ${JSON.stringify(samples.slice(0, 3))}`);
+    expect(samples.every((x) => x.ghostT === null || x.ghostT.split(',').every((d) => d.trim() === '0s')), `a ghost had a transition under reduced motion: ${samples.map((x) => x.ghostT).join(' ')}`);
+    await page.emulateMedia({ reducedMotion: null });
+    await app(() => { window.__app.fast = true; });
+    await action('takeback');
   }
 
   // ==============================================================================================
@@ -695,6 +859,24 @@ module.exports = async function holdon(page, ctx = {}) {
         return { ok: undefended || byPawn, why: `undefended=${undefended} byPawn=${byPawn}` };
       }, gift);
       expect(check.ok, `the gift ${JSON.stringify(gift)} is not a hanging minor piece: ${check.why}`);
+      // taking the gift is the designed moment: the ring, 'You looked' and the count, whatever capture
+      // the pre-search's first line preferred (a pawn capturer first, else the cheapest)
+      const capture = await app(async (g) => {
+        const { Chess } = await import('./vendor/chess.js');
+        const v = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+        const ms = new Chess(window.__app.fen()).moves({ verbose: true }).filter((m) => m.to === g.square);
+        ms.sort((a, b) => v[a.piece] - v[b.piece]);
+        return ms[0] ? ms[0].san : null;
+      }, gift);
+      expect(capture, `no capture of the gift on ${gift.square}`);
+      const before = await app(() => window.__app.stats().freeTaken);
+      await record();
+      const r2 = await play(capture);
+      const rec = await recorded();
+      expect(r2 === 'committed', `taking the gift (${capture}) -> ${r2} (hold ${await boardHold()})`);
+      expect(rec.some((e) => e.kind === 'sq' && e.square === gift.square && /\bok\b/.test(e.classes)), `no ok ring on the gift square ${gift.square}`);
+      expect(rec.some((e) => e.kind === 'coach' && e.text.includes('You looked')), `no 'You looked' for the gift taken (lines: ${rec.filter((e) => e.kind === 'coach').map((e) => e.text).join(' | ') || 'none'})`);
+      expect(await app(() => window.__app.stats().freeTaken) === before + 1, 'the gift taken was not counted as a free piece');
     }
   }
   if (!quick) {
@@ -741,6 +923,17 @@ module.exports = async function holdon(page, ctx = {}) {
     expect(await present('#say'), 'the input did not open');
     expect(await app(() => document.getElementById('say').placeholder) === 'Say what you were going for', 'wrong placeholder');
     expect((await app(() => ((document.querySelector('#actions .note') || {}).textContent || ''))).includes('browser will ask'), 'the consent note is missing');
+    expect(!(await visible('[data-action="but"]')), 'the Hear me out link is still shown while its input is open');
+    // what he types survives the buttons timer and a tap that answers the hold: the element, its text and its focus
+    await page.type('#say', 'im attacking');
+    await app(() => { document.getElementById('say').dataset.mark = 'x'; });
+    await sleep(500);
+    const keptEl = () => app(() => { const i = document.getElementById('say'); return { exists: !!i, same: !!i && i.dataset.mark === 'x', value: i ? i.value : null, focused: !!i && document.activeElement === i, takeback: !!document.querySelector('[data-action="takeback"]') }; });
+    let kept = await keptEl();
+    expect(kept.exists && kept.same && kept.value === 'im attacking' && kept.focused && !kept.takeback, `the open input did not survive the buttons timer: ${JSON.stringify(kept)}`);
+    expect(await tap('d6') === 'right', 'd6 is not right while the input is open');
+    kept = await keptEl();
+    expect(kept.exists && kept.same && kept.value === 'im attacking' && kept.focused && !kept.takeback, `the open input did not survive a right tap: ${JSON.stringify(kept)}`);
     await app((r) => { window.__stubReplies = [r]; }, K2_GOOD);
     const t0 = Date.now();
     await app((t) => window.__app.say(t), 'im attacking his king');
@@ -762,11 +955,27 @@ module.exports = async function holdon(page, ctx = {}) {
     expect(!(await present('#say')), 'the input is still open after the reply');
     expect(await boardState() === 'held', `after the reply data-state is ${await boardState()}`);
     expect(await app(() => window.__app.state().hold.ask) === 'safe_square', 'the ask was not set on the hold');
+    // the look's own words, never the hold's ('Yes, the pawn' would be false for a safe square)
     expect(await tap('f3') === 'right', 'f3 is not right for safe_square');
-    expect((await coach()).includes('Yes'), `after f3 the line is '${await coach()}'`);
+    expect((await coach()).startsWith('Yes, the knight is safe there.'), `after f3 the line is '${await coach()}'`);
+    expect(await cls('f3', 'ok'), 'f3 has no ok ring');
     expect(await tap('g5') === 'wrong', 'g5 is not wrong for safe_square');
-    expect((await coach()).includes('Not that one'), `after g5 the line is '${await coach()}'`);
+    expect(await coach() === 'Not that one. Something of theirs reaches that square.', `after g5 the line is '${await coach()}'`);
+    expect(await tap('h8') === 'named', 'the second wrong tap under the ask did not name a safe square');
+    const named = await app(() => ({ line: document.getElementById('coach').textContent, glow: Array.from(document.querySelectorAll('.sq.glow')).map((x) => x.dataset.square) }));
+    expect(named.glow.length === 1 && named.line === `The knight is safe on ${named.glow[0]}.`, `the named line and the glowing square disagree: ${JSON.stringify(named)}`);
     expect(await app(() => window.__app.state().consented) === true, 'the view is not marked consented after K2');
+    // Play it anyway: he tapped the taker (d6) before the reply, so 'You saw it coming' is true here
+    await action('anyway');
+    const al = await coach();
+    expect(al.startsWith('There it goes. A knight for a pawn.') && al.includes('that counts'), `after play-anyway with the taker tapped the line is '${al}'`);
+    await newGame();   // the played pair (knight, e5) is not held again in the same game
+    // after consent, clean moves still make no sample call (K1 fires on holds only)
+    {
+      const n0 = (await calls()).length;
+      for (const san of ['h3', 'a3', 'Kh1']) { await load(FEN.d6); expect(await play(san) === 'committed', `${san} after consent -> not committed`); }
+      expect((await calls()).length === n0, `clean moves after consent made ${(await calls()).length - n0} sample calls`);
+    }
 
     // ============================================================================================
     // 12. K1 follow-ups after consent
@@ -827,6 +1036,51 @@ module.exports = async function holdon(page, ctx = {}) {
     }
 
     // ============================================================================================
+    // 11d. The longest accepted K2 line fits the box; one word more is refused
+    // ============================================================================================
+    mark('11d long say');
+    if (!quick) {
+      expect(JSON.parse(K2_32).say.split(/\s+/).length === 32 && JSON.parse(K2_33).say.split(/\s+/).length === 33, 'fixture word counts');
+      await load(FEN.d6);
+      await play('Nxe5');
+      const r0 = await rejects();
+      const boardBefore = await app(() => JSON.stringify(document.getElementById('board').getBoundingClientRect()));
+      await app((r) => { window.__stubReplies = [r]; }, K2_32);
+      await app((t) => window.__app.say(t), 'im attacking his king');
+      expect(await rejects() === r0, 'the 32-word say was rejected');
+      const fit = await app(() => { const c = document.getElementById('coach'); return { words: c.textContent.trim().split(/\s+/).length, overflow: c.scrollHeight > c.clientHeight + 1, box: c.clientHeight, board: JSON.stringify(document.getElementById('board').getBoundingClientRect()) }; });
+      expect(fit.words === 40, `the longest K2 line has ${fit.words} words, expected 40`);
+      expect(!fit.overflow, `the longest K2 line (40 words) overflows the ${fit.box} px box`);
+      expect(fit.board === boardBefore, 'the board moved under the longest K2 line');
+      // only the safe-square look was answered: Play it anyway tells the truth about his look (he found
+      // a safe square, not the taker, so no 'You saw it coming')
+      expect(await tap('f3') === 'right', 'f3 is not right for safe_square (long say)');
+      await action('anyway');
+      const al = await coach();
+      expect(al.startsWith('There it goes. A knight for a pawn.') && al.includes('Next time, the pawns first.') && !al.includes('that counts'), `after play-anyway with only a safe-square tap the line is '${al}'`);
+      await newGame();   // the played pair is not held again in the same game
+      await load(FEN.d6);
+      await play('Nxe5');
+      await app((r) => { window.__stubReplies = [r]; }, K2_33);
+      await app((t) => window.__app.say(t), 'im attacking his king');
+      expect(await rejects() === r0 + 1 && (await coach()).includes('Still want to?'), `a 33-word say was accepted: '${await coach()}'`);
+      await action('takeback');
+    }
+
+    // ============================================================================================
+    // 11e. invalid_json turns the link into 'Try again' once (before not_granted, which hides the coach for the view)
+    // ============================================================================================
+    mark('11e errors');
+    if (!quick) {
+      await load(FEN.d6);
+      await play('Nxe5');
+      await app(() => { window.__stubReplies = ['not json at all']; });
+      await app((t) => window.__app.say(t), 'im attacking his king');
+      await waitFor(() => { const b = document.querySelector('[data-action="but"]'); return !!b && !b.hidden && b.textContent === 'Try again'; }, null, 2000, "the link to read 'Try again' after invalid_json");
+      expect(await boardState() === 'held', `after invalid_json the state is ${await boardState()}`);
+      await action('takeback');
+    }
+    // ============================================================================================
     // 11c. not_granted hides the link for the view
     // ============================================================================================
     mark('11c not_granted');
@@ -846,6 +1100,27 @@ module.exports = async function holdon(page, ctx = {}) {
       await play('Nxe5');
       await sleep(50);
       expect(!(await visible('[data-action="but"]')), 'Hear me out came back on a later hold after not_granted');
+      await action('takeback');
+    }
+
+
+    // ============================================================================================
+    // 11f. rate_limited rests the coach for a moment and the open question comes back under him
+    // (a fresh view: not_granted hid the coach for the last one; resting then aborts later calls)
+    // ============================================================================================
+    mark('11f resting');
+    await reload({ cold: false, clear: false });
+    expect(await app(() => window.__app.waitEngine()) === true, 'the engine never became ready for the resting check');
+    {
+      await load(FEN.d6);
+      await play('Nxe5');
+      const h = await holdState();
+      await app(() => { window.__stubErrors = [{ code: 'rate_limited' }]; });
+      await app((t) => window.__app.say(t), 'im attacking his king');
+      expect(await coach() === 'Coach is resting.', `after rate_limited the line is '${await coach()}'`);
+      expect(!(await visible('[data-action="but"]')), 'Hear me out is shown while the coach rests');
+      await waitFor((q) => document.getElementById('coach').textContent === q, h.question, 1500, "the hold question to come back after 'Coach is resting.'");
+      expect(await boardState() === 'held' && await tap('d6') === 'right', 'the hold is not gradable after rate_limited');
       await action('takeback');
     }
   } else {
@@ -889,6 +1164,15 @@ module.exports = async function holdon(page, ctx = {}) {
     expect(offers === 1, `Start again was offered ${offers} times`);
   }
   {
+    // a game with holds and no take-backs reads in the voice, not 'took it back never'
+    await newGame();
+    await load(FEN.d6); await play('Nxe5'); await tap('d6'); await action('anyway');
+    await action('giveup');
+    await action('giveup-yes');
+    const close = await app(() => document.getElementById('close').textContent);
+    expect(close.includes('I stopped your hand once; you played every one.'), `the zero-backs card reads '${close.trim()}'`);
+  }
+  {
     await newGame();
     await load(FEN.d6); await play('Nxe5'); await tap('d6'); await action('takeback');
     await load(FEN.d6); await play('Bxf7+'); await tap('f8'); await action('takeback');
@@ -899,6 +1183,11 @@ module.exports = async function holdon(page, ctx = {}) {
     expect(/Pieces given away: \d+/.test(close) && /Free pieces you took: \d+/.test(close), `the close card reads '${close.trim()}'`);
     expect(close.includes('stopped your hand twice') && close.includes('took it back twice'), `the close card does not count two holds: '${close.trim()}'`);
     expect(await app(() => document.querySelectorAll('#close .close-holds li').length) === 2, 'the close card does not list two holds');
+    if (ctx.vp === 'phone') {
+      // the card and its only button sit above the fold at 400 x 800
+      const again = await app(() => { const b = document.querySelector('#close [data-action="again"]').getBoundingClientRect(); return { top: b.top, bottom: b.bottom, inner: window.innerHeight }; });
+      expect(again.top >= 0 && again.bottom <= again.inner + 0.5, `Again sits at ${again.top}-${again.bottom} in a ${again.inner} px viewport`);
+    }
     await reload({ cold: false, clear: false });
     expect((await coach()).includes('last game'), `after a game with holds the next game's line is '${await coach()}'`);
     const games = await app((k) => JSON.parse(localStorage.getItem(k) || 'null'), KEYS.games);

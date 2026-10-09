@@ -96,9 +96,11 @@ for (const p of positions) {
       ok(v.target && v.targetPiece && v.targetColor, `${where}: target fields`);
       ok(v.reward === null, `${where}: a held move carries no reward`);
       for (const uci of v.refutation) ok(/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(uci), `${where}: refutation ply ${uci}`);
-      // the refutation is playable after his move
+      // the refutation is playable after his move (free_piece_ignored: the capture he walked past,
+      // playable instead of his move, from the position before it)
       const probe = new Chess(p.fen);
-      probe.move(san);
+      if (v.refutationFrom !== 'pre') probe.move(san);
+      ok(v.refutationFrom === (v.category === 'free_piece_ignored' ? 'pre' : 'post'), `${where}: refutationFrom ${v.refutationFrom}`);
       for (const uci of v.refutation) ok(probe.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] || undefined }), `${where}: refutation ${uci} not playable`);
       // material categories: the recorded margin over the threshold
       if (['ignored_attack', 'hanging_after_move', 'free_piece_ignored'].includes(v.category)) {
@@ -150,6 +152,9 @@ console.log('verdicts: ok');
   const { v, fb } = run('italian_nxe4', 'Nc3');
   ok(fb.hanging.b.some((p) => p.square === 'e4'), 'Nxe4 position: e4 knight is free before');
   ok(v.netLoss === 3, 'Nc3 netLoss 3 (undefended knight)');
+  // Show me plays the look he missed (dxe4), not their even trade on c3, and floats no loss
+  assert.deepEqual(v.refutation, ['d3e4'], 'Nc3: the ghost line is the capture he walked past');
+  ok(v.refutationFrom === 'pre', 'Nc3: the ghost line plays from the position before his move');
 }
 {
   const { v, fa } = run('placement_oo', 'Nbd2');
@@ -171,6 +176,85 @@ console.log('verdicts: ok');
   ok(v.target === 'h8' && v.targetPiece === 'k', 'Qf7 target is their king');
 }
 console.log('shapes: ok');
+
+// ------------------------------------------------------------------------------------------
+// 2b. Shapes from the review findings (F9, F10, F11, F16, F17, F19, F20)
+// ------------------------------------------------------------------------------------------
+{
+  // F10: after Ng5 in the Ruy two pieces hang: the bishop (already attacked) stays best, the knight
+  // he moved is right too, and each gets its own if_right; the O-O acceptance keeps its one answer
+  const { v, fa, move } = run('ruy_a6', 'Ng5');
+  assert.deepEqual(v.answer, { squares: ['b5', 'g5'], best: 'b5', partial: ['a6'] }, 'Ng5 answer');
+  ok(G.grade(v.answer, 'g5') === 'right' && G.grade(v.answer, 'b5') === 'right' && G.grade(v.answer, 'a6') === 'partial', 'Ng5 grading');
+  const copy = G.holdCopy(v, fa, move);
+  ok(copy.if_right('g5') === 'Yes, the knight. The queen takes it next move.', `Ng5 if_right(g5): ${copy.if_right('g5')}`);
+  ok(copy.if_right('b5') === 'Yes, the bishop. The pawn takes it next move.', `Ng5 if_right(b5): ${copy.if_right('b5')}`);
+  ok(copy.named === 'Your bishop on b5.' && v.refutation[0] === 'a6b5', 'Ng5: the named square and the ghost stay on the bishop');
+  assert.deepEqual(run('ruy_a6', 'O-O').v.answer, { squares: ['b5'], best: 'b5', partial: ['a6'] }, 'O-O answer unchanged by the widening');
+}
+{
+  // F9: a pinned knight that moves, or a knight stepping off the d-file, opens a line onto the queen:
+  // sub opened_line with its own copy; the defenders of d1 are unchanged, so no guard was lost
+  for (const [id, san, attacker] of [['nc4_rook', 'Nc4', 'rook'], ['nc4_rook', 'Nb3', 'rook'], ['italian_bg5', 'Nh4', 'bishop']]) {
+    const { v, fa, fb, move } = run(id, san);
+    ok(v.held && v.category === 'ignored_attack' && v.sub === C.SUBCASES.OPENED_LINE, `${id} ${san}: ${v.reason}`);
+    ok(fb.bySquare.d1.attackers.length === 0 && fa.bySquare.d1.attackers.length === 1, `${id} ${san}: d1 was not attacked before, is after`);
+    ok(fb.bySquare.d1.defenders.length === fa.bySquare.d1.defenders.length, `${id} ${san}: the defenders of d1 are unchanged`);
+    const copy = G.holdCopy(v, fa, move);
+    ok(copy.question === 'Hold on. Your move opens a line to something of yours. Tap it.', `${id} ${san} question: ${copy.question}`);
+    ok(copy.if_right('d1') === `Yes, the queen. The piece you moved was standing in the ${attacker}'s way.`, `${id} ${san} if_right: ${copy.if_right('d1')}`);
+    ok(copy.if_wrong === 'Not that one. Look along the line your piece just left.', `${id} ${san} if_wrong: ${copy.if_wrong}`);
+    ok(copy.named === 'Your queen on d1.', `${id} ${san} named: ${copy.named}`);
+  }
+  // a genuine lost guard keeps its wording: the d3 bishop was attacked by the knight and guarded by
+  // the queen; Qh5 walks the guard away (synthetic post: Nxd3+ wins the bishop)
+  const fen = '4k3/8/8/4n3/8/3B4/8/3QK3 w - - 0 1';
+  const s = setup(fen, 'Qh5');
+  ok(s.fb.bySquare.d3.attackers.length === 1 && s.fb.bySquare.d3.defenders.length === 1 && s.fa.bySquare.d3.defenders.length === 0, 'Qh5: the bishop loses its one guard');
+  const pre = { fen, evalBefore: 0, best: { uci: 'd1d2', san: 'Qd2', from: 'd1', to: 'd2', piece: 'q', captured: null, isMate: false }, mateIn: null, line2: null, depth: 14, stopped: false };
+  const post = { fen: s.after.fen(), evalAfter: -300, replyMateIn: null, depth: 12, lines: [{ reply: { uci: 'e5d3', san: 'Nxd3+', from: 'e5', to: 'd3', piece: 'n', captured: 'b', isMate: false, isCapture: true, isCheck: true }, score: -300, pv: ['e5d3', 'e1d2'] }] };
+  const v = G.verdict(pre, post, s.fb, s.fa, { move: s.move, anyways: 0, playedPairs: [] });
+  ok(v.held && v.category === 'ignored_attack' && v.sub === C.SUBCASES.LOST_GUARD, `Qh5: ${v.reason}`);
+  const copy = G.holdCopy(v, s.fa, s.move);
+  ok(copy.question === 'Hold on. Something of yours just lost its guard. Tap it.' && copy.if_right('d3') === 'Yes, the bishop. Your move took its guard away.', `Qh5 copy: ${copy.question} / ${copy.if_right('d3')}`);
+}
+{
+  // F11: Two Knights 6.Bxd5: the loss is Qxd5 (an even trade on the moved piece, no category); line
+  // 2's Qxg5 scores under the threshold on its own, so it does not explain the loss and nothing holds
+  const { v, row, p } = run('two_knights_bxd5', 'Bxd5');
+  ok(row.post.lines[1] && row.post.lines[1].reply.to === 'g5' && p.pre.evalBefore - row.post.lines[1].score < C.GATE.HOLD_CP, 'Bxd5: line 2 takes on g5 for under 200 cp');
+  ok(!v.held && v.category === null && v.cpLoss >= C.GATE.HOLD_CP, `Bxd5: ${v.reason}`);
+}
+{
+  // F16: two equal takers (the d7 and f7 pawns) are both right; partial is only for a dearer taker
+  const { v, fa, move } = run('tutorial', 'Be6');
+  ok(v.answer.squares.length === 2 && v.answer.squares.includes('d7') && v.answer.squares.includes('f7') && v.answer.partial.length === 0, `Be6 answer ${JSON.stringify(v.answer)}`);
+  ok(G.grade(v.answer, 'd7') === 'right' && G.grade(v.answer, 'f7') === 'right', 'Be6: either pawn is right');
+  const other = v.answer.squares.find((sq) => sq !== v.answer.best);
+  ok(G.holdCopy(v, fa, move).if_right(other).startsWith('Yes, the pawn.'), 'Be6: the other pawn gets the right line');
+  const nxe5 = run('italian_d6', 'Nxe5').v;
+  assert.deepEqual(nxe5.answer.partial, ['c6'], 'Nxe5: the knight (dearer than the pawn) stays partial');
+}
+{
+  // F17: with rooks on a8 and b8 both Ra1 and Rb1 mate after Qc7: both squares are right
+  const { v } = run('two_mates', 'Qc7');
+  ok(v.held && v.category === 'allowed_mate', `Qc7: ${v.reason}`);
+  assert.deepEqual([...v.answer.squares].sort(), ['a1', 'b1'], 'Qc7 answer squares');
+  ok(['a1', 'b1'].includes(v.answer.best) && G.grade(v.answer, 'a1') === 'right' && G.grade(v.answer, 'b1') === 'right', 'Qc7: either mating square is right');
+}
+{
+  // F19: the only legal move is never held (there is nothing to take it back to)
+  const { v, fb } = run('only_move', 'Kb1');
+  ok(fb.legal.length === 1 && !v.held && v.category === null && /only legal/.test(v.reason), `Kb1: ${v.reason}`);
+}
+{
+  // F20: a mate-scored pre-search against a plain cp post is no loss while the win stands
+  const { v, p, move, fb, fa } = run('kq_stalemate', 'Kb2');
+  ok(v.cpLoss === 0 && !v.held && v.reward === null, `Kb2: cpLoss ${v.cpLoss} (${v.reason})`);
+  const gone = G.verdict(p.pre, { ...p.moves.Kb2.post, evalAfter: 50 }, fb, fa, { move, anyways: 0, playedPairs: [] });
+  ok(gone.cpLoss === p.pre.evalBefore - 50, `Kb2 with the win gone keeps the raw loss: ${gone.cpLoss}`);
+}
+console.log('findings: ok');
 
 // ------------------------------------------------------------------------------------------
 // 3. The quiet rule and the pair rule
@@ -389,6 +473,23 @@ console.log('quoted copy: ok');
   const both = setup('r1bqkbnr/1ppp1ppp/p7/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4', 'Bxd7+');
   const fake = { evalBefore: 0, best: { from: 'b5', to: 'd7', captured: 'p' } };
   ok(G.reward(fake, both.fb, both.fa, both.move) === null, 'a pawn capture is never a reward');
+  // F5: an even trade is not a free piece: his capture is counted net of what their last capture
+  // took on that square (lastMove); load(fen) has no last move, so the FEN-derivable rule stands
+  const qt = setup('6k1/1p4p1/4p2p/4q3/p1pP4/7P/PP3PP1/6K1 w - - 0 29', 'dxe5');
+  const preQ = { evalBefore: 0, best: { uci: 'd4e5', san: 'dxe5', from: 'd4', to: 'e5', piece: 'p', captured: 'q' } };
+  ok(qt.fb.bySquare.e5.hanging, 'the e5 queen hangs by the facts');
+  assert.deepEqual(G.reward(preQ, qt.fb, qt.fa, qt.move, null), { kind: 'free_taken', piece: 'q', square: 'e5' }, 'no last move: the queen reads free');
+  ok(G.reward(preQ, qt.fb, qt.fa, qt.move, { from: 'd5', to: 'e5', piece: 'q', captured: 'q' }) === null, 'after ...Qxe5, dxe5 is an even trade: no reward');
+  const nb = setup('r1bqk2r/1pppbpp1/p1n4p/4p3/2B1P3/2NPnN1P/PPP2PP1/R2Q1RK1 w kq - 0 9', 'fxe3');
+  const preN = { evalBefore: 0, best: { uci: 'f2e3', san: 'fxe3', from: 'f2', to: 'e3', piece: 'p', captured: 'n' } };
+  ok(nb.fb.bySquare.e3.hanging, 'the e3 knight hangs by the facts');
+  const rn = G.reward(preN, nb.fb, nb.fa, nb.move, { from: 'g4', to: 'e3', piece: 'n', captured: 'b' });
+  ok(!(rn && rn.kind === 'free_taken'), `fxe3 after ...Nxe3 took a bishop: even, not a free piece (${rn && rn.kind})`);
+  assert.deepEqual(G.reward(preN, nb.fb, nb.fa, nb.move, null), { kind: 'free_taken', piece: 'n', square: 'e3' }, 'the same recapture with no last move reads free (load(fen))');
+  r = run('italian_nxe4', 'dxe4');
+  assert.deepEqual(G.reward(r.p.pre, r.fb, r.fa, r.move, { from: 'f6', to: 'e4', piece: 'n', captured: 'p' }), { kind: 'free_taken', piece: 'n', square: 'e4' }, 'dxe4 after ...Nxe4 took a pawn: a knight for a pawn is still free');
+  const vv = G.verdict(r.p.pre, r.row.post, r.fb, r.fa, { move: r.move, anyways: 0, playedPairs: [], lastMove: { from: 'f6', to: 'e4', piece: 'n', captured: 'p' } });
+  ok(vv.reward && vv.reward.kind === 'free_taken', 'verdict() passes lastMove through to the reward');
 }
 console.log('rewards: ok');
 

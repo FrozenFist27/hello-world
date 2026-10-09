@@ -8,7 +8,7 @@
    "postDepth": 12,
    "multipv": 2,
    "hash": 16,
-   "date": "2026-10-08",
+   "date": "2026-10-09",
    "engine": "Stockfish 18 (native)",
    "command": "python3 scripts/record_positions.py",
    "check": "python3 scripts/engine_check.py eval \"r1bq1rk1/ppp1bppp/2np1n2/4p3/2B1P3/2NP1N2/PPP2PPP/R1BQ1RK1 w - - 0 7\" --depth 14 --multipv 2"
@@ -278,7 +278,7 @@
    "postDepth": 12,
    "multipv": 2,
    "hash": 16,
-   "date": "2026-10-08",
+   "date": "2026-10-09",
    "engine": "Stockfish 18 (native)",
    "command": "python3 scripts/record_positions.py",
    "check": "python3 scripts/engine_check.py eval \"r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4\" --depth 14 --multipv 2"
@@ -466,13 +466,108 @@
      "depth": 12
     }
    },
+   "Be6": {
+    "expect": "held",
+    "category": "hanging_after_move",
+    "netLoss": 3,
+    "note": "two equal takers (the d7 and f7 pawns): both are right, neither is partial",
+    "post": {
+     "fen": "r1bqkb1r/pppp1ppp/2n1Bn2/4p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 5 4",
+     "evalAfter": -458,
+     "lines": [
+      {
+       "reply": {
+        "uci": "d7e6",
+        "san": "dxe6",
+        "from": "d7",
+        "to": "e6",
+        "piece": "p",
+        "captured": "b",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -458,
+       "pv": [
+        "d7e6",
+        "d2d3",
+        "f8e7",
+        "b1d2",
+        "e8g8",
+        "d2c4",
+        "h7h6",
+        "e1g1"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "f7e6",
+        "san": "fxe6",
+        "from": "f7",
+        "to": "e6",
+        "piece": "p",
+        "captured": "b",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -452,
+       "pv": [
+        "f7e6",
+        "d2d4",
+        "d7d6",
+        "d4e5",
+        "d6e5",
+        "d1e2",
+        "f8c5",
+        "c2c3",
+        "c5b6",
+        "b2b3",
+        "e8g8",
+        "c1a3"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   },
    "d3": {
     "expect": "committed",
     "reward": null,
     "post": {
      "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R b KQkq - 0 4",
-     "evalAfter": 23,
+     "evalAfter": 22,
      "lines": [
+      {
+       "reply": {
+        "uci": "f8c5",
+        "san": "Bc5",
+        "from": "f8",
+        "to": "c5",
+        "piece": "b",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 22,
+       "pv": [
+        "f8c5",
+        "e1g1",
+        "d7d6",
+        "a2a4",
+        "a7a6",
+        "a4a5",
+        "h7h6",
+        "c2c3",
+        "e8g8",
+        "h2h3",
+        "c8e6",
+        "c4e6",
+        "f7e6"
+       ]
+      },
       {
        "reply": {
         "uci": "a7a6",
@@ -488,43 +583,15 @@
        "score": 23,
        "pv": [
         "a7a6",
-        "c2c3",
+        "b1c3",
         "f8c5",
-        "e1g1",
-        "c5a7",
-        "c1e3",
-        "a7e3",
-        "f2e3",
-        "e8g8",
-        "a2a4",
-        "d7d6",
-        "b1d2"
-       ]
-      },
-      {
-       "reply": {
-        "uci": "f8c5",
-        "san": "Bc5",
-        "from": "f8",
-        "to": "c5",
-        "piece": "b",
-        "captured": null,
-        "isMate": false,
-        "isCapture": false,
-        "isCheck": false
-       },
-       "score": 23,
-       "pv": [
-        "f8c5",
-        "a2a4",
-        "d7d6",
-        "h2h3",
+        "c3d5",
         "h7h6",
-        "c2c3",
-        "a7a5",
         "e1g1",
-        "e8g8",
-        "f1e1"
+        "d7d6",
+        "c1e3",
+        "f6d5",
+        "c4d5"
        ]
       }
      ],
@@ -543,7 +610,7 @@
    "postDepth": 12,
    "multipv": 2,
    "hash": 16,
-   "date": "2026-10-08",
+   "date": "2026-10-09",
    "engine": "Stockfish 18 (native)",
    "command": "python3 scripts/record_positions.py",
    "check": "python3 scripts/engine_check.py eval \"r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4\" --depth 14 --multipv 2"
@@ -648,13 +715,124 @@
      "depth": 12
     }
    },
+   "Ng5": {
+    "expect": "held",
+    "category": "ignored_attack",
+    "sub": "already",
+    "answer": {
+     "squares": [
+      "b5",
+      "g5"
+     ],
+     "best": "b5",
+     "partial": [
+      "a6"
+     ]
+    },
+    "netLoss": 3,
+    "note": "two pieces hang: the bishop (already) and the knight he moved; tapping either is right",
+    "post": {
+     "fen": "r1bqkbnr/1ppp1ppp/p1n5/1B2p1N1/4P3/8/PPPP1PPP/RNBQK2R b KQkq - 1 4",
+     "evalAfter": -476,
+     "lines": [
+      {
+       "reply": {
+        "uci": "a6b5",
+        "san": "axb5",
+        "from": "a6",
+        "to": "b5",
+        "piece": "p",
+        "captured": "b",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -476,
+       "pv": [
+        "a6b5",
+        "d2d4",
+        "d7d6",
+        "a2a4",
+        "c6d4",
+        "b1c3",
+        "h7h6",
+        "c3d5",
+        "h6g5",
+        "c1g5",
+        "d8g5",
+        "d5c7",
+        "e8d8"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "d8g5",
+        "san": "Qxg5",
+        "from": "d8",
+        "to": "g5",
+        "piece": "q",
+        "captured": "n",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -439,
+       "pv": [
+        "d8g5",
+        "b5e2",
+        "g5g2",
+        "e2f3",
+        "g2g5",
+        "b1c3",
+        "g8f6",
+        "d2d3",
+        "g5h4",
+        "c3d5",
+        "f6d5",
+        "e4d5"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   },
    "Ba4": {
     "expect": "committed",
     "reward": "escaped",
     "post": {
      "fen": "r1bqkbnr/1ppp1ppp/p1n5/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 1 4",
-     "evalAfter": 20,
+     "evalAfter": 35,
      "lines": [
+      {
+       "reply": {
+        "uci": "b7b5",
+        "san": "b5",
+        "from": "b7",
+        "to": "b5",
+        "piece": "p",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 35,
+       "pv": [
+        "b7b5",
+        "a4b3",
+        "g8f6",
+        "a2a4",
+        "c8b7",
+        "d2d3",
+        "f8c5",
+        "e1g1",
+        "e8g8",
+        "a4b5",
+        "a6b5",
+        "a1a8",
+        "b7a8"
+       ]
+      },
       {
        "reply": {
         "uci": "g8f6",
@@ -667,53 +845,21 @@
         "isCapture": false,
         "isCheck": false
        },
-       "score": 20,
+       "score": 35,
        "pv": [
         "g8f6",
         "e1g1",
-        "f6e4",
-        "d2d4",
-        "e5d4",
-        "f1e1",
-        "d7d5",
-        "a4c6",
-        "b7c6",
-        "d1d4",
-        "d8f6"
-       ]
-      },
-      {
-       "reply": {
-        "uci": "f8c5",
-        "san": "Bc5",
-        "from": "f8",
-        "to": "c5",
-        "piece": "b",
-        "captured": null,
-        "isMate": false,
-        "isCapture": false,
-        "isCheck": false
-       },
-       "score": 42,
-       "pv": [
+        "b7b5",
+        "a4b3",
         "f8c5",
+        "a2a4",
+        "c8b7",
         "c2c3",
-        "g8f6",
+        "c5b6",
         "d2d4",
-        "c5a7",
-        "e1g1",
-        "e8g8",
-        "c1g5",
-        "h7h6",
-        "g5h4",
         "d7d6",
-        "a4c6",
-        "b7c6",
-        "d4e5",
-        "d6e5",
-        "d1d8",
-        "f8d8",
-        "f3e5"
+        "c1e3",
+        "e8g8"
        ]
       }
      ],
@@ -732,7 +878,7 @@
    "postDepth": 12,
    "multipv": 2,
    "hash": 16,
-   "date": "2026-10-08",
+   "date": "2026-10-09",
    "engine": "Stockfish 18 (native)",
    "command": "python3 scripts/record_positions.py",
    "check": "python3 scripts/engine_check.py eval \"r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 5\" --depth 14 --multipv 2"
@@ -910,7 +1056,7 @@
    "postDepth": 12,
    "multipv": 2,
    "hash": 16,
-   "date": "2026-10-08",
+   "date": "2026-10-09",
    "engine": "Stockfish 18 (native)",
    "command": "python3 scripts/record_positions.py",
    "check": "python3 scripts/engine_check.py eval \"r2q1rk1/ppp2ppp/2np1n2/2b1p3/2B1P1b1/2PP1N1P/PP3PP1/RNBQ1RK1 w - - 1 8\" --depth 14 --multipv 2"
@@ -1097,7 +1243,7 @@
    "postDepth": 12,
    "multipv": 2,
    "hash": 16,
-   "date": "2026-10-08",
+   "date": "2026-10-09",
    "engine": "Stockfish 18 (native)",
    "command": "python3 scripts/record_positions.py",
    "check": "python3 scripts/engine_check.py eval \"r1bqk2r/pppp1ppp/2n5/2b1p3/2B1P1n1/3P1N1P/PPP2PP1/RNBQK2R w KQkq - 1 6\" --depth 14 --multipv 2"
@@ -1274,7 +1420,7 @@
    "postDepth": 12,
    "multipv": 2,
    "hash": 16,
-   "date": "2026-10-08",
+   "date": "2026-10-09",
    "engine": "Stockfish 18 (native)",
    "command": "python3 scripts/record_positions.py",
    "check": "python3 scripts/engine_check.py eval \"rnbqkbnr/pppp1ppp/8/4p3/8/5P2/PPPPP1PP/RNBQKBNR w KQkq e6 0 2\" --depth 14 --multipv 2"
@@ -1449,7 +1595,7 @@
    "postDepth": 12,
    "multipv": 2,
    "hash": 16,
-   "date": "2026-10-08",
+   "date": "2026-10-09",
    "engine": "Stockfish 18 (native)",
    "command": "python3 scripts/record_positions.py",
    "check": "python3 scripts/engine_check.py eval \"r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4\" --depth 14 --multipv 2"
@@ -1570,7 +1716,7 @@
    "postDepth": 12,
    "multipv": 2,
    "hash": 16,
-   "date": "2026-10-08",
+   "date": "2026-10-09",
    "engine": "Stockfish 18 (native)",
    "command": "python3 scripts/record_positions.py",
    "check": "python3 scripts/engine_check.py eval \"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\" --depth 14 --multipv 2"
@@ -1739,7 +1885,7 @@
    "postDepth": 12,
    "multipv": 2,
    "hash": 16,
-   "date": "2026-10-08",
+   "date": "2026-10-09",
    "engine": "Stockfish 18 (native)",
    "command": "python3 scripts/record_positions.py",
    "check": "python3 scripts/engine_check.py eval \"r1bqkbnr/pppp1ppp/2n5/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQkq - 2 3\" --depth 14 --multipv 2"
@@ -1969,6 +2115,770 @@
   }
  },
  {
+  "id": "nc4_rook",
+  "name": "A knight steps off the d-file and the d8 rook hits the queen (ignored_attack, opened_line)",
+  "fen": "r2r2k1/ppp1qppp/2n2n2/4p3/4P1b1/5N2/PPPNBPPP/R1BQ1RK1 w - - 0 10",
+  "verified": {
+   "depth": 14,
+   "postDepth": 12,
+   "multipv": 2,
+   "hash": 16,
+   "date": "2026-10-09",
+   "engine": "Stockfish 18 (native)",
+   "command": "python3 scripts/record_positions.py",
+   "check": "python3 scripts/engine_check.py eval \"r2r2k1/ppp1qppp/2n2n2/4p3/4P1b1/5N2/PPPNBPPP/R1BQ1RK1 w - - 0 10\" --depth 14 --multipv 2"
+  },
+  "pre": {
+   "fen": "r2r2k1/ppp1qppp/2n2n2/4p3/4P1b1/5N2/PPPNBPPP/R1BQ1RK1 w - - 0 10",
+   "evalBefore": 440,
+   "best": {
+    "uci": "d1e1",
+    "san": "Qe1",
+    "from": "d1",
+    "to": "e1",
+    "piece": "q",
+    "captured": null,
+    "isMate": false
+   },
+   "mateIn": null,
+   "line2": {
+    "uci": "h2h3",
+    "san": "h3",
+    "from": "h2",
+    "to": "h3",
+    "piece": "p",
+    "captured": null
+   },
+   "depth": 14,
+   "stopped": false
+  },
+  "moves": {
+   "Nc4": {
+    "expect": "held",
+    "category": "ignored_attack",
+    "sub": "opened_line",
+    "answer": {
+     "squares": [
+      "d1"
+     ],
+     "best": "d1",
+     "partial": [
+      "d8"
+     ]
+    },
+    "netLoss": 4,
+    "post": {
+     "fen": "r2r2k1/ppp1qppp/2n2n2/4p3/2N1P1b1/5N2/PPP1BPPP/R1BQ1RK1 b - - 1 10",
+     "evalAfter": -261,
+     "lines": [
+      {
+       "reply": {
+        "uci": "d8d1",
+        "san": "Rxd1",
+        "from": "d8",
+        "to": "d1",
+        "piece": "r",
+        "captured": "q",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -261,
+       "pv": [
+        "d8d1",
+        "e2d1",
+        "f6e4",
+        "f1e1",
+        "e4f2",
+        "c4e5",
+        "f2d1",
+        "e5c6",
+        "e7c5",
+        "c6d4",
+        "g4f3"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "g4f3",
+        "san": "Bxf3",
+        "from": "g4",
+        "to": "f3",
+        "piece": "b",
+        "captured": "n",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -180,
+       "pv": [
+        "g4f3",
+        "d1e1",
+        "f3e4",
+        "e2d1",
+        "h7h6",
+        "f2f3",
+        "e4g6",
+        "e1f2",
+        "e7e6"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   },
+   "Nb3": {
+    "expect": "held",
+    "category": "ignored_attack",
+    "sub": "opened_line",
+    "answer": {
+     "squares": [
+      "d1"
+     ],
+     "best": "d1",
+     "partial": [
+      "d8"
+     ]
+    },
+    "netLoss": 4,
+    "post": {
+     "fen": "r2r2k1/ppp1qppp/2n2n2/4p3/4P1b1/1N3N2/PPP1BPPP/R1BQ1RK1 b - - 1 10",
+     "evalAfter": -319,
+     "lines": [
+      {
+       "reply": {
+        "uci": "d8d1",
+        "san": "Rxd1",
+        "from": "d8",
+        "to": "d1",
+        "piece": "r",
+        "captured": "q",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -319,
+       "pv": [
+        "d8d1",
+        "f1d1",
+        "f6e4",
+        "h2h3",
+        "g4f5",
+        "c1e3",
+        "e4d6",
+        "e3c5",
+        "b7b6"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "g4f3",
+        "san": "Bxf3",
+        "from": "g4",
+        "to": "f3",
+        "piece": "b",
+        "captured": "n",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -154,
+       "pv": [
+        "g4f3",
+        "d1e1",
+        "f3e4",
+        "c2c3",
+        "a7a5",
+        "c1g5",
+        "a5a4",
+        "b3d2",
+        "e4g6",
+        "d2c4",
+        "h7h6",
+        "g5h4"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   },
+   "h3": {
+    "expect": "committed",
+    "reward": null,
+    "post": {
+     "fen": "r2r2k1/ppp1qppp/2n2n2/4p3/4P1b1/5N1P/PPPNBPP1/R1BQ1RK1 b - - 0 10",
+     "evalAfter": 409,
+     "lines": [
+      {
+       "reply": {
+        "uci": "g4h3",
+        "san": "Bxh3",
+        "from": "g4",
+        "to": "h3",
+        "piece": "b",
+        "captured": "p",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": 409,
+       "pv": [
+        "g4h3",
+        "g2h3",
+        "c6d4",
+        "f3d4",
+        "d8d4",
+        "c2c3",
+        "f6e4",
+        "c3d4"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "g4e6",
+        "san": "Be6",
+        "from": "g4",
+        "to": "e6",
+        "piece": "b",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 413,
+       "pv": [
+        "g4e6",
+        "d1e1",
+        "a7a5",
+        "g1h2",
+        "h7h6",
+        "f1g1",
+        "a5a4",
+        "e2d1",
+        "g7g5"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   }
+  }
+ },
+ {
+  "id": "italian_bg5",
+  "name": "Italian with ...Bh5 pinning the f3 knight (a pinned knight that moves opens the line to the queen)",
+  "fen": "r2qk2r/ppp1bppp/2np1n2/4p2b/2B1P3/2NP1N1P/PPP2PP1/R1BQ1RK1 w kq - 1 8",
+  "verified": {
+   "depth": 14,
+   "postDepth": 12,
+   "multipv": 2,
+   "hash": 16,
+   "date": "2026-10-09",
+   "engine": "Stockfish 18 (native)",
+   "command": "python3 scripts/record_positions.py",
+   "check": "python3 scripts/engine_check.py eval \"r2qk2r/ppp1bppp/2np1n2/4p2b/2B1P3/2NP1N1P/PPP2PP1/R1BQ1RK1 w kq - 1 8\" --depth 14 --multipv 2"
+  },
+  "pre": {
+   "fen": "r2qk2r/ppp1bppp/2np1n2/4p2b/2B1P3/2NP1N1P/PPP2PP1/R1BQ1RK1 w kq - 1 8",
+   "evalBefore": 38,
+   "best": {
+    "uci": "a2a4",
+    "san": "a4",
+    "from": "a2",
+    "to": "a4",
+    "piece": "p",
+    "captured": null,
+    "isMate": false
+   },
+   "mateIn": null,
+   "line2": {
+    "uci": "c3d5",
+    "san": "Nd5",
+    "from": "c3",
+    "to": "d5",
+    "piece": "n",
+    "captured": null
+   },
+   "depth": 14,
+   "stopped": false
+  },
+  "moves": {
+   "Nh4": {
+    "expect": "held",
+    "category": "ignored_attack",
+    "sub": "opened_line",
+    "answer": {
+     "squares": [
+      "d1"
+     ],
+     "best": "d1",
+     "partial": [
+      "h5"
+     ]
+    },
+    "post": {
+     "fen": "r2qk2r/ppp1bppp/2np1n2/4p2b/2B1P2N/2NP3P/PPP2PP1/R1BQ1RK1 b kq - 2 8",
+     "evalAfter": -503,
+     "lines": [
+      {
+       "reply": {
+        "uci": "h5d1",
+        "san": "Bxd1",
+        "from": "h5",
+        "to": "d1",
+        "piece": "b",
+        "captured": "q",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -503,
+       "pv": [
+        "h5d1",
+        "h4f5",
+        "e8f8",
+        "f1d1",
+        "h7h5",
+        "c3d5",
+        "f6d5",
+        "c4d5",
+        "h5h4"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "d6d5",
+        "san": "d5",
+        "from": "d6",
+        "to": "d5",
+        "piece": "p",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": -162,
+       "pv": [
+        "d6d5",
+        "g2g4",
+        "d5c4",
+        "g4h5",
+        "g7g6",
+        "h4g2",
+        "c4d3",
+        "d1d3",
+        "d8d3",
+        "c2d3",
+        "f6h5",
+        "c1h6",
+        "h5f6"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   },
+   "Nd5": {
+    "expect": "committed",
+    "reward": null,
+    "post": {
+     "fen": "r2qk2r/ppp1bppp/2np1n2/3Np2b/2B1P3/3P1N1P/PPP2PP1/R1BQ1RK1 b kq - 2 8",
+     "evalAfter": 20,
+     "lines": [
+      {
+       "reply": {
+        "uci": "c6a5",
+        "san": "Na5",
+        "from": "c6",
+        "to": "a5",
+        "piece": "n",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": 20,
+       "pv": [
+        "c6a5",
+        "c4b5",
+        "c7c6",
+        "d5e7",
+        "d8e7",
+        "b5a4",
+        "b7b5",
+        "a4b3",
+        "e8g8",
+        "d1e2",
+        "a5b3",
+        "a2b3",
+        "f6d7",
+        "g2g4",
+        "h5g6"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "f6d5",
+        "san": "Nxd5",
+        "from": "f6",
+        "to": "d5",
+        "piece": "n",
+        "captured": "n",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": 56,
+       "pv": [
+        "f6d5",
+        "c4d5",
+        "d8d7",
+        "c2c3",
+        "c6d8",
+        "c1e3",
+        "c7c6",
+        "d5b3",
+        "d8e6"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   }
+  }
+ },
+ {
+  "id": "two_knights_bxd5",
+  "name": "Two Knights 6.Bxd5?! (the loss is Qxd5, an even trade on the moved piece; Qxg5 is not the story)",
+  "fen": "r1bqkb1r/ppp2ppp/2n5/3np1N1/2B5/8/PPPP1PPP/RNBQK2R w KQkq - 0 6",
+  "verified": {
+   "depth": 14,
+   "postDepth": 12,
+   "multipv": 2,
+   "hash": 16,
+   "date": "2026-10-09",
+   "engine": "Stockfish 18 (native)",
+   "command": "python3 scripts/record_positions.py",
+   "check": "python3 scripts/engine_check.py eval \"r1bqkb1r/ppp2ppp/2n5/3np1N1/2B5/8/PPPP1PPP/RNBQK2R w KQkq - 0 6\" --depth 14 --multipv 2"
+  },
+  "pre": {
+   "fen": "r1bqkb1r/ppp2ppp/2n5/3np1N1/2B5/8/PPPP1PPP/RNBQK2R w KQkq - 0 6",
+   "evalBefore": 82,
+   "best": {
+    "uci": "g5f7",
+    "san": "Nxf7",
+    "from": "g5",
+    "to": "f7",
+    "piece": "n",
+    "captured": "p",
+    "isMate": false
+   },
+   "mateIn": null,
+   "line2": {
+    "uci": "d2d4",
+    "san": "d4",
+    "from": "d2",
+    "to": "d4",
+    "piece": "p",
+    "captured": null
+   },
+   "depth": 14,
+   "stopped": false
+  },
+  "moves": {
+   "Bxd5": {
+    "expect": "committed",
+    "reward": null,
+    "note": "line 2's Qxg5 costs under 200 cp on its own, so it explains no loss; no category",
+    "post": {
+     "fen": "r1bqkb1r/ppp2ppp/2n5/3Bp1N1/8/8/PPPP1PPP/RNBQK2R b KQkq - 0 6",
+     "evalAfter": -150,
+     "lines": [
+      {
+       "reply": {
+        "uci": "d8d5",
+        "san": "Qxd5",
+        "from": "d8",
+        "to": "d5",
+        "piece": "q",
+        "captured": "b",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -150,
+       "pv": [
+        "d8d5",
+        "e1g1",
+        "c8f5",
+        "d2d3",
+        "f7f6",
+        "g5e4",
+        "e8c8",
+        "b1c3",
+        "d5d7",
+        "c1e3"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "d8g5",
+        "san": "Qxg5",
+        "from": "d8",
+        "to": "g5",
+        "piece": "q",
+        "captured": "n",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -30,
+       "pv": [
+        "d8g5",
+        "d5c6",
+        "b7c6",
+        "e1g1",
+        "g5g6",
+        "d2d3",
+        "f8d6",
+        "b1d2",
+        "e8g8"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   }
+  }
+ },
+ {
+  "id": "two_mates",
+  "name": "Two rooks on the back rank: after Qc7 both Ra1 and Rb1 are mate",
+  "fen": "rr4k1/5ppp/8/4Q3/8/8/2P2PPP/6K1 w - - 0 30",
+  "verified": {
+   "depth": 14,
+   "postDepth": 12,
+   "multipv": 2,
+   "hash": 16,
+   "date": "2026-10-09",
+   "engine": "Stockfish 18 (native)",
+   "command": "python3 scripts/record_positions.py",
+   "check": "python3 scripts/engine_check.py eval \"rr4k1/5ppp/8/4Q3/8/8/2P2PPP/6K1 w - - 0 30\" --depth 14 --multipv 2"
+  },
+  "pre": {
+   "fen": "rr4k1/5ppp/8/4Q3/8/8/2P2PPP/6K1 w - - 0 30",
+   "evalBefore": -10,
+   "best": {
+    "uci": "h2h3",
+    "san": "h3",
+    "from": "h2",
+    "to": "h3",
+    "piece": "p",
+    "captured": null,
+    "isMate": false
+   },
+   "mateIn": null,
+   "line2": {
+    "uci": "h2h4",
+    "san": "h4",
+    "from": "h2",
+    "to": "h4",
+    "piece": "p",
+    "captured": null
+   },
+   "depth": 14,
+   "stopped": false
+  },
+  "moves": {
+   "Qc7": {
+    "expect": "held",
+    "category": "allowed_mate",
+    "note": "answer squares are a1 and b1 in the engine's order; test_gate asserts the set",
+    "post": {
+     "fen": "rr4k1/2Q2ppp/8/8/8/8/2P2PPP/6K1 b - - 1 30",
+     "evalAfter": -9999,
+     "lines": [
+      {
+       "reply": {
+        "uci": "a8a1",
+        "san": "Ra1#",
+        "from": "a8",
+        "to": "a1",
+        "piece": "r",
+        "captured": null,
+        "isMate": true,
+        "isCapture": false,
+        "isCheck": true
+       },
+       "score": -9999,
+       "pv": [
+        "a8a1"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "b8b1",
+        "san": "Rb1#",
+        "from": "b8",
+        "to": "b1",
+        "piece": "r",
+        "captured": null,
+        "isMate": true,
+        "isCapture": false,
+        "isCheck": true
+       },
+       "score": -9999,
+       "pv": [
+        "b8b1"
+       ]
+      }
+     ],
+     "replyMateIn": 1,
+     "depth": 12
+    }
+   },
+   "h3": {
+    "expect": "committed",
+    "reward": null,
+    "post": {
+     "fen": "rr4k1/5ppp/8/4Q3/8/7P/2P2PP1/6K1 b - - 0 30",
+     "evalAfter": -40,
+     "lines": [
+      {
+       "reply": {
+        "uci": "b8c8",
+        "san": "Rc8",
+        "from": "b8",
+        "to": "c8",
+        "piece": "r",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": -40,
+       "pv": [
+        "b8c8",
+        "c2c3",
+        "h7h6",
+        "g1h2",
+        "c8e8"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "b8e8",
+        "san": "Re8",
+        "from": "b8",
+        "to": "e8",
+        "piece": "r",
+        "captured": null,
+        "isMate": false,
+        "isCapture": false,
+        "isCheck": false
+       },
+       "score": -30,
+       "pv": [
+        "b8e8",
+        "e5b5"
+       ]
+      }
+     ],
+     "replyMateIn": null,
+     "depth": 12
+    }
+   }
+  }
+ },
+ {
+  "id": "only_move",
+  "name": "A lost ending whose only legal move is Kb1 (nothing to hold, nothing to take back to)",
+  "fen": "8/6pk/4p2p/1p2P3/P7/2p4P/3q1PP1/2K5 w - - 1 37",
+  "verified": {
+   "depth": 14,
+   "postDepth": 12,
+   "multipv": 2,
+   "hash": 16,
+   "date": "2026-10-09",
+   "engine": "Stockfish 18 (native)",
+   "command": "python3 scripts/record_positions.py",
+   "check": "python3 scripts/engine_check.py eval \"8/6pk/4p2p/1p2P3/P7/2p4P/3q1PP1/2K5 w - - 1 37\" --depth 14 --multipv 2"
+  },
+  "pre": {
+   "fen": "8/6pk/4p2p/1p2P3/P7/2p4P/3q1PP1/2K5 w - - 1 37",
+   "evalBefore": -9999,
+   "best": {
+    "uci": "c1b1",
+    "san": "Kb1",
+    "from": "c1",
+    "to": "b1",
+    "piece": "k",
+    "captured": null,
+    "isMate": false
+   },
+   "mateIn": -1,
+   "line2": null,
+   "depth": 14,
+   "stopped": false
+  },
+  "moves": {
+   "Kb1": {
+    "expect": "committed",
+    "reward": null,
+    "post": {
+     "fen": "8/6pk/4p2p/1p2P3/P7/2p4P/3q1PP1/1K6 b - - 2 37",
+     "evalAfter": -9999,
+     "lines": [
+      {
+       "reply": {
+        "uci": "d2b2",
+        "san": "Qb2#",
+        "from": "d2",
+        "to": "b2",
+        "piece": "q",
+        "captured": null,
+        "isMate": true,
+        "isCapture": false,
+        "isCheck": true
+       },
+       "score": -9999,
+       "pv": [
+        "d2b2"
+       ]
+      },
+      {
+       "reply": {
+        "uci": "b5a4",
+        "san": "bxa4",
+        "from": "b5",
+        "to": "a4",
+        "piece": "p",
+        "captured": "p",
+        "isMate": false,
+        "isCapture": true,
+        "isCheck": false
+       },
+       "score": -9998,
+       "pv": [
+        "b5a4",
+        "b1a1",
+        "d2b2"
+       ]
+      }
+     ],
+     "replyMateIn": 1,
+     "depth": 12
+    }
+   }
+  }
+ },
+ {
   "id": "kq_stalemate",
   "name": "King and queen against king (Qf7 stalemates)",
   "fen": "7k/8/8/8/8/8/8/K4Q2 w - - 0 1",
@@ -1977,7 +2887,7 @@
    "postDepth": 12,
    "multipv": 2,
    "hash": 16,
-   "date": "2026-10-08",
+   "date": "2026-10-09",
    "engine": "Stockfish 18 (native)",
    "command": "python3 scripts/record_positions.py",
    "check": "python3 scripts/engine_check.py eval \"7k/8/8/8/8/8/8/K4Q2 w - - 0 1\" --depth 14 --multipv 2"

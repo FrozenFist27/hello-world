@@ -29,7 +29,9 @@ export function firstFloatLine(move, netLoss) {
   return fill(COPY.FIRST_FLOAT_PLAIN, vars);
 }
 
-export function showMe({ board, chess, move, refutation = [], netLoss = null, fast = false, reduced = false, firstFloat = false, coachLine = null, store = null } = {}) {
+// `fromBefore`: the plies play from the position before his move (free_piece_ignored shows the
+// capture he walked past, with no loss to float); otherwise after it.
+export function showMe({ board, chess, move, refutation = [], netLoss = null, fromBefore = false, fast = false, reduced = false, firstFloat = false, coachLine = null, store = null } = {}) {
   let aborted = false;
   let wake = null;
   const ghosts = [];          // { el, from, to }
@@ -46,18 +48,20 @@ export function showMe({ board, chess, move, refutation = [], netLoss = null, fa
   // The scratch position after his move, then the plies as verbose moves.
   const scratch = new Chess(chess.fen());
   const plies = [];
-  if (applyPly(scratch, move)) {
+  if (fromBefore || applyPly(scratch, move)) {
     for (const ply of refutation) {
       const mv = applyPly(scratch, ply);
       if (!mv) break;
       plies.push(mv);
     }
   }
-  const hasLoss = typeof netLoss === 'number' && netLoss > 0;
+  const hasLoss = !fromBefore && typeof netLoss === 'number' && netLoss > 0;
+  const take = (mv) => { if (mv.captured && board.ghosts.take) board.ghosts.take(mv.to, true); };
 
   function cleanup() {
     board.ghosts.clear();
     board.ghosts.setDim(false);
+    if (board.ghosts.untakeAll) board.ghosts.untakeAll();
     ghosts.length = 0;
     if (lineChanged && coachLine && lineBefore != null) coachLine.say(lineBefore);
     lineChanged = false;
@@ -83,6 +87,7 @@ export function showMe({ board, chess, move, refutation = [], netLoss = null, fa
         const code = mv.color + mv.piece.toUpperCase();
         const el = board.ghosts.add(mv.promotion ? mv.color + mv.promotion.toUpperCase() : code, mv.to);
         ghosts.push({ el, from: mv.from, to: mv.to });
+        take(mv);
       }
       const label = floatLoss();
       await sleep(ms('REDUCED_STATIC_MS'));
@@ -102,6 +107,7 @@ export function showMe({ board, chess, move, refutation = [], netLoss = null, fa
       await Promise.race([slide, sleep(ms('GHOST_PLY_MS'))]);
       if (aborted) return;
       if (mv.promotion) el.dataset.piece = mv.color + mv.promotion.toUpperCase();
+      take(mv);
       if (first && mv.captured) {
         first = false;
         await floatLoss();
@@ -110,7 +116,8 @@ export function showMe({ board, chess, move, refutation = [], netLoss = null, fa
     if (aborted) return;
     await sleep(ms('BEAT_MS'));
     if (aborted) return;
-    // rewind: every ghost slides back to where it came from
+    // rewind: every ghost slides back to where it came from and the taken pieces reappear
+    if (board.ghosts.untakeAll) board.ghosts.untakeAll();
     const back = ghosts.map((g) => board.ghosts.move(g.el, g.from, ms('REWIND_MS')));
     await Promise.race([Promise.all(back), sleep(ms('REWIND_MS') + 16)]);
   }
