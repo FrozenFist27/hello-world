@@ -1,6 +1,6 @@
 // validate.js — the ordered validation pipeline for everything Claude writes. Pure: no DOM, no
-// imports, no chess. The page grades every tap with chess.js's own answer sets; this file only
-// decides whether a reply's words may be shown at all.
+// chess, and nothing from the app but contract.js (the K3 caps). The page grades every tap with
+// chess.js's own answer sets; this file only decides whether a reply's words may be shown at all.
 //
 // The pipeline on one string, in order:
 //  (1) every square token ([a-h][1-8] on word boundaries) must be in the allowed set and not in
@@ -15,7 +15,12 @@
 //  (5) caps: words, sentences, and a question mark where none is allowed.
 //
 // K2 and K1 wrap that pipeline with their own shapes; templateRules applies only (1)-(2) to the
-// copy templates, with every square allowed and placeholders removed.
+// copy templates, with every square allowed and placeholders removed. K3 (the close) runs every
+// text field through the same pipeline with an EMPTY allowed-square set and accepts per field;
+// maskForPrompt() is the other direction: it takes squares and moves out of the player's own
+// words before they enter any prompt.
+
+import { CLAUDE } from './contract.js';
 
 const chars = (...codes) => String.fromCharCode(...codes);
 
@@ -206,4 +211,93 @@ export function templateRules(text) {
   const t = text.replace(PLACEHOLDER_RE, ' ');
   const r = squareAndSanRules(t, { allowedSquares: [], allAllowed: true, forbidSquares: [], piecesOn: null, allowedMoves: [] });
   return r.ok ? { ok: true } : { ok: false, reason: r.reason };
+}
+
+// ---------------------------------------------------------------------------------------------
+// K3, the close: { where, next, again, question, ask_first, focus }, accepted PER FIELD.
+// ---------------------------------------------------------------------------------------------
+// The caps come from CLAUDE.K3. One exception, Decided: the contract's own example 'where' (the
+// PATHWAY.md K3 example, which must pass whole) is twenty words, two over WHERE_MAX_WORDS, so the
+// where cap accepts up to twenty; the prompt still asks for CLAUDE.K3.WHERE_MAX_WORDS. Once the
+// contract carries 20 this max() is a no-op.
+const K3 = CLAUDE.K3;
+const K3_WHERE_EXAMPLE_WORDS = 20;
+export const K3_LIMITS = Object.freeze({
+  where: Object.freeze({ maxWords: Math.max(K3.WHERE_MAX_WORDS, K3_WHERE_EXAMPLE_WORDS), maxSentences: K3.WHERE_MAX_SENTENCES, noQuestion: true }),
+  next: Object.freeze({ maxWords: K3.NEXT_MAX_WORDS, maxSentences: K3.NEXT_MAX_SENTENCES, noQuestion: true }),
+  again: Object.freeze({ maxWords: K3.AGAIN_MAX_WORDS, maxSentences: K3.AGAIN_MAX_SENTENCES, noQuestion: true }),
+  question: Object.freeze({ maxWords: K3.QUESTION_MAX_WORDS, maxSentences: K3.QUESTION_MAX_SENTENCES, noQuestion: false }),
+});
+const PIECE_WORD_RE = /\b(pawn|knight|bishop|rook|queen|king)s?\b/gi;
+// Every K3 text is shown over positions Claude has not seen: no square, no piece check, no move.
+const K3_TEXT_CTX = Object.freeze({ allowedSquares: [], piecesOn: {}, allowedMoves: [] });
+
+function k3Text(field, raw, ctx) {
+  let text = raw;
+  if (field === 'again' && text == null) text = '';
+  if (typeof text !== 'string') return { ok: false, reason: `${field} is not a string` };
+  text = tidy(text);
+  if (!text) return field === 'again' ? { ok: true, value: '' } : { ok: false, reason: `${field} is empty` };
+  const r = validateText(text, K3_TEXT_CTX, K3_LIMITS[field]);
+  if (!r.ok) return { ok: false, reason: r.reason };
+  if (field === 'question') {
+    if (!text.startsWith(K3.QUESTION_START)) return { ok: false, reason: `does not start with '${K3.QUESTION_START}'` };
+    if (!text.endsWith(K3.QUESTION_END)) return { ok: false, reason: `does not end with '${K3.QUESTION_END}'` };
+    const allowed = toSet(ctx.allowedPieces);
+    PIECE_WORD_RE.lastIndex = 0;
+    let m;
+    while ((m = PIECE_WORD_RE.exec(text))) {
+      const w = m[1].toLowerCase();
+      if (!allowed.has(w)) return { ok: false, reason: `the piece word ${w} is not allowed for ${ctx.nodeId || 'this look'}` };
+    }
+  }
+  return { ok: true, value: text };
+}
+
+function k3Choice(field, raw, list) {
+  if (raw == null || raw === '') return { ok: true, value: null };
+  if (typeof raw !== 'string') return { ok: false, reason: `${field} is not a string` };
+  const v = raw.trim();
+  if (!v) return { ok: true, value: null };
+  if (!(Array.isArray(list) ? list : []).includes(v)) return { ok: false, reason: `${field} ${v} is not in the set` };
+  return { ok: true, value: v };
+}
+
+// validateK3(reply, ctx): ctx = { nodeId, allowedPieces, offeredAsks, tied, ... }. Returns
+// { ok: at least one field passed, value: { field: tidy text | choice | null (rejected) },
+//   rejected: [field] in CLAUDE.K3.FIELDS order, reasons: { field: string } }.
+export function validateK3(reply, ctx = {}) {
+  const c = ctx && typeof ctx === 'object' ? ctx : {};
+  const value = {};
+  const rejected = [];
+  const reasons = {};
+  if (!reply || typeof reply !== 'object' || Array.isArray(reply)) {
+    for (const f of K3.FIELDS) { value[f] = null; rejected.push(f); reasons[f] = 'reply is not an object'; }
+    return { ok: false, value, rejected, reasons };
+  }
+  for (const f of K3.FIELDS) {
+    let r;
+    if (f === 'ask_first') r = k3Choice(f, reply[f], c.offeredAsks);
+    else if (f === 'focus') r = k3Choice(f, reply[f], c.tied);
+    else r = k3Text(f, reply[f], c);
+    if (r.ok) value[f] = r.value;
+    else { value[f] = null; rejected.push(f); reasons[f] = r.reason; }
+  }
+  return { ok: rejected.length < K3.FIELDS.length, value, rejected, reasons };
+}
+
+// maskForPrompt(text): the player's own words, safe to quote in a prompt. Every SAN-shaped token
+// (castling included, and the lower-case spellings people type: nxe5, bxf7, o-o, 0-0) becomes
+// 'that move'; every square token becomes 'that square'; control characters and guillemets go;
+// whitespace collapses. A non-string is ''.
+const LOOSE_MOVE_RE = /\b(?:[KQRBN]?[a-h]?[1-8]?x[a-h][1-8]|[KQRBN][a-h]?[1-8]?[a-h][1-8])(?:=?[QRBN])?[+#]?(?![\w])/gi;
+const CASTLE_RE = /(?<![\w-])(?:[O0]-[O0](?:-[O0])?)(?![\w-])[+#]?/gi;
+export function maskForPrompt(text) {
+  if (typeof text !== 'string') return '';
+  let t = text.replace(/[\u0000-\u001f\u007f-\u009f]+/g, ' ').replace(/[\u00ab\u00bb]/g, ' ');
+  t = t.replace(SAN_RE, ' that move ');
+  t = t.replace(CASTLE_RE, ' that move ');
+  t = t.replace(LOOSE_MOVE_RE, ' that move ');
+  t = t.replace(SQUARE_RE, 'that square');
+  return t.replace(/\s+([,.;:!?])/g, '$1').replace(/\s+/g, ' ').trim();
 }

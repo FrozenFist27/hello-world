@@ -8,15 +8,30 @@
 // built from char codes), <dir>/data/*.json. scripts/ and app/dev/ are not scanned.
 //
 // Rules:
-//  words    blunder, mistake, inaccuracy, submit, analyze, accuracy, user (whole words, any case);
-//           the CSS property user-select is a property name, not copy, and is exempt
+//  words    blunder, mistake, inaccuracy, submit, analyze, accuracy, user, and the scope words
+//           level, mastered, progress, xp, curriculum, lesson (whole words, any case; level and
+//           lesson with their plurals); the CSS property user-select is a property name, not copy,
+//           and is exempt; so is the exact phrase 'Skill Level' (the engine's UCI option name, in
+//           engine.js and in contract.js comments), and, in a JS comment line that names the hand,
+//           the word level (the hand level is PATH.HAND_LEVELS / handLevel(), code vocabulary that
+//           never reaches the page; a string literal saying it is still a hit)
 //  marks    '??' (in JS only inside string literals: the nullish operator is code, not copy)
 //  red      the word red, #f00 / #ff0000, any hex or rgb() colour whose red channel is more than
 //           twice the larger of green and blue
-//  markup   a class, id or selector naming an eval bar, move list, rating or clock
+//  markup   a class, id or selector naming an eval bar, move list, rating or clock; in index.html
+//           and styles.css a class or id with a part naming a badge, tick, streak, lock, road,
+//           lane, bar or percentage (the path view refuses them)
 //  emoji    emoji code points; chess glyphs U+2654-U+265F (pieces are SVG, never text)
 //  copy     every COPY template passes validate.templateRules (no square, no notation outside a
-//           placeholder) and every question starts with 'Hold on.' and has at most 16 words
+//           placeholder) and every question (COPY.QUESTION.*, COPY.PATH.QUESTION.*) starts with
+//           'Hold on.' and has at most 16 words
+//  path     every COPY.PATH string, COPY.QUESTION.bare and the iteration's new COPY.CLOSE, LINKS and
+//           BUTTONS keys hold no digit (any digit is a hit), no banned word (the list above and
+//           validate.BANNED) and at most 28 words; the seven COPY.PATH.SENTENCES are under 34
+//           characters
+//  page     the static text of the close card and the #path section in index.html (text and
+//           aria-label) holds no digit and no banned word; both sections exist, #path holds its
+//           ol#path-looks, and the two close-card links read COPY.LINKS.AGAIN_FROM / WHERE_YOU_ARE
 //
 // JS files are scanned by their string literals (words, red, markup, emoji, '??') and comments
 // (words, red, markup, emoji); code identifiers are not copy.
@@ -28,12 +43,18 @@ const { pathToFileURL } = require('url');
 function arg(name, def) { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : def; }
 const DIR = path.resolve(arg('--dir', path.join(__dirname, '..', 'app')));
 
-const WORD_RE = /\b(blunder|mistake|inaccuracy|submit|analyze|accuracy|user)\b/gi;
+const WORD_RE = /\b(blunder|mistake|inaccuracy|submit|analyze|accuracy|user|levels?|mastered|progress|xp|curriculum|lessons?)\b/gi;
+const SKILL_LEVEL = 'Skill Level';                // the UCI option name: the one exact phrase exempt
+const DIGIT_RE = /\d/;
 const RED_WORD_RE = /\bred\b/gi;
 const HEX_RE = /#([0-9a-f]{6}|[0-9a-f]{3})\b/gi;
 const RGB_RE = /\brgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/gi;
 const MARKUP_HTML_RE = /\b(?:class|id)\s*=\s*["'][^"']*?(eval|movelist|move-list|rating|clock)/gi;
 const MARKUP_CSS_RE = /[.#][\w-]*?(eval|movelist|move-list|rating|clock)\b/gi;
+// the path view's refusals as markup: a class or id (one hyphen-separated part of it) naming a
+// badge, tick, streak, lock, road, lane, bar or percentage
+const SCOPE_CSS_RE = /[.#](?:[A-Za-z0-9_]+-)*(badges?|ticks?|streaks?|locks?|roads?|lanes?|bars?|percent(?:age)?)(?![\w])/gi;
+const SCOPE_HTML_RE = /\b(?:class|id)\s*=\s*["'](?:[^"']*?[\s-])?(badges?|ticks?|streaks?|locks?|roads?|lanes?|bars?|percent(?:age)?)(?=[\s"'-])/gi;
 const MARKUP_TEXT_RE = /(?:^|[\s.#"'`\-_])(eval-?bar|move-?list|rating|clock)\b/gi;
 const EMOJI_RE = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu;
 const GLYPH_RE = /[♔-♟]/g;
@@ -154,11 +175,19 @@ function jsChunks(src) {
 // ---------------------------------------------------------------------------------------------
 // Rules on a chunk
 // ---------------------------------------------------------------------------------------------
+// The words rule's exemptions: the CSS property user-select; the exact phrase 'Skill Level'.
+function exempt(text, index, word) {
+  if (/^user-select/i.test(text.slice(index))) return true;
+  if (/^levels?$/i.test(word)) {
+    if (word === 'Level' && text.slice(Math.max(0, index - 6), index) === 'Skill ') return true;
+  }
+  return false;
+}
 function scanWords(file, full, chunk) {
   WORD_RE.lastIndex = 0;
   let m;
   while ((m = WORD_RE.exec(chunk.text))) {
-    if (/^user-select/i.test(chunk.text.slice(m.index))) continue; // the CSS property
+    if (exempt(chunk.text, m.index, m[0])) continue;
     hit(file, full, chunk.offset + m.index, 'banned word', m[0]);
   }
 }
@@ -214,8 +243,8 @@ function scanFile(file) {
     scanQQ(file, text, chunk);
     scanRed(file, text, chunk);
     scanGlyphs(file, text, chunk);
-    if (ext === '.html') { scanMarkup(file, text, chunk, MARKUP_HTML_RE); scanMarkup(file, text, chunk, MARKUP_TEXT_RE); }
-    else if (ext === '.css') scanMarkup(file, text, chunk, MARKUP_CSS_RE);
+    if (ext === '.html') { scanMarkup(file, text, chunk, MARKUP_HTML_RE); scanMarkup(file, text, chunk, MARKUP_TEXT_RE); scanMarkup(file, text, chunk, SCOPE_HTML_RE); }
+    else if (ext === '.css') { scanMarkup(file, text, chunk, MARKUP_CSS_RE); scanMarkup(file, text, chunk, SCOPE_CSS_RE); }
     else scanMarkup(file, text, chunk, MARKUP_TEXT_RE);
   }
 }
@@ -229,6 +258,75 @@ function walkStrings(value, keyPath, visit) {
   if (value && typeof value === 'object') for (const [k, v] of Object.entries(value)) walkStrings(v, keyPath ? `${keyPath}.${k}` : k, visit);
 }
 
+// The iteration's copy that must carry no digit and no banned word: every COPY.PATH string, the
+// bare question, and the new close-card, link and button keys.
+const PATH_KEY_RE = /^COPY\.(?:PATH\.|QUESTION\.bare$|CLOSE\.(?:OUTCOME\.landed|OUTCOME\.again|LANDED|FREE_STAYED)$|LINKS\.(?:WHERE_YOU_ARE|AGAIN_FROM)$|BUTTONS\.BACK$)/;
+const PATH_MAX_WORDS = 28;
+const SENTENCE_MAX_CHARS = 34;
+
+// The banned words a COPY string may not hold: this file's list (with its 'Skill Level'
+// exemption) and validate.BANNED (its stems, matched at a word start, as validate does).
+function bannedIn(validate) {
+  const extra = (Array.isArray(validate.BANNED) ? validate.BANNED : []).filter((w) => typeof w === 'string' && w);
+  return (text) => {
+    WORD_RE.lastIndex = 0;
+    let m;
+    while ((m = WORD_RE.exec(text))) if (!exempt(text, m.index, m[0], 'string')) return m[0];
+    const lower = text.toLowerCase();
+    for (const w of extra) {
+      if (/^[a-z]+$/i.test(w)) { if (new RegExp('\\b' + w, 'i').test(text)) return w; }
+      else if (lower.includes(w.toLowerCase())) return w;
+    }
+    return null;
+  };
+}
+
+// index.html: the close card and the #path section, by their static text.
+function sectionOf(html, id) {
+  const open = new RegExp(`<section\\b[^>]*\\bid\\s*=\\s*["']${id}["'][^>]*>`, 'i').exec(html);
+  if (!open) return null;
+  const end = html.indexOf('</section>', open.index);
+  return { index: open.index, text: html.slice(open.index, end < 0 ? html.length : end + '</section>'.length) };
+}
+function staticText(markup) {
+  // text between tags plus the attributes a reader hears (aria-label, title, placeholder, alt)
+  const parts = [];
+  const attrRe = /\b(?:aria-label|title|placeholder|alt)\s*=\s*(["'])(.*?)\1/gi;
+  let m;
+  while ((m = attrRe.exec(markup))) parts.push(m[2]);
+  parts.push(markup.replace(/<!--[\s\S]*?-->/g, ' ').replace(/<[^>]*>/g, ' '));
+  return parts.join(' ').replace(/\s+/g, ' ').trim();
+}
+async function checkPage(htmlPath) {
+  if (!fs.existsSync(htmlPath)) return;
+  const html = fs.readFileSync(htmlPath, 'utf8');
+  const rel = path.relative(process.cwd(), htmlPath);
+  let links = null;
+  try { links = (await import(pathToFileURL(path.join(DIR, 'js', 'contract.js')).href)).COPY.LINKS; } catch { links = null; }
+  for (const id of ['close', 'path']) {
+    const sec = sectionOf(html, id);
+    if (!sec) { hits.push(`${rel}: page: no <section id="${id}">`); continue; }
+    const text = staticText(sec.text);
+    const d = DIGIT_RE.exec(text);
+    if (d) {
+      // report the line of the first digit outside a tag's attribute names
+      const at = sec.text.search(/>[^<]*\d/);
+      hit(htmlPath, html, sec.index + Math.max(0, at), 'page digit', `#${id} static text: '${text}'`);
+    }
+    WORD_RE.lastIndex = 0;
+    let m;
+    while ((m = WORD_RE.exec(text))) if (!exempt(text, m.index, m[0], 'text')) hits.push(`${rel}: page: #${id} static text holds '${m[0]}'`);
+    if (id === 'path' && !/<ol\b[^>]*\bid\s*=\s*["']path-looks["']/i.test(sec.text)) hits.push(`${rel}: page: #path holds no ol#path-looks`);
+    if (id === 'close' && links) {
+      for (const [action, key] of [['again-from', 'AGAIN_FROM'], ['path', 'WHERE_YOU_ARE']]) {
+        const b = new RegExp(`<button\\b[^>]*\\bdata-action\\s*=\\s*["']${action}["'][^>]*>([^<]*)</button>`, 'i').exec(sec.text);
+        if (!b) hits.push(`${rel}: page: the close card has no [data-action=${action}]`);
+        else if (b[1].trim() !== links[key]) hits.push(`${rel}: page: [data-action=${action}] reads '${b[1].trim()}', not COPY.LINKS.${key} '${links[key]}'`);
+      }
+    }
+  }
+}
+
 async function checkTemplates() {
   const contractPath = path.join(DIR, 'js', 'contract.js');
   const validatePath = path.join(DIR, 'js', 'validate.js');
@@ -236,11 +334,20 @@ async function checkTemplates() {
   const validate = await import(pathToFileURL(validatePath).href);
   const rel = path.relative(process.cwd(), contractPath);
   let count = 0;
+  const banned = bannedIn(validate);
   walkStrings(contract.COPY, 'COPY', (key, text) => {
     count += 1;
     const r = validate.templateRules(text);
     if (!r.ok) hits.push(`${rel}: template ${key}: ${r.reason} | ${text}`);
-    if (/^COPY\.QUESTION\./.test(key)) {
+    if (PATH_KEY_RE.test(key)) {
+      if (DIGIT_RE.test(text)) hits.push(`${rel}: template ${key}: a digit | ${text}`);
+      const word = banned(text);
+      if (word) hits.push(`${rel}: template ${key}: banned word '${word}' | ${text}`);
+      const words = text.trim().split(/\s+/).length;
+      if (words > PATH_MAX_WORDS) hits.push(`${rel}: template ${key}: ${words} words, more than ${PATH_MAX_WORDS} | ${text}`);
+      if (/^COPY\.PATH\.SENTENCES\./.test(key) && text.length >= SENTENCE_MAX_CHARS) hits.push(`${rel}: template ${key}: ${text.length} characters, not under ${SENTENCE_MAX_CHARS} | ${text}`);
+    }
+    if (/^COPY\.(?:PATH\.)?QUESTION\./.test(key)) {
       if (!text.startsWith('Hold on.')) hits.push(`${rel}: template ${key}: does not start with 'Hold on.' | ${text}`);
       const words = text.trim().split(/\s+/).length;
       if (words > 16) hits.push(`${rel}: template ${key}: ${words} words, more than 16 | ${text}`);
@@ -262,6 +369,7 @@ async function main() {
   }
   let templates = 0;
   try { templates = await checkTemplates(); } catch (e) { hits.push(`contract.js / validate.js could not be loaded: ${e && e.message}`); }
+  await checkPage(path.join(DIR, 'index.html'));
   if (hits.length) {
     for (const h of hits) console.log(h);
     console.log(`copy_check: ${hits.length} hit${hits.length === 1 ? '' : 's'} in ${files.length} files`);

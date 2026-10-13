@@ -209,7 +209,7 @@ function recs(line, id) {
 function sum(lines, pick) {
   return lines.reduce((t, l) => t + num(pick(l)), 0);
 }
-function floorHolds(id, countedLines, s, positive) {
+function floorHolds(id, countedLines, s) {
   const win = countedLines.slice(-PATH.FLOOR_WINDOW);
   switch (id) {
     case 'takes_back': return sum(win, (l) => l.captures) >= PATH.CAPTURES_MIN;
@@ -220,7 +220,7 @@ function floorHolds(id, countedLines, s, positive) {
       return offered >= PATH.GIFTS_MIN && taken >= offered - 1;
     }
     case 'guards': return countedLines.length >= PATH.GUARDS_HISTORY;
-    default: return !!positive || true;
+    default: return true; // pawns and takers: the counted game is the whole floor
   }
 }
 function windowClean(id, countedLines) {
@@ -238,11 +238,13 @@ function fold(lines) {
   for (const id of PATH.MATERIAL_LOOKS) st[id] = { stage: 'asking', run: 0, woken: false, everFired: false, since: null };
   const positive = { free: false, their_last_move: false };
   const countedLines = [];
+  const realLines = [];
   let matesEver = false;
   let realGames = 0;
   for (const line of lines) {
     if (line.again) continue;
     realGames += 1;
+    realLines.push(line);
     if (line.gifts && num(line.gifts.taken) > 0) positive.free = true;
     if (num(line.escapes) > 0) positive.their_last_move = true;
     if (recs(line, 'mates') > 0) matesEver = true;
@@ -267,14 +269,14 @@ function fold(lines) {
       } else if (isCounted) {
         s.run += 1;
         if (s.stage === 'asking') {
-          if (s.run >= PATH.CLEAN_TO_QUIET && floorHolds(id, countedLines, s, positive[id]) && prereqOk(id, st)) {
+          if (s.run >= PATH.CLEAN_TO_QUIET && floorHolds(id, countedLines, s) && prereqOk(id, st)) {
             s.stage = 'quiet';
             s.run = 0;
             s.since = line.date;
           }
         } else if (s.stage === 'quiet') {
           const need = s.woken ? PATH.WOKEN_TO_OFF : PATH.QUIET_TO_OFF;
-          if (s.run >= need && floorHolds(id, countedLines, s, positive[id]) && windowClean(id, countedLines) && (s.everFired || !!positive[id])) {
+          if (s.run >= need && floorHolds(id, countedLines, s) && windowClean(id, countedLines) && (s.everFired || !!positive[id])) {
             s.stage = 'off';
             s.run = 0;
             s.woken = false;
@@ -284,7 +286,7 @@ function fold(lines) {
       }
     }
   }
-  return { st, positive, countedLines, matesEver, realGames };
+  return { st, positive, countedLines, realLines, matesEver, realGames };
 }
 
 function stagesOf(st) {
@@ -300,7 +302,7 @@ export function compute(digest, now = Date.now()) {
   for (let i = lines.length - 1; i >= 0; i -= 1) if (!lines[i].again) { newestReal = lines[i]; break; }
   const full = fold(lines);
   const prior = fold(newestReal ? lines.filter((l) => l !== newestReal) : lines);
-  const { st, positive, countedLines, matesEver, realGames } = full;
+  const { st, positive, countedLines, realLines, matesEver, realGames } = full;
   const win = countedLines.slice(-PATH.FLOOR_WINDOW);
   const countedGames = countedLines.length;
   const nowMs = Number.isFinite(Number(now)) ? Number(now) : Date.now();
@@ -339,10 +341,17 @@ export function compute(digest, now = Date.now()) {
     current = movable.length ? quiet[0] : null;
   }
 
-  // the mates word
+  // the mates word: 'back' when the newest real game holds a record; 'quiet' when the last
+  // MATE_WINDOW counted games (and every real game since the first of them) hold none and a
+  // record exists before that window; else 'asking'. A mate-win is evidence of nothing.
   let word = 'asking';
   if (newestReal && recs(newestReal, 'mates') > 0) word = 'back';
-  else if (matesEver && countedGames >= PATH.MATE_WINDOW && countedLines.slice(-PATH.MATE_WINDOW).every((l) => recs(l, 'mates') === 0)) word = 'quiet';
+  else if (matesEver && countedGames >= PATH.MATE_WINDOW) {
+    const start = realLines.indexOf(countedLines[countedLines.length - PATH.MATE_WINDOW]);
+    const inWindow = realLines.slice(start).some((l) => recs(l, 'mates') > 0);
+    const earlier = realLines.slice(0, start).some((l) => recs(l, 'mates') > 0);
+    if (!inWindow && earlier) word = 'quiet';
+  }
 
   const looks = PATH.LOOKS.map((id) => {
     const w = win3[id];
@@ -418,7 +427,7 @@ function countdownOf(state) {
   const positive = !!(state.positive && state.positive[look.id]);
   const counted = state.window || [];
   // the floor over the trailing window as it stands (the guards floor counts the games so far)
-  const floor = look.id === 'guards' ? state.countedGames >= PATH.GUARDS_HISTORY : floorHolds(look.id, counted, s, positive);
+  const floor = look.id === 'guards' ? state.countedGames >= PATH.GUARDS_HISTORY : floorHolds(look.id, counted, s);
   if (!floor) return COPY.PATH.COUNTDOWN.FLOOR[look.id] || null;
   if (look.stage === 'asking') {
     const n = Math.max(1, PATH.CLEAN_TO_QUIET - look.run);
@@ -453,19 +462,36 @@ function seen(line, id, before) {
   const landed = Number.isFinite(Number(e.landed)) && e.landed !== null ? Math.min(n, Math.max(0, num(e.landed))) : before[id] === 'off' ? n : 0;
   return { shown: n - landed, landed };
 }
-function closeLineOf(state) {
-  const look = COPY.PATH.LOOK_WORDS[state.current];
-  if (!state.newest) return state.current ? COPY.PATH.CLOSE.NONE_FIRST : COPY.PATH.CLOSE.NOTHING_LEFT;
-  if (state.newest.again) return COPY.PATH.CLOSE.AGAIN;
-  if (state.current === null) return COPY.PATH.CLOSE.NOTHING_LEFT;
+// The newest real game's holds as he saw them: every shown hold of any look, and the current
+// look's shown and landed counts; from the summary when it is given, else from the digest line.
+function tallyOf(state, games) {
+  const g = newestRealGame(games, state);
+  if (g) {
+    const mine = g.holds.filter((h) => nodeOf(h));
+    const shownAll = mine.filter((h) => PATH.SHOWN_OUTCOMES.includes(h.outcome) && h.outcome !== 'again');
+    return {
+      total: shownAll.length,
+      cur: {
+        shown: shownAll.filter((h) => nodeOf(h) === state.current).length,
+        landed: mine.filter((h) => h.outcome === 'landed' && nodeOf(h) === state.current).length,
+      },
+    };
+  }
   const line = state.newestReal;
   let total = 0;
   for (const id of PATH.LOOKS) total += seen(line, id, state.before).shown;
-  const cur = seen(line, state.current, state.before);
+  return { total, cur: seen(line, state.current, state.before) };
+}
+function closeLineOf(state, games) {
+  const look = COPY.PATH.LOOK_WORDS[state.current];
+  if (!state.newest) return state.current ? COPY.PATH.CLOSE.NONE_FIRST : COPY.PATH.CLOSE.NOTHING_LEFT;
+  if (state.newest.again) return COPY.PATH.CLOSE.AGAIN;
+  if (state.current === null || !state.newestReal) return COPY.PATH.CLOSE.NOTHING_LEFT;
+  const { total, cur } = tallyOf(state, games);
   if (cur.landed > 0) return fill(COPY.PATH.CLOSE.LANDED, { look });
   if (total === 0) return state.realGames <= 1 ? COPY.PATH.CLOSE.NONE_FIRST : fill(COPY.PATH.CLOSE.NONE, { look });
   if (cur.shown === total) return total === 1 ? fill(COPY.PATH.CLOSE.ONE, { look }) : fill(COPY.PATH.CLOSE.ALL, { n: cap(countWord(total)), look });
-  if (cur.shown === 0) return fill(COPY.PATH.CLOSE.OTHER, { n: cap(countWord(total)), look });
+  if (cur.shown === 0) return total === 1 ? fill(COPY.PATH.CLOSE.OTHER_ONE, { look }) : fill(COPY.PATH.CLOSE.OTHER, { n: cap(countWord(total)), look });
   return fill(COPY.PATH.CLOSE.SOME, { n: cap(countWord(total)), k: countWord(cur.shown), look });
 }
 function normGames(games) {
@@ -474,13 +500,12 @@ function normGames(games) {
 function sortGames(games) {
   return normGames(games).sort((a, b) => (Date.parse(a.date) || 0) - (Date.parse(b.date) || 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
+// The summary of the state's newest real game (matched by id); without a state, the newest
+// non-again summary. A summary that is not the digest's newest real line is never used for it.
 function newestRealGame(games, state) {
   const sorted = sortGames(games).filter((g) => !g.again);
   if (!sorted.length) return null;
-  if (state && state.newestReal) {
-    const match = sorted.find((g) => g.id === state.newestReal.id);
-    if (match) return match;
-  }
+  if (state && state.newestReal) return sorted.find((g) => g.id === String(state.newestReal.id)) || null;
   return sorted[sorted.length - 1];
 }
 function drillOf(state, games) {
@@ -501,6 +526,10 @@ function drillOf(state, games) {
   return record ? { record: JSON.parse(JSON.stringify(record)), gameId: g.id } : null;
 }
 
+// The plan for one game (frozen; game.js keeps it on S for the whole game). The digest holds no
+// records, so the drill and the exact close-line counts read the stored summaries: pass them as
+// the fifth argument (store.list(KEYS.GAMES)); without them drill is null and the close line
+// counts from the digest line.
 export function plan(state, k3 = null, shown = null, said = [], games = null) {
   const S = isObj(state) && Array.isArray(state.looks) ? state : compute([]);
   const saidList = Array.isArray(said) ? said.filter((x) => typeof x === 'string') : [];
@@ -568,7 +597,7 @@ export function plan(state, k3 = null, shown = null, said = [], games = null) {
     question,
     askFirst,
     focus,
-    closeLine: closeLineOf(S),
+    closeLine: closeLineOf(S, games),
     where: whereOf(S),
     drill: drillOf(S, games),
     k3: k3use ? JSON.parse(JSON.stringify(k3use)) : null,
@@ -722,7 +751,7 @@ export function stillOf(games, lookId) {
     }
     if (!best) continue;
     const chess = afterMove(best);
-    return chess ? Object.freeze({ record: best, chess }) : null;
+    return chess ? Object.freeze({ record: deepFreeze(best), chess }) : null;
   }
   return null;
 }

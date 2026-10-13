@@ -8,8 +8,27 @@ the favicon link, and writes app/artifact.html (gitignored). Supporting files (j
 assets/, vendor/) are published alongside it unchanged.
 
   python3 scripts/build_artifact.py            # writes app/artifact.html, prints the file list
+  python3 scripts/build_artifact.py --check    # prints the capability declaration only; builds nothing
+
+Capabilities. The republish declares exactly these three, in full and with no rules:
+
+  {"sample": {}, "db": {}, "user": {}}
+
+sample is the coach (Hear me out, the follow-ups, the close lines); db and user are the mirror:
+one document per viewer at data/users/<id>/holdon, the viewer's own private subtree under the
+default rules. permissions is never declared: the page only reads permissions.state('db') when
+the viewer's runtime offers the namespace, and plays the same without it. Outside the viewer
+every claude.use() resolves null and the page plays fully on localStorage alone. test_all.sh runs
+--check and asserts the three names.
 """
 import re, sys, os, json
+
+# The declaration the republish must carry (see the docstring): exactly sample, db and user.
+CAPABILITIES = {"sample": {}, "db": {}, "user": {}}
+
+if "--check" in sys.argv[1:]:
+    print(json.dumps({"capabilities": CAPABILITIES}))
+    sys.exit(0)
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app")
 src = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()

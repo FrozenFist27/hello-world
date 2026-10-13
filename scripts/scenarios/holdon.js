@@ -805,6 +805,16 @@ module.exports = async function holdon(page, ctx = {}) {
     await load(FEN.d6);
     const r = await play('Bxf7+');
     expect(r === 'committed', `after two play-anyways Bxf7+ -> ${r} (expected committed)`);
+    // the suppressed Bxf7+ is logged 'landed', listed on the card, and never counted as a stop
+    await action('giveup');
+    await action('giveup-yes');
+    {
+      const close = await app(() => ({ text: document.getElementById('close').textContent, items: Array.from(document.querySelectorAll('#close .close-holds li')).map((li) => li.textContent) }));
+      expect(close.text.includes('stopped your hand twice'), `after the quiet-rule game the close card reads '${close.text.trim()}'`);
+      expect(close.items.length === 3, `the quiet-rule close card lists ${close.items.length} holds: ${JSON.stringify(close.items)}`);
+      expect(close.items.filter((t) => t.includes('it landed')).length === 1, `no single landed caption on the quiet-rule card: ${JSON.stringify(close.items)}`);
+    }
+    // load() keeps the game's counters from any state: the two play-anyways still stand for g4
     await load(FEN.f3e5);
     const r2 = await play('g4');
     expect(r2 === 'held', `after two play-anyways g4 -> ${r2} (expected held)`);
@@ -1189,7 +1199,12 @@ module.exports = async function holdon(page, ctx = {}) {
       expect(again.top >= 0 && again.bottom <= again.inner + 0.5, `Again sits at ${again.top}-${again.bottom} in a ${again.inner} px viewport`);
     }
     await reload({ cold: false, clear: false });
-    expect((await coach()).includes('last game'), `after a game with holds the next game's line is '${await coach()}'`);
+    // from the second stored game the opening line is the path's (product/PATHWAY.md, 'Felt in the
+    // game'): the one look he is on, in words, where the MVP said 'last game'
+    {
+      const opening = await app(() => ({ line: document.getElementById('coach').textContent, plan: window.__app.plan ? window.__app.plan().line : null }));
+      expect(opening.plan && opening.line === opening.plan && opening.line !== 'Your move.' && !/\d/.test(opening.line), `after a game with holds the next game's line is '${opening.line}' (plan line '${opening.plan}')`);
+    }
     const games = await app((k) => JSON.parse(localStorage.getItem(k) || 'null'), KEYS.games);
     expect(Array.isArray(games) && games.length, 'holdon.v1.games is not an array');
     const lastGame = games[games.length - 1];

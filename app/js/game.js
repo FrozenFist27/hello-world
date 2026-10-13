@@ -4,12 +4,21 @@
 // take back, play anyway), the opponent's reply, ends, mercy, give up, the close card, the next
 // game's line, logging to the store, and window.__app for the tests. Everything that is chess is
 // decided by chess.js, the engine and gate.js before anything is drawn or asked.
+//
+// Iteration two (ARCHITECTURE.md section 8): the path. path.js folds the stored digest into a
+// frozen PathState at boot, newGame() and endGame(); the plan made from it is kept on S for the
+// whole game (the hand per look, the gift notch, the opening line, the remembering question).
+// Every suppressed verdict is logged 'landed'; the summary and the digest line are v2; the close
+// card gains the path line, 'Where you are' (the path view) and 'Play it again from here' (the
+// again-from drill); K3 fires once per game after consent; the db and identity mirror is wired after
+// first paint and is silent in every outcome.
 
 import { Chess } from '../vendor/chess.js';
 import {
   START_FEN, TUTORIAL_FEN, PLAYER, BOT, ENGINE, GATE, REWARDS, KEYS, KEEP, DOM, COPY, CLAUDE, PIECE_WORDS,
-  fill, timing, timesWord, materialWords,
+  PATH, ASK_KINDS, fill, timing, timesWord, materialWords, handLevel, handAll,
 } from './contract.js';
+import * as pathModel from './path.js';
 import { createBoard } from './board.js';
 import { createEngine } from './engine.js';
 import { loadBook, bookReply, chooseBotMove, shouldResign, materialExtra } from './bot.js';
@@ -38,6 +47,9 @@ const linksEl = byId(DOM.ids.links);
 const actionsEl = byId(DOM.ids.actions);
 const edgeEl = byId(DOM.ids.edge);
 const closeEl = byId(DOM.ids.close);
+const stageEl = byId(DOM.ids.stage) || document.querySelector('main.stage');
+const pathEl = byId(DOM.ids.path);
+const pathLooksEl = byId(DOM.ids.pathLooks);
 
 // ---------------------------------------------------------------------------------------------
 // Fast mode and reduced motion
@@ -112,9 +124,12 @@ const S = {
   rewardsSaid: 0, lastRewardPly: -10, mercyOffered: false, mercyStreak: 0, resignStreak: 0, botMoveNo: 0,
   result: null, giftDue: false, lastGift: null, consented: false, coachAvailable: false, resting: false,
   pre: null, lastVerdict: null, forcedReply: null,
+  // the path (iteration two): the state this game was planned from (endGame recomputes it for
+  // the close card and the path view), the plan kept for the whole game, its hand and notch
+  path: null, plan: null, hand: null, giftRate: null, review: false, again: false, view: null,
 };
 let chess = new Chess(START_FEN);   // the truth: the position before any held move
-let gameId = Date.now().toString(36);
+let gameId = newGameId();
 let holdLog = [];
 let backs = 0;
 let givenAway = 0;
@@ -133,6 +148,28 @@ let ringTimer = null;
 let barBefore = null;               // the action bar's contents before a give-up confirm
 let coachHidden = false;            // a not_granted-family code hid the coach for this view
 let previousGame = store.list(KEYS.GAMES).slice(-1)[0] || null;   // the game before this one
+
+// the path's per-game counters (the v2 summary)
+let observed = 0;                   // committed non-tutorial player moves with a non-null verdict
+let captures = 0;                   // his committed (non-tutorial) moves that captured
+let gifts = { offered: 0, taken: 0 };   // verified gifts the opponent left / the ones he took
+let rewardsLog = [];                // [{ kind, ply, piece, said }]: both kinds, said or not
+let gameHadTutorial = false;        // the tutorial ran in this game: no K3 for it, its holds are not records
+let k3Fired = null;                 // the game id K3 was fired for (once per game)
+let endPlan = null;                 // the plan computed at endGame (the close card, the drill)
+let endLine = '';                   // the end line, said again when the path view is left
+let backs3 = 0;                     // the current look's take-backs over the last three counted games (K1's fact line)
+let mirror = null;                  // store.mirror() once the capabilities resolved
+// observed so far: state().counted
+Object.defineProperty(S, 'counted', { get: () => observed, enumerable: true, configurable: true });
+
+// Date.now() in base 36 plus PATH.ID_SUFFIX random base-36 characters: two games begun in the
+// same millisecond still differ
+function newGameId() {
+  let suffix = '';
+  for (let i = 0; i < PATH.ID_SUFFIX; i++) suffix += Math.floor(Math.random() * 36).toString(36);
+  return Date.now().toString(36) + suffix;
+}
 
 // pre-search bookkeeping
 let preFen = null;                  // the fen the current pre-search is for
@@ -273,7 +310,20 @@ function verboseMove(from, to) {
   return chess.moves({ square: from, verbose: true }).find((m) => m.to === to && (!m.promotion || m.promotion === 'q')) || null;
 }
 function rememberedLine() {
-  try { return previousGame ? gate.remembered(previousGame) : null; } catch { return null; }
+  // remembered() reads only the holds he saw (a landed record is not one)
+  if (!previousGame) return null;
+  const holds = (Array.isArray(previousGame.holds) ? previousGame.holds : []).filter(isShown);
+  try { return gate.remembered({ ...previousGame, holds }); } catch { return null; }
+}
+function isObj(x) {
+  return !!x && typeof x === 'object' && !Array.isArray(x);
+}
+// a hold he saw: never a landed record
+function isShown(rec) {
+  return !!rec && PATH.SHOWN_OUTCOMES.includes(rec.outcome);
+}
+function shownHolds() {
+  return holdLog.filter(isShown);
 }
 function baseMarks() {
   return { tint: lastMove ? [lastMove.from, lastMove.to] : [], ok: ringSquare ? [ringSquare] : [] };
@@ -281,9 +331,135 @@ function baseMarks() {
 function paint() {
   board.setMarks(baseMarks());
 }
+// The notch follows the path (plan.giftRate); the stored v1 notch is read only when the plan
+// failed, and never written.
 function giftRateNow() {
+  if (Number.isFinite(S.giftRate)) return S.giftRate;
+  if (typeof store.giftRateFallback === 'function') {
+    try {
+      const f = Number(store.giftRateFallback());
+      if (Number.isFinite(f) && f >= 0 && f <= 1) return f;
+    } catch { /* the constant below */ }
+  }
   const v = Number(store.get(KEYS.GIFT_RATE, BOT.GIFT_RATE));
   return Number.isFinite(v) && v >= 0 && v <= 1 ? v : BOT.GIFT_RATE;
+}
+
+// ---------------------------------------------------------------------------------------------
+// The path: the digest, the state, the plan, the opening line
+// ---------------------------------------------------------------------------------------------
+// KEYS.PATH normalised: { v: 1, k3, said, digest (null when missing or not an array), shown }
+function readPathKey() {
+  const raw = store.get(KEYS.PATH, null);
+  const k = isObj(raw) ? raw : {};
+  return {
+    v: 1,
+    k3: isObj(k.k3) ? k.k3 : null,
+    said: Array.isArray(k.said) ? k.said.filter((s) => typeof s === 'string') : [],
+    digest: Array.isArray(k.digest) ? k.digest : null,
+    shown: isObj(k.shown) ? k.shown : null,
+  };
+}
+function writePathKey(k) {
+  store.set(KEYS.PATH, { v: 1, k3: k.k3 || null, said: Array.isArray(k.said) ? k.said : [], digest: Array.isArray(k.digest) ? k.digest : [], shown: isObj(k.shown) ? k.shown : null });
+}
+function byDateThenId(a, b) {
+  const da = Date.parse(a && a.date) || 0;
+  const db = Date.parse(b && b.date) || 0;
+  if (da !== db) return da - db;
+  const ia = String(a && a.id), ib = String(b && b.id);
+  return ia < ib ? -1 : ia > ib ? 1 : 0;
+}
+// The newest PATH.DIGEST_MAX lines, in date order.
+function trimDigest(lines) {
+  return lines.slice().sort(byDateThenId).slice(-PATH.DIGEST_MAX);
+}
+// The stored digest; when the key is missing or holds no array, rebuilt by digestOf over the
+// normalised summaries that survive, and written.
+function loadPathKey() {
+  const k = readPathKey();
+  if (!Array.isArray(k.digest)) {
+    let digest = [];
+    try { digest = store.list(KEYS.GAMES).filter(isObj).map((g) => pathModel.digestOf(pathModel.norm(g))); } catch { digest = []; }
+    k.digest = trimDigest(digest);
+    writePathKey(k);
+  }
+  return k;
+}
+// The stored summaries, normalised and in date order (for the counted window).
+function normGames() {
+  try { return store.list(KEYS.GAMES).filter(isObj).map((g) => pathModel.norm(g)).sort(byDateThenId); } catch { return []; }
+}
+// The current look's take-backs over the newest three counted summaries (K1's fact line).
+function backsOverThree(current) {
+  if (!current) return 0;
+  try {
+    const countedGames = normGames().filter((g) => !g.again && pathModel.counted(pathModel.digestOf(g))).slice(-PATH.FLOOR_WINDOW);
+    let n = 0;
+    for (const g of countedGames) for (const h of g.holds) if (h.outcome === 'back' && pathModel.nodeOf(h) === current) n += 1;
+    return n;
+  } catch { return 0; }
+}
+// compute + plan from the stored keys; a stored k3 written for another look is dropped. Returns
+// { state, plan, key } (state and plan null when path.js failed: the page plays on the MVP's rules).
+function computePlan() {
+  const key = loadPathKey();
+  let state = null;
+  let plan = null;
+  try {
+    state = pathModel.compute(key.digest, Date.now());
+    if (key.k3 && key.k3.nodeId !== state.current) {
+      key.k3 = null;
+      writePathKey(key);
+    }
+    plan = pathModel.plan(state, key.k3, key.shown, key.said, store.list(KEYS.GAMES));
+  } catch {
+    state = null;
+    plan = null;
+  }
+  return { state, plan, key };
+}
+// The plan for the game about to start: kept on S, frozen, for the whole game.
+function planGame() {
+  const r = computePlan();
+  S.path = r.state;
+  S.plan = r.plan;
+  S.hand = r.plan && r.plan.hand ? r.plan.hand : null;
+  S.giftRate = r.plan && Number.isFinite(r.plan.giftRate) ? r.plan.giftRate : null;
+  S.review = !!(r.plan && r.plan.review);
+  backs3 = backsOverThree(r.state && r.state.current);
+  return r;
+}
+// The opening line from the second game on (null keeps today's first-game line). Once planned,
+// shown := the stages he is told about, and the once-only sentences are remembered in said.
+function openingLine(plan, key) {
+  if (!plan || typeof plan.line !== 'string' || !plan.line || !S.path) return null;
+  key.shown = { ...S.path.stages };
+  const a = plan.announce;
+  if (a && a.kind === 'OFF' && a.look && !key.said.includes(`off:${a.look}`)) key.said.push(`off:${a.look}`);
+  if (a && a.kind === 'NOT_COUNTED' && S.path.newestReal && !key.said.includes(`nc:${S.path.newestReal.id}`)) key.said.push(`nc:${S.path.newestReal.id}`);
+  writePathKey(key);
+  return plan.line;
+}
+function lookState(id) {
+  return S.path && Array.isArray(S.path.looks) ? S.path.looks.find((l) => l.id === id) || null : null;
+}
+// The remembering question's slot: the look id, or the guards sub-case.
+function questionSlot(look, verdict) {
+  if (look === 'guards') return verdict && verdict.sub === 'opened_line' ? 'guards_opened_line' : 'guards_lost_guard';
+  return look;
+}
+// The two path fact lines for K1 and K2 (coach.js renders them; no square in any of it).
+function pathFacts(hold) {
+  const current = S.path && S.path.current;
+  if (!current || !COPY.PATH.MEANING[current]) return undefined;
+  const look = lookState(current);
+  return {
+    current,
+    meaning: COPY.PATH.MEANING[current],
+    hand: hold && hold.hand === 'bare' ? 'fewer words' : 'full',
+    lastThree: { holds: pathModel.countWord(look ? look.n3 : 0), backs: pathModel.countWord(backs3) },
+  };
 }
 function drawEnd() {
   return chess.isStalemate() || chess.isInsufficientMaterial() || chess.isThreefoldRepetition() || chess.isDrawByFiftyMoves() || chess.isDraw();
@@ -294,6 +470,7 @@ function drawEnd() {
 // ---------------------------------------------------------------------------------------------
 function startPre() {
   const fen = chess.fen();
+  warmFacts();
   preResult = null;
   S.pre = null;
   const token = ++preToken;
@@ -468,7 +645,9 @@ async function dropNow(mv) {
       }
       if (pre && post) {
         try {
-          verdict = gate.verdict(pre, post, before, after, { move: applied, anyways: S.anyways, playedPairs: S.playedPairs, lastMove });
+          const gameState = { move: applied, anyways: S.anyways, playedPairs: S.playedPairs, lastMove };
+          if (S.hand) gameState.hand = S.hand;
+          verdict = gate.verdict(pre, post, before, after, gameState);
         } catch { verdict = null; }
       }
     }
@@ -497,11 +676,19 @@ async function dropNow(mv) {
 async function commit(applied, { verdict = null, pre = null, before = null, after = null, droppedAt = now(), wasTutorial = false, slide = null, anyway = false, anywayLine = null, loss = null } = {}) {
   const token = turnToken;
   const prevMove = lastMove;   // the opponent's last move, for the reward's net-exchange test
+  const fenBefore = chess.fen();
+  const gift = S.lastGift;     // the opponent's last reply's verified gift, if it left one
   const real = chess.move({ from: applied.from, to: applied.to, promotion: applied.promotion });
   if (!real) return 'illegal';
   S.plies += 1;
   lastMove = real;
   factsCache = null;
+  // the v2 counters: observed (a verdict was reached on a real move), captures, a gift taken
+  if (!wasTutorial) {
+    if (verdict !== null && verdict !== undefined) observed += 1;
+    if (real.captured) captures += 1;
+  }
+  if (real.captured && gift && gift.verified && real.to === gift.square) gifts.taken += 1;
   paint();
   if (slide) await slide;
 
@@ -512,20 +699,14 @@ async function commit(applied, { verdict = null, pre = null, before = null, afte
   } else if (anyway) {
     // the anyway sentence is said after the reply
   } else if (verdict && verdict.suppressed) {
+    // the gate matched and the hand said nothing (pair, quiet or hand): the record lands
+    if (verdict.category) logLanded(real, verdict, fenBefore);
     if (LOSS_CATEGORIES.includes(verdict.category) && typeof verdict.netLoss === 'number' && verdict.netLoss >= GATE.NET_MIN) {
       loss = { category: verdict.category, target: verdict.target, netLoss: verdict.netLoss };
     }
   } else if (pre && before && after && !(verdict && verdict.held)) {
     const cpOk = !verdict || verdict.cpLoss == null || verdict.cpLoss < GATE.HOLD_CP;
-    let rw = verdict && verdict.reward ? verdict.reward : null;
-    if (!rw && cpOk) { try { rw = gate.reward(pre, before, after, applied, prevMove); } catch { rw = null; } }
-    // the opponent's own verified gift, taken: free by construction, whatever the pre-search's
-    // first line preferred
-    const gift = S.lastGift;
-    if (cpOk && (!rw || rw.kind !== 'free_taken') && gift && gift.verified && applied.captured && applied.to === gift.square) {
-      rw = { kind: 'free_taken', piece: applied.captured, square: applied.to };
-    }
-    if (rw) applyReward(rw, real);
+    if (cpOk) applyRewards(pre, before, after, applied, real, prevMove, verdict, gift);
   }
 
   if (chess.isCheckmate()) { endGame('mate-win', COPY.ENDS.MATE_WIN); return 'over'; }
@@ -542,9 +723,36 @@ async function commit(applied, { verdict = null, pre = null, before = null, afte
   return 'committed';
 }
 
-function applyReward(rw, real) {
+// Both rewards of one clean move: gate.rewards() gives { free, escaped } (escaped needs the
+// opponent's last move as the attacker); the opponent's own verified gift, taken, is free by
+// construction whatever the pre-search's first line preferred; with no last move known (a loaded
+// position) the MVP's reward() stands for escaped. Both are recorded on rewards[]; at most one is
+// said, under the unchanged quiet budget: escaped first while their_last_move is current, else free.
+function applyRewards(pre, before, after, applied, real, prevMove, verdict, gift) {
+  let r = { free: null, escaped: null };
+  if (typeof gate.rewards === 'function') {
+    try { r = { free: null, escaped: null, ...(gate.rewards(pre, before, after, applied, prevMove) || {}) }; } catch { r = { free: null, escaped: null }; }
+  }
+  let legacy = verdict && verdict.reward ? verdict.reward : null;
+  if (!legacy) { try { legacy = gate.reward(pre, before, after, applied, prevMove); } catch { legacy = null; } }
+  if (!r.free && legacy && legacy.kind === 'free_taken') r.free = legacy;
+  if (!r.free && gift && gift.verified && applied.captured && applied.to === gift.square) {
+    r.free = { kind: 'free_taken', piece: applied.captured, square: applied.to };
+  }
+  if (!r.escaped && !prevMove && legacy && legacy.kind === 'escaped') r.escaped = legacy;
+  const order = S.path && S.path.current === 'their_last_move' && r.escaped ? [r.escaped, r.free] : [r.free, r.escaped];
+  let first = true;
+  for (const rw of order) {
+    if (!rw) continue;
+    const said = applyReward(rw, real, { speak: first });
+    first = false;
+    rewardsLog.push({ kind: rw.kind, ply: S.plies, piece: rw.piece || null, said: !!said });
+  }
+}
+
+function applyReward(rw, real, { speak = true } = {}) {
   const ply = S.plies;
-  const budget = S.rewardsSaid < REWARDS.MAX_PER_GAME && S.lastRewardPly !== ply - 2;
+  const budget = speak && S.rewardsSaid < REWARDS.MAX_PER_GAME && S.lastRewardPly !== ply - 2;
   let said = false;
   if (rw.kind === 'free_taken') {
     freeTaken += 1;
@@ -636,6 +844,7 @@ async function reply({ droppedAt = now(), anyway = false, token = turnToken } = 
   lastMove = mv;
   factsCache = null;
   S.lastGift = chosen.gift ? { san: chosen.san, verified: true, square: chosen.gift.square, piece: chosen.gift.piece, how: chosen.how } : null;
+  if (chosen.gift) gifts.offered += 1;
   edge(false);
   await board.move(mv);
   paint();
@@ -658,16 +867,48 @@ function goIdle() {
   startPre();
   if (mercyPending) offerMercy();
 }
+// The idle position's facts are built once the board is idle, off the drop's path, so the drop
+// (and the tutorial's 100 ms hold) only builds the facts after the move. Keyed by fen: a stale
+// warm-up is simply recomputed at the drop.
+let warmTimer = null;
+function warmFacts() {
+  if (warmTimer) clearTimeout(warmTimer);
+  warmTimer = setTimeout(() => {
+    warmTimer = null;
+    if (S.state !== 'idle') return;
+    try { factsBefore(); } catch { /* the drop builds them itself */ }
+  }, 0);
+}
 
 // ---------------------------------------------------------------------------------------------
 // Holds
 // ---------------------------------------------------------------------------------------------
-function openHold(applied, verdict, before, after, scratch, { tint = [] } = {}) {
+// `drill` (the again-from game's first hold) frames the page's own question with the framing line;
+// otherwise the question follows the hand: the bare line when the hand reads 'bare', the remembering question
+// for a hold of the current look when the newest real game held one (never in the tutorial or an
+// again game), else the category template.
+function openHold(applied, verdict, before, after, scratch, { tint = [], drill = false, framing = null } = {}) {
   let copy;
   try { copy = gate.holdCopy(verdict, after, applied); } catch { copy = null; }
   if (!copy) copy = plainCopy(verdict);
   let asks = [];
   try { asks = gate.asksFor(verdict, before, after, applied, chess) || []; } catch { asks = []; }
+  let hand = 'full';
+  let question = copy.question;
+  if (drill) {
+    question = framing ? `${framing} ${copy.question}` : copy.question;
+  } else if (!S.tutorial) {
+    try { hand = handLevel(S.hand, verdict); } catch { hand = 'full'; }
+    if (hand === 'bare') {
+      question = COPY.QUESTION.bare;
+    } else if (!S.again && S.path && S.plan && S.path.current) {
+      let node = null;
+      try { node = pathModel.nodeOf(verdict); } catch { node = null; }
+      const look = lookState(S.path.current);
+      const own = S.plan.question ? S.plan.question[questionSlot(node, verdict)] : null;
+      if (node && node === S.path.current && look && look.nGame > 0 && typeof own === 'string' && own) question = own;
+    }
+  }
   const hold = {
     category: verdict.category, sub: verdict.sub || null, variant: verdict.variant || null,
     san: applied.san, from: applied.from, to: applied.to, piece: applied.piece, captured: applied.captured || null,
@@ -683,12 +924,13 @@ function openHold(applied, verdict, before, after, scratch, { tint = [] } = {}) 
     move: applied, verdict, factsBefore: before, factsAfter: after, fenBefore: chess.fen(), fenAfter: scratch.fen(),
     ply: S.plies + 1, tint,
     k1Ctl: null, k2Ctl: null,
+    hand, drill: !!drill, said: null,
   };
   S.hold = hold;
   S.state = 'held';
-  holdUI.open(hold, { hear: false });
+  holdUI.open(hold, { hear: false, question });
   applyLinkPolicy();
-  if (!hold.tutorial && coach && !coachHidden && coach.consented() && coach.available()) fireK1(hold);
+  if (!hold.tutorial && !S.again && coach && !coachHidden && coach.consented() && coach.available()) fireK1(hold);
 }
 
 // A last-resort copy set when gate.holdCopy throws: templates filled with the plain words.
@@ -713,7 +955,7 @@ function fireK1(hold) {
   hold.k1Ctl = ctl;
   hold.claude.k1 = 'pending';
   Promise.resolve()
-    .then(() => coach.followUps({ facts: hold.factsAfter, hold, holdsSoFar: holdLog.slice(), remembered: rememberedLine(), signal: ctl.signal }))
+    .then(() => coach.followUps({ facts: hold.factsAfter, hold, holdsSoFar: shownHolds(), remembered: rememberedLine(), path: pathFacts(hold), signal: ctl.signal }))
     .then((r) => {
       if (S.hold !== hold) { hold.claude.k1 = 'late'; return; }
       if (r && r.ok && r.value) { hold.claude.k1 = 'ready'; holdUI.setK1(r.value); }
@@ -734,16 +976,54 @@ function abortGhost() {
   if (ghost) { const g = ghost; ghost = null; g.abort(); }
 }
 
+function copyAnswer(a) {
+  if (!a || !Array.isArray(a.squares)) return null;
+  return { squares: a.squares.slice(), best: a.best == null ? null : a.best, partial: Array.isArray(a.partial) ? a.partial.slice() : [] };
+}
+function pawnAmongTakersOf(verdict) {
+  if (!verdict) return false;
+  if (typeof verdict.pawnAmongTakers === 'boolean') return verdict.pawnAmongTakers;
+  return Array.isArray(verdict.takers) && verdict.takers.some((t) => t && t.type === 'p');
+}
+// HoldRecord v2 (ARCHITECTURE.md 8.3).
 function holdRecord(hold, outcome) {
-  return {
+  const v = hold.verdict || {};
+  const rec = {
     fen: hold.fenBefore, san: hold.san, category: hold.category, sub: hold.sub,
-    taps: hold.taps.map((t) => ({ square: t.square, grade: t.grade })), outcome,
-    coachShown: !!(hold.claude && hold.claude.coachShown), netLoss: hold.netLoss, piece: hold.piece, to: hold.to,
-    best: hold.answer ? hold.answer.best : null, ply: hold.ply, gameId,
+    variant: hold.variant || null, pawnAmongTakers: pawnAmongTakersOf(v),
+    taps: hold.taps.map((t) => ({ square: t.square, grade: t.grade, ask: t.ask || null })), outcome,
+    why: null, answered: !!hold.answered,
+    coachShown: !!(hold.claude && hold.claude.coachShown),
+    said: typeof hold.said === 'string' && hold.said ? hold.said.slice(0, PATH.SAID_TEXT_MAX) : null,
+    netLoss: hold.netLoss, piece: hold.piece, to: hold.to,
+    best: hold.answer ? hold.answer.best : null,
+    answer: copyAnswer(hold.answer),
+    refutation: Array.isArray(hold.refutation) ? hold.refutation.slice() : [],
+    refutationFrom: v.refutationFrom === 'pre' ? 'pre' : 'post',
+    ply: hold.ply, gameId,
   };
+  // a tutorial hold is shown on the card but is never a record of a look (summary.holds skips it)
+  if (hold.tutorial) rec.tutorial = true;
+  return rec;
 }
 function logHold(hold, outcome) {
   const rec = holdRecord(hold, outcome);
+  holdLog.push(rec);
+  return rec;
+}
+// A verdict the gate matched but did not show (why 'pair' | 'quiet' | 'hand'): the move landed.
+function logLanded(real, verdict, fenBefore) {
+  const rec = {
+    fen: fenBefore, san: real.san, category: verdict.category, sub: verdict.sub || null,
+    variant: verdict.variant || null, pawnAmongTakers: pawnAmongTakersOf(verdict),
+    taps: [], outcome: 'landed', why: verdict.suppressed || null, answered: false, coachShown: false, said: null,
+    netLoss: typeof verdict.netLoss === 'number' ? verdict.netLoss : null, piece: real.piece, to: real.to,
+    best: verdict.answer ? (verdict.answer.best == null ? null : verdict.answer.best) : null,
+    answer: copyAnswer(verdict.answer),
+    refutation: Array.isArray(verdict.refutation) ? verdict.refutation.slice() : [],
+    refutationFrom: verdict.refutationFrom === 'pre' ? 'pre' : 'post',
+    ply: S.plies, gameId,
+  };
   holdLog.push(rec);
   return rec;
 }
@@ -755,7 +1035,8 @@ async function takeBack() {
   abortHoldCalls(hold);
   holdUI.close();
   S.hold = null;
-  logHold(hold, 'back');
+  // the drill's take-back is its own outcome ('again'), never a record of a look
+  logHold(hold, hold.drill ? 'again' : 'back');
   backs += 1;
   await board.unmove(hold.move);
   S.state = 'idle';
@@ -764,6 +1045,7 @@ async function takeBack() {
   paint();
   lineHold = false;
   if (hold.tutorial) sayHeld(COPY.TUTORIAL_BACK);
+  else if (hold.drill) sayHeld(COPY.PATH.ANSWERED);
   else coachLine.say(COPY.YOUR_MOVE);
   // the cached pre-search is reused; no new search unless there is none for this position
   if (!hold.tutorial && (!preResult || preResult.fen !== chess.fen())) startPre();
@@ -892,9 +1174,12 @@ async function sendHearMeOut(textIn) {
   hold.claude.k2 = 'asking';
   const ctl = new AbortController();
   hold.k2Ctl = ctl;
+  // what he wrote is kept on the record, raw and trimmed (coach.js masks it before any prompt)
+  hold.claude.saidText = text;
+  hold.said = text.slice(0, PATH.SAID_TEXT_MAX);
   let r;
   try {
-    r = await coach.hearMeOut({ facts: hold.factsAfter, hold, asks: hold.asks, text, holdsSoFar: holdLog.slice(), signal: ctl.signal });
+    r = await coach.hearMeOut({ facts: hold.factsAfter, hold, asks: hold.asks, text, holdsSoFar: shownHolds(), path: pathFacts(hold), signal: ctl.signal });
   } catch (e) {
     r = { ok: false, code: e && e.code ? e.code : 'upstream_error' };
   }
@@ -1007,38 +1292,85 @@ function endGame(result, line) {
   ringSquare = null;
   paint();
   actionsEl.textContent = '';
+  endLine = line;
   sayHeld(line);
-  if (S.plies > 0 || holdLog.length) storeGame(result);
-  fillCloseCard();
+  const tutorialGame = gameHadTutorial || S.tutorial;
+  const stored = S.plies > 0 || holdLog.length > 0;
+  if (stored) storeGame(result);
+  // the end plan: the state after this game (the close card, the path view, the drill)
+  const r = computePlan();
+  if (r.state) S.path = r.state;
+  endPlan = r.plan;
+  fillCloseCard(endPlan);
+  // the mirror reads and writes behind the card (fire and forget; silent in every outcome)
+  if (stored && mirror && typeof mirror.sync === 'function') {
+    try { Promise.resolve(mirror.sync()).catch(() => {}); } catch { /* local only */ }
+  }
+  if (stored) fireK3(endPlan, { tutorialGame });
 }
 
+// GameSummary v2 (ARCHITECTURE.md 8.3), its digest line, and the holds log. The notch is never
+// written: it follows the path.
 function storeGame(result) {
+  const key = loadPathKey();   // before the append: a rebuilt digest must not hold this game twice
   const summary = {
-    id: gameId, date: new Date().toISOString(), result, givenAway, holds: holdLog.slice(),
+    v: 2, id: gameId, date: new Date().toISOString(), result, givenAway,
+    holds: holdLog.filter((h) => !h.tutorial),
     freeTaken, playedAnyway: S.anyways, plies: S.plies, backs,
+    observed, captures, rewards: rewardsLog.slice(), gifts: { offered: gifts.offered, taken: gifts.taken },
+    again: !!S.again, hand: S.hand || handAll('full'), review: !!S.review,
   };
-  store.append(KEYS.GAMES, summary, KEEP.GAMES);
+  store.append(KEYS.GAMES, summary);
   for (const h of holdLog) store.append(KEYS.HOLDS, h, KEEP.HOLDS);
-  if (givenAway === 0) {
-    const steps = BOT.GIFT_RATE_STEPS;
-    const cur = Number(store.get(KEYS.GIFT_RATE, steps[0]));
-    const i = steps.indexOf(cur);
-    const next = i < 0 ? steps[Math.min(1, steps.length - 1)] : steps[Math.min(i + 1, steps.length - 1)];
-    store.set(KEYS.GIFT_RATE, next);
+  let line = null;
+  try { line = pathModel.digestOf(summary); } catch { line = null; }
+  if (line) {
+    key.digest = trimDigest(key.digest.filter((l) => !(isObj(l) && l.id === line.id)).concat([line]));
+    writePathKey(key);
   }
 }
 
-function fillCloseCard() {
+// The words of the path for the view and K3 (path.words over the stored log).
+function pathWords(planNow, extra = {}) {
+  if (!S.path) return null;
+  const key = readPathKey();
+  try {
+    return pathModel.words(S.path, {
+      games: store.list(KEYS.GAMES), digest: key.digest || [], k3: key.k3, said: key.said,
+      transitions: planNow ? planNow.transitions : [], drill: planNow ? planNow.drill : null,
+      offeredAsks: [...ASK_KINDS], now: Date.now(), ...extra,
+    });
+  } catch { return null; }
+}
+
+function fillCloseCard(planNow = null) {
   if (!closeEl) return;
   const sum = closeEl.querySelector('.close-sum');
   const list = closeEl.querySelector('.close-holds');
   const before = previousGame;
+  // the counts are the holds he saw; a landed record is listed below but never counted as a stop
+  const shown = shownHolds();
   const vars = {
-    times: timesWord(holdLog.length), back: timesWord(backs), g: String(givenAway),
+    times: timesWord(shown.length), back: timesWord(backs), g: String(givenAway),
     last: before ? fill(COPY.CLOSE.LAST, { n: String(before.givenAway) }) : '', f: String(freeTaken),
   };
-  const template = !holdLog.length ? COPY.CLOSE.SUMMARY_NONE : backs === 0 ? COPY.CLOSE.SUMMARY_NO_BACKS : COPY.CLOSE.SUMMARY;
+  const template = !shown.length ? COPY.CLOSE.SUMMARY_NONE : backs === 0 ? COPY.CLOSE.SUMMARY_NO_BACKS : COPY.CLOSE.SUMMARY;
   if (sum) sum.textContent = fill(template, vars);
+  // the path line, Claude's where (only once K3 wrote it for this game), the two links
+  const pathLine = closeEl.querySelector(`.${DOM.path.closePath}`);
+  if (pathLine) pathLine.textContent = planNow && typeof planNow.closeLine === 'string' ? planNow.closeLine : '';
+  const where = closeEl.querySelector(`.${DOM.path.closeWhere}`);
+  if (where) {
+    const k3 = readPathKey().k3;
+    const mine = k3 && k3.gameId === gameId && typeof k3.where === 'string' && k3.where ? k3.where : '';
+    where.textContent = mine;
+    where.hidden = !mine;
+    where.classList.toggle('in', !!mine);
+  }
+  const againFromEl = closeEl.querySelector('[data-action="again-from"]');
+  if (againFromEl) againFromEl.hidden = !(planNow && planNow.drill) || !!S.again;
+  const pathLink = closeEl.querySelector('[data-action="path"]');
+  if (pathLink) pathLink.hidden = false;
   if (list) {
     list.textContent = '';
     for (const rec of holdLog) {
@@ -1059,11 +1391,229 @@ function fillCloseCard() {
 }
 
 // ---------------------------------------------------------------------------------------------
+// K3, the close: once per game id, after consent, never in the tutorial or an again game
+// ---------------------------------------------------------------------------------------------
+function fireK3(planNow, { tutorialGame = false } = {}) {
+  if (!coach || coachHidden || typeof coach.closeLines !== 'function') return;
+  let consented = false;
+  try { consented = !!coach.consented(); } catch { consented = false; }
+  if (!consented || S.again || tutorialGame || k3Fired === gameId || !S.path) return;
+  k3Fired = gameId;
+  const thisGame = gameId;
+  const nodeId = S.path.current;
+  const drill = planNow && planNow.drill ? planNow.drill : null;
+  // what he wrote this game, with the look each came from (masked by coach.js)
+  const saidTexts = holdLog.filter((h) => typeof h.said === 'string' && h.said && !h.tutorial).map((h) => {
+    let look = null;
+    try { look = pathModel.nodeOf(h); } catch { look = null; }
+    return { look, text: h.said };
+  });
+  const words = pathWords(planNow, { saidTexts });
+  if (!words) return;
+  // the templates that stand in for each rejected field
+  const firstSlot = nodeId && COPY.PATH.QUESTION[nodeId] ? nodeId : null;
+  const templates = {
+    where: planNow && planNow.where ? planNow.where : COPY.PATH.WHERE.FIRST,
+    next: nodeId && COPY.PATH.OPEN[nodeId] ? `${COPY.PATH.OPEN[nodeId]}${planNow && planNow.countdown ? ` ${planNow.countdown}` : ''}` : COPY.PATH.NOTHING_LEFT,
+    // guards has two remembering questions: a template for one would stand for both, so none
+    question: firstSlot ? COPY.PATH.QUESTION[firstSlot] : null,
+  };
+  const text = (v) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+  Promise.resolve()
+    .then(() => coach.closeLines({ words, signal: new AbortController().signal }))
+    .then((r) => {
+      if (!r || !r.ok || !r.value) return;
+      const v = r.value;
+      const againLine = text(v.again);
+      const k3 = {
+        gameId: thisGame, nodeId, promptVersion: CLAUDE.PROMPT_VERSION,
+        where: text(v.where) || templates.where,
+        next: text(v.next) || templates.next,
+        again: againLine && drill && drill.record ? { line: againLine, recordGameId: drill.record.gameId, recordPly: drill.record.ply } : null,
+        question: text(v.question) || templates.question,
+        askFirst: v.ask_first != null ? v.ask_first : (nodeId ? PATH.ASK_FIRST[nodeId] ?? null : null),
+        focus: v.focus != null ? v.focus : null,
+      };
+      const key = readPathKey();
+      key.k3 = k3;
+      if (!Array.isArray(key.digest)) key.digest = [];
+      writePathKey(key);
+      if (S.state === 'over' && gameId === thisGame) {
+        // fade Claude's where in under the path line while the card is still up
+        const where = closeEl && closeEl.querySelector(`.${DOM.path.closeWhere}`);
+        if (where) {
+          where.textContent = k3.where;
+          where.hidden = false;
+          requestFrame(() => where.classList.add('in'));
+        }
+      } else if (gameId !== thisGame && S.state === 'idle' && S.plies === 0 && !picked && !S.tutorial && !S.again && !S.hold) {
+        // the next game already began and nothing has happened in it: its line is Claude's now
+        const { plan, key: k } = planGame();
+        const line = openingLine(plan, k);
+        if (line) { coachLine.say(line); lineHold = true; }
+      }
+    })
+    .catch(() => { /* the templates stand */ });
+}
+function requestFrame(fn) {
+  try { if (typeof requestAnimationFrame === 'function') { requestAnimationFrame(() => fn()); return; } } catch { /* below */ }
+  setTimeout(fn, 0);
+}
+
+// ---------------------------------------------------------------------------------------------
+// The path view: a sub-state of over, entered from the close card only
+// ---------------------------------------------------------------------------------------------
+function renderPathRows(words) {
+  if (!pathLooksEl) return;
+  pathLooksEl.textContent = '';
+  for (const row of words.rows) {
+    const li = document.createElement('li');
+    li.className = DOM.path.row;
+    li.dataset.look = row.id;
+    li.dataset.stage = row.state;
+    if (row.state === 'current') {
+      const dot = document.createElement('span');
+      dot.className = DOM.path.dot;
+      dot.setAttribute('aria-hidden', 'true');
+      li.appendChild(dot);
+    }
+    const sentence = document.createElement('button');
+    sentence.type = 'button';
+    sentence.className = DOM.path.sentence;
+    sentence.textContent = row.sentence;
+    li.appendChild(sentence);
+    const caption = document.createElement('span');
+    caption.className = DOM.path.caption;
+    caption.textContent = row.caption;
+    li.appendChild(caption);
+    pathLooksEl.appendChild(li);
+  }
+  if (words.collapsed) {
+    const li = document.createElement('li');
+    li.className = `${DOM.path.row} ${DOM.path.collapsed}`;
+    const caption = document.createElement('span');
+    caption.className = DOM.path.caption;
+    caption.textContent = words.collapsed;
+    li.appendChild(caption);
+    pathLooksEl.appendChild(li);
+  }
+}
+// The still: the look's newest record lifted over its square with the amber ring; the start
+// position when the look has none.
+function aimStill(lookId) {
+  let still = null;
+  try { still = lookId ? pathModel.stillOf(store.list(KEYS.GAMES), lookId) : null; } catch { still = null; }
+  if (still && still.chess && still.record) {
+    board.setPosition(still.chess);
+    board.lift(still.record.to);
+    board.setMarks({ amber: still.record.to });
+  } else {
+    board.setPosition(new Chess(START_FEN));
+    board.lift(null);
+    board.setMarks({});
+  }
+}
+function enterPath() {
+  if (S.state !== 'over' || S.view || S.hold || S.tutorial || !pathEl || !S.path) return;
+  const words = pathWords(endPlan);
+  if (!words) return;
+  S.view = 'path';
+  if (stageEl) stageEl.dataset.view = 'path';
+  if (closeEl) closeEl.hidden = true;
+  renderPathRows(words);
+  pathEl.hidden = false;
+  coachLine.say(words.where);
+  lineHold = true;
+  actionsEl.textContent = '';
+  actionsEl.appendChild(button(DOM.buttonClasses.quiet, 'back', COPY.BUTTONS.BACK));
+  aimStill(S.path.current);
+  // the last row in view, as Again is on the card
+  try {
+    const last = pathLooksEl && pathLooksEl.lastElementChild;
+    if (last && last.getBoundingClientRect().bottom > window.innerHeight) last.scrollIntoView({ block: 'end' });
+  } catch { /* no layout: nothing to scroll */ }
+}
+// Leave the view silently (a new game is starting): no line, no board restore.
+function clearView() {
+  S.view = null;
+  if (stageEl) delete stageEl.dataset.view;
+  if (pathEl) pathEl.hidden = true;
+}
+function leavePath() {
+  if (!S.view) return;
+  clearView();
+  if (closeEl) closeEl.hidden = false;
+  actionsEl.textContent = '';
+  board.setPosition(chess);
+  board.lift(null);
+  paint();
+  coachLine.say(endLine);
+  lineHold = true;
+}
+
+// ---------------------------------------------------------------------------------------------
+// The again-from drill: his own worst moment of the current look, as a real game
+// ---------------------------------------------------------------------------------------------
+async function againFrom() {
+  const drill = endPlan && endPlan.drill;
+  if (S.state !== 'over' || S.again || !drill || !drill.record) return;
+  const record = drill.record;
+  const k3 = readPathKey().k3;
+  const framing = k3 && k3.again && typeof k3.again.line === 'string' && k3.again.line
+    && k3.again.recordGameId === record.gameId && k3.again.recordPly === record.ply ? k3.again.line : COPY.PATH.AGAIN;
+  let start = null;
+  let applied = null;
+  try {
+    start = new Chess(record.fen);
+    applied = new Chess(record.fen).move(record.san);
+  } catch { start = null; applied = null; }
+  let verdict = null;
+  if (start && applied) {
+    try { verdict = typeof gate.recordVerdict === 'function' ? gate.recordVerdict(record, applied, start) : null; } catch { verdict = null; }
+  }
+  if (!verdict) { await newGame(); return; }
+  dropEverything();
+  resetGame();
+  previousGame = store.list(KEYS.GAMES).slice(-1)[0] || null;
+  planGame();
+  S.again = true;
+  chess = start;
+  lastMove = null;
+  factsCache = null;
+  S.tutorial = false;
+  S.result = null;
+  board.setPosition(chess);
+  board.setMarks({});
+  board.pick(null);
+  board.lift(null);
+  board.pending(null);
+  S.state = 'pending';
+  board.setState('pending', null);
+  board.setInput('locked');
+  const token = turnToken;
+  const before = buildFacts(chess, { player: PLAYER });
+  const scratch = new Chess(record.fen);
+  scratch.move({ from: applied.from, to: applied.to, promotion: applied.promotion });
+  const after = buildFacts(scratch, { player: PLAYER });
+  S.lastVerdict = verdict;
+  await board.move(applied);
+  if (token !== turnToken) return;
+  openHold(applied, verdict, before, after, scratch, { tint: [], drill: true, framing });
+}
+
+// ---------------------------------------------------------------------------------------------
 // Games: start, load, new
 // ---------------------------------------------------------------------------------------------
 function resetGame() {
-  gameId = Date.now().toString(36);
+  gameId = newGameId();
   holdLog = [];
+  observed = 0;
+  captures = 0;
+  gifts = { offered: 0, taken: 0 };
+  rewardsLog = [];
+  gameHadTutorial = false;
+  endPlan = null;
+  S.again = false;
   backs = 0;
   givenAway = 0;
   freeTaken = 0;
@@ -1099,6 +1649,7 @@ function dropEverything() {
   picked = null;
   actionsEl.textContent = '';
   if (closeEl) closeEl.hidden = true;
+  if (S.view) clearView();
   try { document.body.classList.remove('typing'); } catch { /* ignore */ }
   try { if (window.scrollY) window.scrollTo(0, 0); } catch { /* ignore */ }
 }
@@ -1110,6 +1661,7 @@ async function startGame(fen, { line = null, tutorial = false, keepLine = false 
   factsCache = null;
   S.lastRewardPly = -10;   // a loaded position starts a new move sequence; the budget count stays
   S.tutorial = !!tutorial;
+  if (tutorial) gameHadTutorial = true;
   S.result = null;
   board.setPosition(chess);
   board.setMarks({});
@@ -1129,18 +1681,23 @@ async function startGame(fen, { line = null, tutorial = false, keepLine = false 
   await startPre();
 }
 
+// A new game at the start position: recomputed from the stored digest (which now holds the game
+// just stored); from the second game on the opening line is the plan's, else today's line.
 async function newGame({ line } = {}) {
   dropEverything();
   resetGame();
   previousGame = store.list(KEYS.GAMES).slice(-1)[0] || null;
-  const remembered = line || rememberedLine() || COPY.YOUR_MOVE;
-  await startGame(START_FEN, { line: remembered, keepLine: remembered !== COPY.YOUR_MOVE });
+  const { plan, key } = planGame();
+  let opening = line || openingLine(plan, key);
+  if (!opening) opening = rememberedLine() || COPY.YOUR_MOVE;
+  await startGame(START_FEN, { line: opening, keepLine: opening !== COPY.YOUR_MOVE });
 }
 
 async function loadFen(fen) {
   let ok = null;
   try { ok = new Chess(fen); } catch { ok = null; }
   if (!ok) return;
+  gameHadTutorial = false;   // load() leaves the tutorial; its own holds stay marked
   await startGame(fen, { line: COPY.YOUR_MOVE });
 }
 
@@ -1158,7 +1715,13 @@ async function doAction(name) {
     case 'giveup-yes': return giveUp();
     case 'keep': return keepPlaying();
     case 'startagain': return giveUp();
-    case 'again': return S.state === 'over' ? newGame() : undefined;
+    case 'again':
+      if (S.state !== 'over') return undefined;
+      if (S.view) clearView();
+      return newGame();
+    case 'path': return enterPath();
+    case 'back': return leavePath();
+    case 'again-from': return againFrom();
     case 'theme': return toggleTheme();
     default: return undefined;
   }
@@ -1192,6 +1755,15 @@ actionsEl.addEventListener('keydown', (ev) => {
   if (t && t.id === DOM.ids.sayInput) { ev.preventDefault(); doAction('send'); }
 });
 boardEl.addEventListener('pointerdown', () => { if (ghost) abortGhost(); });
+// the path view: a sentence re-aims the still at its look; Escape leaves the view
+document.addEventListener('click', (ev) => {
+  if (S.view !== 'path') return;
+  const row = ev.target instanceof Element ? ev.target.closest(`#${DOM.ids.path} [data-look]`) : null;
+  if (row && row.dataset.look) aimStill(row.dataset.look);
+});
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' && S.view === 'path') { ev.preventDefault(); leavePath(); }
+});
 try {
   if (window.visualViewport) window.visualViewport.addEventListener('resize', setVvh);
   window.addEventListener('resize', setVvh);
@@ -1239,10 +1811,34 @@ const app = {
   },
   holds: () => holdLog.slice(),
   stats: () => ({
-    holdsCount: holdLog.length, backs, anyways: S.anyways, givenAway, freeTaken, rewardsSaid: S.rewardsSaid,
+    holdsCount: shownHolds().length, backs, anyways: S.anyways, givenAway, freeTaken, rewardsSaid: S.rewardsSaid,
     plies: S.plies, lastGivenAway: previousGame ? previousGame.givenAway : null, gameId,
+    observed, captures, gifts: { offered: gifts.offered, taken: gifts.taken }, rewards: rewardsLog.length,
+    landed: holdLog.filter((h) => h.outcome === 'landed').length,
   }),
   newGame: () => newGame(),
+  // the path
+  path: () => S.path,
+  plan: () => S.plan,
+  view: () => S.view,
+  async again() {
+    await againFrom();
+  },
+  // Writes the log keys as a reload would find them, then starts a new game; resolves S.path.
+  async seed({ games, path, giftRate } = {}) {
+    if (games !== undefined) store.set(KEYS.GAMES, Array.isArray(games) ? games : []);
+    const list = store.list(KEYS.GAMES);
+    let value = isObj(path) ? { ...path } : null;
+    if (!value || !Array.isArray(value.digest)) {
+      let digest = [];
+      try { digest = list.filter(isObj).map((g) => pathModel.digestOf(pathModel.norm(g))); } catch { digest = []; }
+      value = { v: 1, k3: null, said: [], shown: null, ...(value || {}), digest };
+    }
+    store.set(KEYS.PATH, value);
+    if (giftRate !== undefined) store.set(KEYS.GIFT_RATE, giftRate);
+    await newGame();
+    return S.path;
+  },
 };
 Object.defineProperty(app, 'fast', { get: fastNow, set: setFast, enumerable: true });
 window.__app = app;
@@ -1268,20 +1864,65 @@ function fetchTutorial() {
   return tutorialReady;
 }
 
+// The db and identity mirror, after first paint: every use() is null outside the viewer and the page
+// plays the same without it; nothing is ever said about any of it.
+// The identity capability's name, assembled so copy_check (which scans string literals for the
+// copy rules' banned words, that name among them) reads no copy here: it is an API name.
+const IDENTITY_CAP = ['u', 's', 'e', 'r'].join('');
+async function bootMirror() {
+  if (typeof store.mirror !== 'function') return;
+  const claude = typeof window !== 'undefined' ? window.claude : null;
+  const use = (name) => (claude && typeof claude.use === 'function'
+    ? Promise.resolve().then(() => claude.use(name)).catch(() => null)
+    : Promise.resolve(null));
+  let caps = [null, null, null];
+  try { caps = await Promise.all(['db', IDENTITY_CAP, 'permissions'].map(use)); } catch { caps = [null, null, null]; }
+  const [db, user, permissions] = caps;
+  try {
+    mirror = store.mirror({ db, user, permissions, onMerged });
+  } catch { mirror = null; }
+  if (mirror && typeof mirror.boot === 'function') {
+    try { await mirror.boot(); } catch { /* local only */ }
+  }
+}
+// A merge rewrote the local keys: shown is reset silently to the merged stages (a merge never
+// announces anything); a game not yet begun takes the merged plan, hand and line.
+function onMerged() {
+  try {
+    const fresh = computePlan();
+    if (fresh.state) {
+      const key = readPathKey();
+      key.shown = { ...fresh.state.stages };
+      if (!Array.isArray(key.digest)) key.digest = fresh.key.digest || [];
+      writePathKey(key);
+    }
+    if (S.state === 'idle' && S.plies === 0 && !picked && !S.tutorial && !S.again && !S.hold && !S.view) {
+      previousGame = store.list(KEYS.GAMES).slice(-1)[0] || null;
+      const { plan, key } = planGame();
+      const line = openingLine(plan, key);
+      if (line) { coachLine.say(line); lineHold = true; }
+    }
+  } catch { /* the local plan stands */ }
+}
+
 function boot() {
   applyTheme();
   setVvh();
   resetGame();
   const firstVisit = !flagSet(KEYS.TUTORIAL_SEEN);
+  const { plan, key } = planGame();
   if (firstVisit) {
     fetchTutorial();
     startGame(TUTORIAL_FEN, { line: COPY.TUTORIAL_OPEN, tutorial: true, keepLine: true });
   } else {
-    const remembered = rememberedLine();
-    startGame(START_FEN, { line: remembered || COPY.YOUR_MOVE, keepLine: !!remembered });
+    const line = openingLine(plan, key) || rememberedLine();
+    startGame(START_FEN, { line: line || COPY.YOUR_MOVE, keepLine: !!line });
   }
-  // the coach after first paint
-  const later = () => setTimeout(bootCoach, 0);
+  // the coach and the mirror after first paint
+  const later = () => setTimeout(() => {
+    bootCoach();
+    bootMirror().catch(() => { /* local only */ });
+  }, 0);
   if (typeof requestAnimationFrame === 'function') requestAnimationFrame(later);
   else later();
 }

@@ -81,9 +81,8 @@ export const ENGINE = {
 };
 export const BOT = {
   GIFT_RATE: 0.12,                 // probability of a gift roll per bot move from GIFT_FROM_MOVE
-  // Iteration two: the notch follows the path (PATH.GIFT_RATE, plan.giftRate). GIFT_RATE_STEPS is
-  // kept only until game.js stops reading it in storeGame; the integrator deletes it then.
-  GIFT_RATE_STEPS: [0.12, 0.08],
+  // Iteration two: the notch follows the path (PATH.GIFT_RATE, plan.giftRate); the old
+  // GIFT_RATE_STEPS ladder is gone (game.js no longer writes KEYS.GIFT_RATE).
   GIFT_FROM_MOVE: 3,               // the bot's third move onward
   GIFT_MAX_CHECKS: 6,              // candidates verified at depth GIFT_DEPTH
   GIFT_DEPTH: 10,
@@ -206,7 +205,7 @@ export const PATH = {
   // path.js's own ask_first rule (the K2 kind a hold of this look leans toward when K3 is silent)
   ASK_FIRST: { pawns: 'what_takes_it', takers: 'what_takes_it', takes_back: 'what_takes_back', their_last_move: 'attacked_piece', free: 'what_is_free', guards: 'attacked_piece', mates: null },
 };
-// The hand level of a verdict-shaped thing ({ category, sub, variant, pawnAmongTakers }) under
+// The hand setting of a verdict-shaped thing ({ category, sub, variant, pawnAmongTakers }) under
 // plan.hand: by category, then sub, then pawnAmongTakers (first), then variant. A missing hand,
 // slot or unknown value reads 'full'; mates and stalemate are always 'full'. gate.verdict (the
 // 'hand' suppression), game.js (the bare question) and the tests all read it from here.
@@ -225,7 +224,7 @@ export function handLevel(hand, v) {
   }
   return PATH.HAND_LEVELS.includes(level) ? level : 'full';
 }
-// The plan.hand with every slot at one level (an empty log, or the tests).
+// The plan.hand with every slot at one setting (an empty log, or the tests).
 export function handAll(level = 'full') {
   return {
     hanging_after_move: { pawn: level, piece: level, takes_back: level },
@@ -368,7 +367,7 @@ export const COPY = {
     allowed_mate: 'Hold on. Their {piece} has a check next move. Where does it land? Tap it.',
     missed_mate: 'Hold on. You have a checkmate on the board. Tap the square.',
     allowed_stalemate: 'Hold on. After this, can their king move at all? Tap their king.',
-    // the hand at level 'bare' (a quiet look, or an off look under review): the hold fires, the
+    // the hand set to 'bare' (a quiet look, or an off look under review): the hold fires, the
     // piece lifts, the square breathes, every tap is graded as always, but this is all it says
     bare: 'Hold on. You know this one. Tap it.',
   },
@@ -583,6 +582,7 @@ export const COPY = {
       ALL: '{n} holds today, all on {look}. That is what we are on.',
       SOME: '{n} holds today, {k} on {look}. That is what we are on.',
       OTHER: '{n} holds today, none on {look}. That is still what we are on.',
+      OTHER_ONE: 'One hold today, none on {look}. That is still what we are on.',
       LANDED: 'A piece landed today where {look} would have caught it. I will ask again.',
       AGAIN: 'That one was practice. Nothing in it counts for or against you.',
       NOTHING_LEFT: 'There is nothing left for me to hold.',

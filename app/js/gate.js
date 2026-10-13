@@ -279,7 +279,7 @@ function matchCategory(category, ctx) {
 }
 
 // The verdict: first matching category in CATEGORIES order, then the pair, quiet and hand rules.
-// `gameState.hand` (plan.hand, the per-look hand level) is read through contract.handLevel: a
+// `gameState.hand` (plan.hand, the per-look hand setting) is read through contract.handLevel: a
 // material category whose slot is 'off' is suppressed 'hand' with every fact intact, so the
 // landed record carries what the hold would have; ALWAYS_HOLD and a loss of BIG_LOSS or more
 // hold whatever the hand says. With no hand nothing changes.
