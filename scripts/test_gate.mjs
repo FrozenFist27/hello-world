@@ -630,4 +630,303 @@ console.log('between games: ok');
 }
 console.log('facts: ok');
 
-console.log(`all ${checks} checks passed`);
+// ==========================================================================================
+// Iteration two (the pathway). Everything above is the MVP's test and must stay exactly as it
+// is: the same count, the same outcome, with gameState.hand absent on every call.
+// ==========================================================================================
+const BASELINE = 2195;
+if (checks !== BASELINE) throw new Error(`the MVP's checks changed: ${checks} ran before the pathway sections, expected ${BASELINE}`);
+console.log(`baseline: ${checks} checks unchanged`);
+
+// ------------------------------------------------------------------------------------------
+// 12. The hand: suppressed 'hand' after the pair and quiet rules, facts intact
+// ------------------------------------------------------------------------------------------
+{
+  // the pawn slot off, everything else full
+  const pawnsOff = C.handAll('full');
+  pawnsOff.hanging_after_move.pawn = 'off';
+  const live = run('italian_d6', 'Nxe5').v;
+  const { v } = run('italian_d6', 'Nxe5', { hand: pawnsOff });
+  ok(C.handLevel(pawnsOff, v) === 'off', 'Nxe5 reads the pawn slot');
+  ok(!v.held && v.suppressed === 'hand', `hand: Nxe5 is suppressed 'hand' (${v.reason})`);
+  ok(v.category === 'hanging_after_move' && v.sub === null && v.variant === 'takes_back' && v.pawnAmongTakers === true, 'hand: category, sub, variant, pawnAmongTakers intact');
+  ok(v.netLoss === 2 && v.cpLoss === live.cpLoss, 'hand: netLoss and cpLoss intact');
+  assert.deepEqual(v.answer, live.answer, 'hand: the answer set intact');
+  assert.deepEqual(v.refutation, live.refutation, 'hand: the refutation intact');
+  assert.deepEqual(v.takers, live.takers, 'hand: the takers intact');
+  assert.deepEqual(v.gained, live.gained, 'hand: gained intact');
+  ok(v.target === live.target && v.targetPiece === live.targetPiece && v.refutationFrom === live.refutationFrom && v.reward === null, 'hand: target and refutationFrom intact');
+  ok(v.reason === `${live.reason} (suppressed: hand)`, `hand: the reason says so: ${v.reason}`);
+  assert.deepEqual({ ...v, held: true, suppressed: null, reason: live.reason }, live, 'hand: nothing else differs from the live verdict');
+  // the same hand leaves Bxf7+ (takes_back, no pawn among the takers) held
+  const b = run('italian_d6', 'Bxf7+', { hand: pawnsOff }).v;
+  ok(b.held && b.suppressed === null && b.category === 'hanging_after_move' && b.pawnAmongTakers === false, `hand: Bxf7+ is held under the pawns-off hand (${b.reason})`);
+  // takes_back off holds Nxe5 (pawns first) and lets Bxf7+ land
+  const tbOff = C.handAll('full');
+  tbOff.hanging_after_move.takes_back = 'off';
+  ok(run('italian_d6', 'Nxe5', { hand: tbOff }).v.held, 'hand: takes_back off keeps Nxe5 (a pawn among the takers reads the pawn slot)');
+  ok(run('italian_d6', 'Bxf7+', { hand: tbOff }).v.suppressed === 'hand', 'hand: takes_back off lands Bxf7+');
+  // 'bare' and 'full' never suppress; a hand with no slot for the category reads full
+  ok(run('italian_d6', 'Nxe5', { hand: C.handAll('bare') }).v.held, 'hand: bare still holds');
+  ok(run('italian_d6', 'Nxe5', { hand: C.handAll('full') }).v.held, 'hand: full still holds');
+  ok(run('italian_d6', 'Nxe5', { hand: {} }).v.held, 'hand: an empty hand holds');
+  ok(run('italian_d6', 'Nxe5', { hand: null }).v.held, 'hand: a null hand holds');
+  // hand all off: ALWAYS_HOLD and a five-point loss still hold
+  const off = C.handAll('off');
+  let r = run('f3_e5', 'g4', { hand: off }).v;
+  ok(r.held && r.suppressed === null && r.category === 'allowed_mate', `hand off: g4 after 1.f3 e5 still holds (${r.reason})`);
+  r = run('queen_hang', 'Qxe5+', { hand: off }).v;
+  ok(r.held && r.suppressed === null && r.netLoss === 8 && r.netLoss >= C.GATE.BIG_LOSS, `hand off: Qxe5+ (net ${r.netLoss}) still holds`);
+  r = run('kq_stalemate', 'Qf7', { hand: off }).v;
+  ok(r.held && r.suppressed === null && r.category === 'allowed_stalemate', 'hand off: Qf7 still holds');
+  r = run('scholars_white', 'Qh3', { hand: off }).v;
+  ok(r.held && r.suppressed === null && r.category === 'missed_mate', 'hand off: a missed mate still holds');
+  r = run('two_mates', 'Qc7', { hand: off }).v;
+  ok(r.held && r.category === 'allowed_mate', 'hand off: Qc7 still holds');
+  // ... and every material look lands
+  r = run('ruy_a6', 'O-O', { hand: off }).v;
+  ok(!r.held && r.suppressed === 'hand' && r.category === 'ignored_attack' && r.sub === 'already' && r.netLoss === 3, 'hand off: the Ruy O-O lands');
+  r = run('italian_nxe4', 'Nc3', { hand: off }).v;
+  ok(!r.held && r.suppressed === 'hand' && r.category === 'free_piece_ignored' && r.refutationFrom === 'pre', 'hand off: Nc3 lands with its pre refutation');
+  r = run('nc4_rook', 'Nc4', { hand: off }).v;
+  ok(!r.held && r.suppressed === 'hand' && r.sub === C.SUBCASES.OPENED_LINE, 'hand off: Nc4 (opened_line) lands');
+  // the sub slots are read one by one
+  const guardsOff = C.handAll('full');
+  guardsOff.ignored_attack.opened_line = 'off';
+  ok(run('nc4_rook', 'Nc4', { hand: guardsOff }).v.suppressed === 'hand' && run('ruy_a6', 'O-O', { hand: guardsOff }).v.held, 'hand: opened_line off lands Nc4 and keeps the Ruy O-O');
+  const freeOff = C.handAll('full');
+  freeOff.free_piece_ignored = 'off';
+  ok(run('italian_nxe4', 'Nc3', { hand: freeOff }).v.suppressed === 'hand' && run('italian_d6', 'Nxe5', { hand: freeOff }).v.held, 'hand: free off lands Nc3 only');
+  // order: pair, then quiet, then hand
+  ok(run('italian_d6', 'Nxe5', { hand: off, playedPairs: ['ne5'] }).v.suppressed === 'pair', 'hand: the pair rule is named first');
+  ok(run('italian_d6', 'Nxe5', { hand: off, anyways: 2 }).v.suppressed === 'quiet', 'hand: the quiet rule is named before the hand');
+  ok(run('italian_d6', 'Nxe5', { hand: off, anyways: 1 }).v.suppressed === 'hand', 'hand: one play-anyway leaves the hand to decide');
+  // a clean move under any hand is still clean, with its reward
+  const h3 = run('italian_d6', 'h3', { hand: off }).v;
+  ok(!h3.held && h3.category === null && h3.suppressed === null, 'hand off: a clean move stays clean');
+  const dx = run('italian_nxe4', 'dxe4', { hand: off }).v;
+  ok(dx.reward && dx.reward.kind === 'free_taken', 'hand off: the reward on a clean move stands');
+  // the cold engine and the only legal move are unchanged by the hand
+  const s = setup(find('italian_d6').fen, 'Nxe5');
+  ok(G.verdict(null, null, s.fb, s.fa, { move: s.move, hand: off }).category === null, 'hand off: cold engine stays clean');
+  ok(/only legal/.test(run('only_move', 'Kb1', { hand: off }).v.reason), 'hand off: the only legal move stays clean');
+  // handLevel's own table over the recorded verdicts
+  for (const p of positions) {
+    for (const [san, row] of Object.entries(p.moves)) {
+      if (row.expect !== 'held') continue;
+      const v2 = run(p.id, san).v;
+      ok(C.handLevel(C.handAll('off'), v2) === (C.ALWAYS_HOLD.includes(v2.category) ? 'full' : 'off'), `${p.id} ${san}: handLevel off`);
+      ok(C.handLevel(C.handAll('bare'), v2) === (C.ALWAYS_HOLD.includes(v2.category) ? 'full' : 'bare'), `${p.id} ${san}: handLevel bare`);
+      ok(C.handLevel(null, v2) === 'full' && C.handLevel(undefined, v2) === 'full', `${p.id} ${san}: handLevel without a hand`);
+      const landed = run(p.id, san, { hand: C.handAll('off') }).v;
+      const exempt = C.ALWAYS_HOLD.includes(v2.category) || (typeof v2.netLoss === 'number' && v2.netLoss >= C.GATE.BIG_LOSS);
+      ok(landed.held === exempt && landed.suppressed === (exempt ? null : 'hand'), `${p.id} ${san}: hand off -> ${exempt ? 'held' : 'landed'} (${landed.reason})`);
+      assert.deepEqual({ ...landed, held: true, suppressed: null, reason: v2.reason }, v2, `${p.id} ${san}: the landed verdict carries the hold's facts`);
+    }
+  }
+}
+console.log('hand: ok');
+
+// ------------------------------------------------------------------------------------------
+// 13. rewards(): both kinds; escaped needs the opponent's last move as the attacker
+// ------------------------------------------------------------------------------------------
+{
+  // the Ruy after 3...a6: the a6 pawn (their last move) is on the bishop; Ba4 escapes it
+  const ruy = find('ruy_a6');
+  const beforeA6 = new Chess('r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3');
+  const a6 = beforeA6.move('a6');
+  ok(a6 && beforeA6.fen() === ruy.fen, 'the Ruy position is the one after ...a6');
+  let r = run('ruy_a6', 'Ba4');
+  let rw = G.rewards(r.p.pre, r.fb, r.fa, r.move, a6);
+  assert.deepEqual(rw, { free: null, escaped: { kind: 'escaped', piece: 'b', attacker: 'p' } }, 'Ba4 after ...a6: escaped only');
+  assert.deepEqual(G.rewards(r.p.pre, r.fb, r.fa, r.move, null), { free: null, escaped: null }, 'Ba4 with no last move: escaped is null');
+  assert.deepEqual(G.rewards(r.p.pre, r.fb, r.fa, r.move), { free: null, escaped: null }, 'Ba4 with the argument left out: escaped is null');
+  const elsewhere = { color: 'b', from: 'g8', to: 'f6', piece: 'n', san: 'Nf6' };
+  assert.deepEqual(G.rewards(r.p.pre, r.fb, r.fa, r.move, elsewhere), { free: null, escaped: null }, 'Ba4 after a last move that did not attack the bishop: no escape');
+  ok(r.fb.bySquare.b5.attackers.some((a) => a.square === a6.to), 'the a6 pawn is among the b5 attackers (what the rule reads)');
+  // reward() is unchanged: it never asks for the last move
+  assert.deepEqual(G.reward(r.p.pre, r.fb, r.fa, r.move), { kind: 'escaped', piece: 'b', attacker: 'p' }, 'reward() still returns escaped without a last move');
+  // the Italian after 4.d3 Nxe4: dxe4 takes the free knight; nothing of White's hung before
+  const ita = find('italian_nxe4');
+  const beforeNxe4 = new Chess('r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R b KQkq - 0 4');
+  const nxe4 = beforeNxe4.move('Nxe4');
+  ok(nxe4 && nxe4.captured === 'p' && beforeNxe4.fen() === ita.fen, 'the Italian position is the one after ...Nxe4');
+  r = run('italian_nxe4', 'dxe4');
+  rw = G.rewards(r.p.pre, r.fb, r.fa, r.move, nxe4);
+  assert.deepEqual(rw, { free: { kind: 'free_taken', piece: 'n', square: 'e4' }, escaped: null }, 'dxe4 after ...Nxe4: free only (a knight for a pawn)');
+  ok(r.fb.hanging.w.filter((p) => p.type !== 'p' && p.value >= 2).length === 0, 'dxe4: nothing of White\'s worth two hung before, so escaped cannot fire');
+  assert.deepEqual(G.rewards(r.p.pre, r.fb, r.fa, r.move, null), { free: { kind: 'free_taken', piece: 'n', square: 'e4' }, escaped: null }, 'dxe4 with no last move: free stands');
+  assert.deepEqual(G.rewards(r.p.pre, r.fb, r.fa, r.move, nxe4).free, G.reward(r.p.pre, r.fb, r.fa, r.move, nxe4), 'free is exactly reward()\'s first rule');
+  // free's even-trade rule is the same as reward()'s
+  const qt = setup('6k1/1p4p1/4p2p/4q3/p1pP4/7P/PP3PP1/6K1 w - - 0 29', 'dxe5');
+  const preQ = { evalBefore: 0, best: { uci: 'd4e5', san: 'dxe5', from: 'd4', to: 'e5', piece: 'p', captured: 'q' } };
+  ok(G.rewards(preQ, qt.fb, qt.fa, qt.move, { from: 'd5', to: 'e5', piece: 'q', captured: 'q' }).free === null, 'rewards: an even trade is not free');
+  ok(G.rewards(preQ, qt.fb, qt.fa, qt.move, null).free.kind === 'free_taken', 'rewards: with no last move the FEN rule stands');
+  // both on one move: the b5 bishop hangs to the pawn that just came to a6, and the free c6
+  // knight is what the bishop takes; after Bxc6 nothing of White's hangs
+  const beforeBoth = new Chess('6k1/p7/2n5/1B6/8/8/8/6K1 b - - 0 1');
+  const a6b = beforeBoth.move('a6');
+  ok(a6b && a6b.to === 'a6', 'the constructed last move is ...a6');
+  const both = setup(beforeBoth.fen(), 'Bxc6');
+  ok(both.fb.bySquare.b5.hanging && both.fb.bySquare.b5.attackers.some((a) => a.square === 'a6'), 'constructed: the bishop hangs to the a6 pawn');
+  ok(both.fb.bySquare.c6.hanging && both.fb.bySquare.c6.color === 'b' && both.fb.bySquare.c6.value === 3, 'constructed: the knight is free');
+  ok(both.fa.hanging.w.length === 0, 'constructed: after Bxc6 nothing of White\'s hangs');
+  const preBoth = { fen: beforeBoth.fen(), evalBefore: 300, best: { uci: 'b5c6', san: 'Bxc6', from: 'b5', to: 'c6', piece: 'b', captured: 'n', isMate: false }, mateIn: null, line2: null, depth: 14, stopped: false };
+  rw = G.rewards(preBoth, both.fb, both.fa, both.move, a6b);
+  assert.deepEqual(rw, { free: { kind: 'free_taken', piece: 'n', square: 'c6' }, escaped: { kind: 'escaped', piece: 'b', attacker: 'p' } }, 'constructed: both rewards on one move');
+  assert.deepEqual(G.reward(preBoth, both.fb, both.fa, both.move, a6b), rw.free, 'reward() keeps returning the first match (free)');
+  assert.deepEqual(G.rewards(preBoth, both.fb, both.fa, both.move, null), { free: rw.free, escaped: null }, 'constructed: without the last move only free');
+  assert.deepEqual(G.rewards(preBoth, both.fb, both.fa, both.move, { from: 'h8', to: 'g8', piece: 'k' }), { free: rw.free, escaped: null }, 'constructed: a king step as the last move does not count as the attack');
+  // a discovered attack is not their last move's attack: the bishop on b5 is hit by a rook on b8
+  // once the b6 knight steps aside (their last move went to d5, not onto the bishop)
+  const disc = new Chess('1r4k1/8/1n6/1B6/8/8/8/6K1 b - - 0 1');
+  const nd5 = disc.move('Nd5');
+  const esc = setup(disc.fen(), 'Ba4');
+  ok(esc.fb.bySquare.b5.hanging && !esc.fb.bySquare.b5.attackers.some((a) => a.square === nd5.to), 'discovered: the bishop hangs to the rook, not to the piece that moved');
+  const preDisc = { fen: disc.fen(), evalBefore: 0, best: { uci: 'b5a4', san: 'Ba4', from: 'b5', to: 'a4', piece: 'b', captured: null, isMate: false }, mateIn: null, line2: null, depth: 14, stopped: false };
+  ok(G.rewards(preDisc, esc.fb, esc.fa, esc.move, nd5).escaped === null, 'discovered: no escape reward');
+  ok(G.reward(preDisc, esc.fb, esc.fa, esc.move, nd5) && G.reward(preDisc, esc.fb, esc.fa, esc.move, nd5).kind === 'escaped', 'discovered: reward() (the MVP rule) still calls it escaped');
+  // the guards
+  assert.deepEqual(G.rewards(null, r.fb, r.fa, r.move, nxe4), { free: null, escaped: null }, 'rewards: no pre-search, no free (and nothing hung)');
+  assert.deepEqual(G.rewards(r.p.pre, null, r.fa, r.move, nxe4), { free: null, escaped: null }, 'rewards: no facts, nothing');
+  assert.deepEqual(G.rewards(r.p.pre, r.fb, r.fa, null, nxe4), { free: null, escaped: null }, 'rewards: no move, nothing');
+  // the recorded clean moves agree with reward() on free, and escaped only with the attack as the last move
+  for (const p of positions) {
+    for (const [san, row] of Object.entries(p.moves)) {
+      if (row.expect !== 'committed') continue;
+      const s2 = setup(p.fen, san);
+      const r1 = G.reward(p.pre, s2.fb, s2.fa, s2.move);
+      const r2 = G.rewards(p.pre, s2.fb, s2.fa, s2.move, null);
+      ok(JSON.stringify(r2.free) === JSON.stringify(r1 && r1.kind === 'free_taken' ? r1 : null), `${p.id} ${san}: rewards().free agrees with reward()`);
+      ok(r2.escaped === null, `${p.id} ${san}: escaped is null without a last move`);
+    }
+  }
+}
+console.log('rewards both: ok');
+
+// ------------------------------------------------------------------------------------------
+// 14. recordVerdict(): a stored record as the hold it was
+// ------------------------------------------------------------------------------------------
+{
+  // a v2 HoldRecord from a live verdict, as game.js stores it
+  const recordOf = (id, san, over = {}) => {
+    const { v, move, p } = run(id, san);
+    return {
+      record: {
+        fen: p.fen, san, category: v.category, sub: v.sub, variant: v.variant, pawnAmongTakers: v.pawnAmongTakers,
+        taps: [], outcome: 'anyway', why: null, answered: true, coachShown: false, said: null,
+        netLoss: v.netLoss, piece: move.piece, to: move.to, best: v.answer.best,
+        answer: { squares: [...v.answer.squares], best: v.answer.best, partial: [...v.answer.partial] },
+        refutation: [...v.refutation], refutationFrom: v.refutationFrom, ply: 12, gameId: 'g1', ...over,
+      },
+      live: v,
+    };
+  };
+  const same = (id, san) => {
+    const { record, live } = recordOf(id, san);
+    const before = new Chess(record.fen);
+    const applied = new Chess(record.fen).move(record.san);
+    const rv = G.recordVerdict(record, applied, before);
+    const where = `recordVerdict ${id} ${san}`;
+    ok(rv && rv.held === true && rv.suppressed === null, `${where}: held`);
+    ok(rv.category === live.category && rv.sub === live.sub && rv.variant === live.variant && rv.pawnAmongTakers === live.pawnAmongTakers, `${where}: category, sub, variant, pawnAmongTakers`);
+    assert.deepEqual(rv.answer, live.answer, `${where}: the answer set`);
+    assert.deepEqual(rv.refutation, live.refutation, `${where}: the refutation`);
+    ok(rv.refutationFrom === live.refutationFrom, `${where}: refutationFrom`);
+    ok(rv.netLoss === live.netLoss && rv.cpLoss === null, `${where}: netLoss copied, cpLoss null`);
+    ok(rv.target === live.target && rv.targetPiece === live.targetPiece && rv.targetColor === live.targetColor, `${where}: target ${rv.target} ${rv.targetPiece} ${rv.targetColor} vs ${live.target} ${live.targetPiece} ${live.targetColor}`);
+    assert.deepEqual(rv.takers, live.takers, `${where}: the takers`);
+    assert.deepEqual(rv.gained, live.gained, `${where}: gained`);
+    ok(rv.reward === null && /^again: /.test(rv.reason), `${where}: reason ${rv.reason}`);
+    ok(G.grade(rv.answer, live.answer.best) === 'right', `${where}: the best square grades right`);
+    // the hold copy and the asks come out the same as the live hold's
+    const s = setup(record.fen, san);
+    const a = G.holdCopy(live, s.fa, s.move);
+    const b = G.holdCopy(rv, s.fa, s.move);
+    const psq = live.answer.partial.length ? live.answer.partial[0] : live.answer.best;
+    ok(a.question === b.question && a.if_right(live.answer.best) === b.if_right(live.answer.best) && a.if_partial(psq) === b.if_partial(psq) && a.if_wrong === b.if_wrong && a.named === b.named, `${where}: the hold copy is the same`);
+    ok(a.anyway(false) === b.anyway(false) && a.anyway(true) === b.anyway(true) && a.fallback === b.fallback && a.caption === b.caption, `${where}: the anyway, fallback and caption lines are the same`);
+    assert.deepEqual(G.asksFor(rv, s.fb, s.fa, s.move, s.before), G.asksFor(live, s.fb, s.fa, s.move, s.before), `${where}: the asks are the same`);
+    return { record, rv, live };
+  };
+  const nxe5 = same('italian_d6', 'Nxe5');
+  assert.deepEqual(nxe5.rv.answer, { squares: ['d6', 'c6'], best: 'd6', partial: ['c6'] }, 'recordVerdict Nxe5 answer');
+  assert.deepEqual(nxe5.rv.refutation, ['d6e5'], 'recordVerdict Nxe5 refutation');
+  ok(nxe5.rv.variant === 'takes_back' && nxe5.rv.pawnAmongTakers === true && nxe5.rv.netLoss === 2, 'recordVerdict Nxe5 facts');
+  assert.deepEqual(nxe5.rv.gained, ['p'], 'recordVerdict Nxe5 gained');
+  const bxf7 = same('italian_d6', 'Bxf7+');
+  assert.deepEqual(bxf7.rv.answer, { squares: ['f8', 'g8'], best: 'f8', partial: ['g8'] }, 'recordVerdict Bxf7+ answer');
+  ok(bxf7.rv.refutation[0] === 'f8f7' && bxf7.rv.takers.find((t) => t.square === 'g8').type === 'k', 'recordVerdict Bxf7+ refutation and the king taker');
+  // every other recorded hold rebuilds too (ignored_attack both subs, free, both mates, the stalemate)
+  for (const p of positions) {
+    for (const [san, row] of Object.entries(p.moves)) {
+      if (row.expect !== 'held' || (p.id === 'italian_d6' && (san === 'Nxe5' || san === 'Bxf7+'))) continue;
+      same(p.id, san);
+    }
+  }
+  // the tutorial's own rows, stored as the tutorial stores them, rebuild as the tutorial verdict
+  for (const san of ['Nxe5', 'Bxf7+', 'Nd4', 'Ba6', 'Be6']) {
+    const s = setup(tutorial.fen, san);
+    const tv = G.tutorialVerdict(tutorial.moves[san], s.move, s.before);
+    const rec = { fen: tutorial.fen, san, category: tv.category, sub: tv.sub, variant: tv.variant, pawnAmongTakers: tv.pawnAmongTakers, netLoss: tv.netLoss, piece: s.move.piece, to: s.move.to, best: tv.answer.best, answer: tv.answer, refutation: tv.refutation, refutationFrom: 'post', outcome: 'anyway', ply: 7, gameId: 't' };
+    const rv = G.recordVerdict(rec, s.move, s.before);
+    assert.deepEqual(rv.answer, tv.answer, `tutorial ${san} record answer`);
+    assert.deepEqual(rv.refutation, tv.refutation, `tutorial ${san} record refutation`);
+    assert.deepEqual(rv.takers.map((t) => t.square).sort(), tv.takers.map((t) => t.square).sort(), `tutorial ${san} record takers`);
+    ok(rv.targetPiece === tv.targetPiece && rv.target === tv.target, `tutorial ${san} record target`);
+  }
+  // without the move or the position the record's own fen and san stand in
+  {
+    const { record, live } = recordOf('ruy_a6', 'O-O');
+    const rv = G.recordVerdict(record);
+    ok(rv && rv.category === 'ignored_attack' && rv.sub === 'already' && rv.target === 'b5' && rv.targetPiece === 'b', 'recordVerdict with the record alone');
+    assert.deepEqual(rv.answer, live.answer, 'recordVerdict with the record alone: the answer');
+    assert.deepEqual(rv.takers, live.takers, 'recordVerdict with the record alone: the takers');
+  }
+  // a record without an answer set (a normalised v1 record) is never a drill
+  {
+    const { record } = recordOf('italian_d6', 'Nxe5');
+    ok(G.recordVerdict({ ...record, answer: null }) === null, 'recordVerdict: answer null -> null');
+    const v1 = { ...record };
+    delete v1.answer; delete v1.refutation; delete v1.refutationFrom; delete v1.variant; delete v1.pawnAmongTakers;
+    ok(G.recordVerdict(v1) === null, 'recordVerdict: a v1 record -> null');
+    ok(G.recordVerdict(null) === null && G.recordVerdict({}) === null && G.recordVerdict({ category: 'hanging_after_move' }) === null, 'recordVerdict: junk -> null');
+    ok(G.recordVerdict({ ...record, san: 'Nxe4' }) === null, 'recordVerdict: an illegal san -> null');
+    ok(G.recordVerdict({ ...record, category: 'something_else' }) === null, 'recordVerdict: an unknown category -> null');
+    // a copy: the record's own arrays are not shared with the verdict
+    const rv = G.recordVerdict(record);
+    rv.answer.squares.push('a1'); rv.refutation.push('a1a2');
+    ok(record.answer.squares.length === 2 && record.refutation.length === 1, 'recordVerdict copies the record\'s arrays');
+  }
+}
+console.log('recordVerdict: ok');
+
+// ------------------------------------------------------------------------------------------
+// 15. Shown outcomes: remembered() ignores a landed record; closeCaption's landed and again
+// ------------------------------------------------------------------------------------------
+{
+  const d6 = find('italian_d6').fen;
+  const rec = (over) => ({ fen: d6, san: 'Nxe5', category: 'hanging_after_move', sub: null, variant: 'takes_back', pawnAmongTakers: true, taps: [], outcome: 'back', why: null, coachShown: false, netLoss: 2, piece: 'n', to: 'e5', best: 'd6', ply: 12, gameId: 'x', ...over });
+  const landed = rec({ outcome: 'landed', why: 'hand' });
+  ok(G.remembered({ holds: [landed] }) === C.COPY.REMEMBERED.NONE, 'remembered: a landed record is not a hold he saw');
+  ok(G.remembered({ holds: [rec(), landed] }) === 'One hold last game, a pawn you did not see. Watch the pawns.', 'remembered: one shown beside one landed');
+  ok(G.remembered({ holds: [rec(), rec({ outcome: 'anyway' }), landed, rec({ outcome: 'ended' })] }) === 'Three holds last game, all a pawn you did not see. Watch the pawns.', 'remembered: back, anyway and ended count');
+  ok(G.remembered({ holds: [rec({ outcome: 'again' })] }) === 'One hold last game, a pawn you did not see. Watch the pawns.', 'remembered: the drill\'s take-back counts on its own game');
+  ok(G.remembered({ holds: [rec({ outcome: 'nonsense' }), landed] }) === C.COPY.REMEMBERED.NONE, 'remembered: unknown outcomes are not counted');
+  for (const o of C.PATH.SHOWN_OUTCOMES) ok(G.remembered({ holds: [rec({ outcome: o })] }) !== C.COPY.REMEMBERED.NONE, `remembered: '${o}' is a shown outcome`);
+  ok(G.closeCaption(landed) === 'Knight to e5, a pawn was waiting: it landed.', `caption landed: ${G.closeCaption(landed)}`);
+  ok(G.closeCaption(rec({ outcome: 'landed', why: 'quiet', best: 'c6' })) === 'Knight to e5, a knight was waiting: it landed.', 'caption landed (quiet)');
+  ok(G.closeCaption(rec({ outcome: 'again' })) === 'Knight to e5, a pawn was waiting: answered.', `caption again: ${G.closeCaption(rec({ outcome: 'again' }))}`);
+  ok(G.closeCaption(rec()) === 'Knight to e5, a pawn was waiting: taken back.', 'caption back unchanged');
+  const freeLanded = { fen: find('italian_nxe4').fen, san: 'Nc3', category: 'free_piece_ignored', sub: null, outcome: 'landed', why: 'hand', piece: 'n', to: 'c3', best: 'e4', netLoss: 3 };
+  ok(G.closeCaption(freeLanded) === 'A free knight was there: it stayed.', `caption free landed: ${G.closeCaption(freeLanded)}`);
+  ok(G.closeCaption({ ...freeLanded, fen: find('placement_oo').fen, san: 'Nbd2', to: 'd2', best: 'g4' }) === 'A free bishop was there: it stayed.', 'caption free landed names the free piece');
+  ok(G.closeCaption({ ...freeLanded, outcome: 'anyway' }) === 'Knight to c3, a free knight was there: played anyway.', 'caption free played anyway is unchanged');
+  ok(G.closeCaption({ fen: find('ruy_a6').fen, san: 'O-O', category: 'ignored_attack', sub: 'already', outcome: 'landed', why: 'hand', piece: 'k', to: 'g1', best: 'b5' }) === 'King to g1, your bishop was under attack: it landed.', 'caption ignored_attack landed');
+  templateOk(G.closeCaption(landed), 'landed caption', 20);
+  templateOk(G.closeCaption(freeLanded), 'free landed caption', 20);
+  ok(C.COPY.CLOSE.OUTCOME.landed === C.COPY.CLOSE.LANDED, 'the landed outcome word is the one COPY key');
+}
+console.log('shown outcomes: ok');
+
+console.log(`all ${checks} checks passed (${BASELINE} of the MVP unchanged, ${checks - BASELINE} for the pathway)`);

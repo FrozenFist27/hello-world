@@ -1,15 +1,18 @@
 // gate.js — the silent gate, pure. verdict() takes the pre-search, the post-search and the two
-// fact sheets and returns the first matching category in CATEGORIES order with its answer set;
-// reward() the two clean-move rewards; holdCopy() the template lines; asksFor() the looks K2 may
-// choose; grade() a tap; tutorialVerdict() a tutorial.json row; remembered() and closeCaption()
-// the stored-game lines. No DOM, no engine, no Chess instance of its own (asksFor receives the
-// pre-move Chess only to hand it to facts.safeSquares).
+// fact sheets and returns the first matching category in CATEGORIES order with its answer set,
+// then applies the pair, quiet and hand rules; reward() the first of the two clean-move rewards,
+// rewards() both of them; holdCopy() the template lines; asksFor() the looks K2 may choose;
+// grade() a tap; tutorialVerdict() a tutorial.json row and recordVerdict() a stored v2 record
+// (the drill); remembered() and closeCaption() the stored-game lines. No DOM, no engine; the only
+// Chess instances are the pre-move one asksFor hands to facts.safeSquares and recordVerdict's
+// scratch copy of the record's position (the drill has no post-search to read takers from).
 
+import { Chess } from '../vendor/chess.js';
 import {
-  VALUES, PIECE_WORDS, CATEGORIES, SUBCASES, ALWAYS_HOLD, GATE, REWARDS, COPY, ASKS,
-  fill, gainedWords, numberWord,
+  VALUES, PIECE_WORDS, CATEGORIES, SUBCASES, ALWAYS_HOLD, GATE, REWARDS, COPY, ASKS, PATH,
+  fill, gainedWords, numberWord, handLevel,
 } from './contract.js';
-import { safeSquares, lineToUci } from './facts.js';
+import { safeSquares, lineToUci, legalTakers, mateInOneMoves } from './facts.js';
 
 const MATE = ['allowed_mate', 'missed_mate'];
 
@@ -275,11 +278,16 @@ function matchCategory(category, ctx) {
   return null;
 }
 
-// The verdict: first matching category in CATEGORIES order, then the pair and quiet rules.
+// The verdict: first matching category in CATEGORIES order, then the pair, quiet and hand rules.
+// `gameState.hand` (plan.hand, the per-look hand level) is read through contract.handLevel: a
+// material category whose slot is 'off' is suppressed 'hand' with every fact intact, so the
+// landed record carries what the hold would have; ALWAYS_HOLD and a loss of BIG_LOSS or more
+// hold whatever the hand says. With no hand nothing changes.
 export function verdict(pre, post, factsBefore, factsAfter, gameState = {}) {
   const move = gameState.move || {};
   const anyways = gameState.anyways || 0;
   const playedPairs = gameState.playedPairs || [];
+  const hand = gameState.hand || null;
   if (!pre || !post) {
     return blank({ reason: 'clean: engine cold' });
   }
@@ -309,6 +317,13 @@ export function verdict(pre, post, factsBefore, factsAfter, gameState = {}) {
       !(typeof v.netLoss === 'number' && v.netLoss >= GATE.BIG_LOSS)
     ) {
       v.suppressed = 'quiet';
+    } else if (
+      hand &&
+      !ALWAYS_HOLD.includes(category) &&
+      !(typeof v.netLoss === 'number' && v.netLoss >= GATE.BIG_LOSS) &&
+      handLevel(hand, v) === 'off'
+    ) {
+      v.suppressed = 'hand';
     }
     v.held = v.suppressed === null;
     if (v.suppressed) v.reason += ` (suppressed: ${v.suppressed})`;
@@ -326,30 +341,52 @@ export function verdict(pre, post, factsBefore, factsAfter, gameState = {}) {
 // `lastMove` (the opponent's last move, a verbose move, or null after load(fen)) keeps an even
 // trade from being called a free piece: what his capture wins is counted net of what their
 // capture on the same square just took.
-export function reward(pre, factsBefore, factsAfter, move, lastMove = null) {
-  if (!move || !factsBefore || !factsAfter) return null;
-  // Reward 1: his capture took a piece that facts and the pre-search both called free, and the
-  // exchange nets him two points or more.
-  if (move.captured && value(move.captured) >= REWARDS.MIN_VALUE && pre && pre.best) {
-    const taken = factsBefore.bySquare[move.to];
-    const gaveUp = lastMove && lastMove.captured && lastMove.to === move.to ? value(lastMove.captured) : 0;
-    const net = value(move.captured) - gaveUp;
-    if (taken && taken.color === 'b' && taken.hanging && pre.best.from === move.from && pre.best.to === move.to && net >= REWARDS.MIN_VALUE) {
-      return { kind: 'free_taken', piece: move.captured, square: move.to };
-    }
-  }
-  // Reward 2: a non-pawn piece of his worth >= 2 was hanging and nothing of his worth that hangs now.
-  const was = factsBefore.hanging.w.filter((p) => p.type !== 'p' && p.value >= REWARDS.MIN_VALUE);
-  if (was.length) {
-    const still = factsAfter.hanging.w.filter((p) => p.value >= REWARDS.MIN_VALUE);
-    if (!still.length) {
-      const piece = dearest(was);
-      const pool = piece.defenders.length ? piece.attackers.filter((a) => a.type !== 'k') : piece.attackers;
-      const attacker = cheapest(pool.length ? pool : piece.attackers);
-      return { kind: 'escaped', piece: piece.type, attacker: attacker ? attacker.type : 'piece' };
-    }
+// Reward 1: his capture took a piece that facts and the pre-search both called free, and the
+// exchange nets him two points or more.
+function freeTaken(pre, factsBefore, move, lastMove) {
+  if (!move.captured || value(move.captured) < REWARDS.MIN_VALUE || !pre || !pre.best) return null;
+  const taken = factsBefore.bySquare[move.to];
+  const gaveUp = lastMove && lastMove.captured && lastMove.to === move.to ? value(lastMove.captured) : 0;
+  const net = value(move.captured) - gaveUp;
+  if (taken && taken.color === 'b' && taken.hanging && pre.best.from === move.from && pre.best.to === move.to && net >= REWARDS.MIN_VALUE) {
+    return { kind: 'free_taken', piece: move.captured, square: move.to };
   }
   return null;
+}
+// Reward 2: a non-pawn piece of his worth >= 2 was hanging and nothing of his worth that hangs
+// now. With `requireLastMove` the escaped piece must have been attacked by the opponent's last
+// move (lastMove.to among its attackers before his move): a discovered attack is not counted.
+function escaped(factsBefore, factsAfter, lastMove, requireLastMove) {
+  const was = factsBefore.hanging.w.filter((p) => p.type !== 'p' && p.value >= REWARDS.MIN_VALUE);
+  if (!was.length) return null;
+  const still = factsAfter.hanging.w.filter((p) => p.value >= REWARDS.MIN_VALUE);
+  if (still.length) return null;
+  const piece = dearest(was);
+  if (requireLastMove) {
+    if (!lastMove || typeof lastMove.to !== 'string') return null;
+    if (!(piece.attackers || []).some((a) => a.square === lastMove.to)) return null;
+  }
+  const pool = piece.defenders.length ? piece.attackers.filter((a) => a.type !== 'k') : piece.attackers;
+  const attacker = cheapest(pool.length ? pool : piece.attackers);
+  return { kind: 'escaped', piece: piece.type, attacker: attacker ? attacker.type : 'piece' };
+}
+
+// The first reward that applies (free_taken wins), as the MVP's verdict() reports it.
+export function reward(pre, factsBefore, factsAfter, move, lastMove = null) {
+  if (!move || !factsBefore || !factsAfter) return null;
+  return freeTaken(pre, factsBefore, move, lastMove) || escaped(factsBefore, factsAfter, lastMove, false);
+}
+
+// Both rewards of one move, each on its own: `free` is reward()'s free_taken rule exactly;
+// `escaped` is its escaped rule plus the last-move condition (the opponent's last move, a verbose
+// move, must have been the attack he answered). Both may be non-null on one move; game.js records
+// both and says at most one.
+export function rewards(pre, factsBefore, factsAfter, move, lastMove = null) {
+  if (!move || !factsBefore || !factsAfter) return { free: null, escaped: null };
+  return {
+    free: freeTaken(pre, factsBefore, move, lastMove),
+    escaped: escaped(factsBefore, factsAfter, lastMove, true),
+  };
 }
 
 // --------------------------------------------------------------------------------------------
@@ -564,6 +601,136 @@ export function tutorialVerdict(row, move, chessBefore) {
 }
 
 // --------------------------------------------------------------------------------------------
+// A stored record as a verdict (the drill: 'Play it again from here')
+// --------------------------------------------------------------------------------------------
+
+// {square, type, value} for the pieces of `color` that reach `square` by geometry on `chess`.
+function attackersOn(chess, square, color) {
+  let squares = [];
+  try { squares = chess.attackers(square, color); } catch { squares = []; }
+  return squares.map((sq) => {
+    const p = chess.get(sq);
+    return { square: sq, type: p ? p.type : null, value: p ? value(p.type) : 0 };
+  });
+}
+function pieceOnBoard(chess, square) {
+  if (!chess || typeof square !== 'string') return null;
+  let p = null;
+  try { p = chess.get(square); } catch { p = null; }
+  return p || null;
+}
+// The refutation's first ply as a taker, put first among `takers` the way verdict() does.
+function withRefuter(takers, uci, chess) {
+  const from = uciFrom(uci);
+  if (!from || takers.some((t) => t.square === from)) return takers;
+  const p = pieceOnBoard(chess, from);
+  return [{ square: from, type: p ? p.type : null, value: p ? value(p.type) : 0 }, ...takers];
+}
+
+// The tutorialVerdict() shape rebuilt from a stored v2 HoldRecord, so the hold opens at 0 ms with
+// no engine: answer, refutation, refutationFrom, netLoss, sub, variant and pawnAmongTakers are
+// copied; target, targetPiece, takers and gained are derived from the record's position with
+// chess.js (`move` is the record's san applied, `chessBefore` the position before it; when either
+// is missing the record's own fen and san stand in). Returns null for a record without an answer
+// set (a normalised v1 record is never a drill) or whose san is not legal in its fen.
+export function recordVerdict(record, move = null, chessBefore = null) {
+  if (!record || typeof record !== 'object' || !record.category) return null;
+  const answer = record.answer;
+  if (!answer || typeof answer !== 'object' || !Array.isArray(answer.squares)) return null;
+  const fen = chessBefore && typeof chessBefore.fen === 'function' ? chessBefore.fen() : record.fen;
+  let before = null;
+  let after = null;
+  let applied = move;
+  try {
+    before = new Chess(fen);
+    after = new Chess(fen);
+    const m = after.move(record.san);
+    if (!m) return null;
+    if (!applied || typeof applied !== 'object') applied = m;
+  } catch {
+    return null;
+  }
+  const c = record.category;
+  const refutation = Array.isArray(record.refutation) ? record.refutation.filter((u) => typeof u === 'string') : [];
+  const refutationFrom = record.refutationFrom === 'pre' || c === 'free_piece_ignored' ? 'pre' : 'post';
+  const best = answer.best == null ? null : answer.best;
+  const to = applied.to || record.to;
+  const captured = applied.captured || null;
+  let target = null;
+  let targetPiece = null;
+  let targetColor = null;
+  let takers = [];
+  const gained = [];
+
+  if (c === 'hanging_after_move') {
+    target = to;
+    const p = pieceOnBoard(after, to);
+    targetPiece = p ? p.type : applied.piece || record.piece || null;
+    targetColor = 'w';
+    takers = withRefuter(legalTakers(after, to).map((t) => ({ square: t.square, type: t.type, value: t.value })), refutation[0], after);
+    if (captured) gained.push(captured);
+    if (recaptures(refutation[1], to)) {
+      const taker = takers.find((t) => t.square === uciFrom(refutation[0]));
+      if (taker && taker.type) gained.push(taker.type);
+    }
+  } else if (c === 'ignored_attack') {
+    target = best || record.best || null;
+    const p = pieceOnBoard(after, target);
+    targetPiece = p ? p.type : null;
+    targetColor = 'w';
+    takers = withRefuter(attackersOn(after, target, 'b'), refutation[0], after);
+    if (captured) gained.push(captured);
+    if (recaptures(refutation[1], target)) {
+      const taker = takers.find((t) => t.square === uciFrom(refutation[0]));
+      if (taker && taker.type) gained.push(taker.type);
+    }
+  } else if (c === 'free_piece_ignored') {
+    target = best || record.best || null;
+    const p = pieceOnBoard(before, target);
+    targetPiece = p ? p.type : null;
+    targetColor = 'b';
+    takers = withRefuter(legalTakers(before, target).map((t) => ({ square: t.square, type: t.type, value: t.value })), refutation[0], before);
+  } else if (c === 'allowed_mate') {
+    target = best || uciTo(refutation[0]) || record.best || null;
+    const p = pieceOnBoard(after, uciFrom(refutation[0]));
+    targetPiece = p ? p.type : null;
+    targetColor = 'b';
+  } else if (c === 'missed_mate') {
+    target = best || record.best || null;
+    let mates = [];
+    try { mates = mateInOneMoves(before); } catch { mates = []; }
+    const mate = mates.find((m) => m.to === target);
+    targetPiece = mate ? mate.piece : applied.piece || record.piece || null;
+    targetColor = 'w';
+  } else if (c === 'allowed_stalemate') {
+    target = best || record.best || null;
+    targetPiece = 'k';
+    targetColor = 'b';
+  } else {
+    return null;
+  }
+
+  return blank({
+    held: true,
+    category: c,
+    sub: record.sub || null,
+    variant: record.variant || (c === 'hanging_after_move' && captured ? 'takes_back' : null),
+    cpLoss: null,
+    netLoss: typeof record.netLoss === 'number' ? record.netLoss : null,
+    target,
+    targetPiece,
+    targetColor,
+    answer: { squares: [...answer.squares], best, partial: [...(Array.isArray(answer.partial) ? answer.partial : [])] },
+    takers,
+    refutation,
+    refutationFrom,
+    gained,
+    pawnAmongTakers: typeof record.pawnAmongTakers === 'boolean' ? record.pawnAmongTakers : takers.some((t) => t.type === 'p'),
+    reason: `again: ${record.san} held, ${c}${record.sub ? ` (${record.sub})` : ''}`,
+  });
+}
+
+// --------------------------------------------------------------------------------------------
 // Between games
 // --------------------------------------------------------------------------------------------
 
@@ -574,9 +741,14 @@ function pawnHold(r) {
   return !!p && p.type === 'p';
 }
 
+// A hold he saw: a landed record (the gate matched, the hand said nothing) is not one.
+function shown(r) {
+  return !!r && PATH.SHOWN_OUTCOMES.includes(r.outcome);
+}
+
 export function remembered(lastGame) {
   if (!lastGame) return null;
-  const holds = Array.isArray(lastGame.holds) ? lastGame.holds : [];
+  const holds = (Array.isArray(lastGame.holds) ? lastGame.holds : []).filter(shown);
   const n = holds.length;
   if (n === 0) return COPY.REMEMBERED.NONE;
   const allPawns = holds.every(pawnHold);
@@ -585,11 +757,16 @@ export function remembered(lastGame) {
   return fill(COPY.REMEMBERED.MIXED, { n: cap(numberWord(n)) });
 }
 
-// 'Knight to e5, a pawn was waiting: taken back.'
+// 'Knight to e5, a pawn was waiting: taken back.' A landed record ends 'it landed', the drill's
+// take-back 'answered'; a landed free piece (nothing of his was lost) reads 'A free knight was
+// there: it stayed.' whole.
 export function closeCaption(record) {
   const c = record.category;
   const at = pieceAtFen(record.fen, record.best);
   const atWord = at ? word(at.type) : 'piece';
+  if (record.outcome === 'landed' && c === 'free_piece_ignored') {
+    return fill(COPY.CLOSE.FREE_STAYED, { piece: atWord });
+  }
   const waiting = fill(COPY.CLOSE.WAITING[c] || '', { taker: atWord, piece: c === 'ignored_attack' || c === 'free_piece_ignored' ? atWord : word(record.piece) });
   const outcome = COPY.CLOSE.OUTCOME[record.outcome] || COPY.CLOSE.OUTCOME.ended;
   return fill(COPY.CLOSE.CAPTION, { piece: cap(word(record.piece)), square: record.to, waiting, outcome });

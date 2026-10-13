@@ -715,3 +715,368 @@ window.__coachRejects = 0
    reply, ends, close card, `window.__app`.
 3. tests (scenario, stub extension, copy_check, test_all.sh) run against the integrated page; failures
    go back to the owning group.
+
+## 8. Iteration two: the pathway
+
+The contract is `product/PATHWAY.md`; this section is the plan that makes six builders agree on
+names for it. Everything shared lives in `app/js/contract.js` (PATH, COPY.PATH, COPY.QUESTION.bare,
+the new COPY.CLOSE keys, CLAUDE.K3, KEYS.PATH / KEYS.SYNC, KEEP, DOM and TEST_API additions,
+`handLevel()` and `handAll()`); when a name is in both, contract.js wins. Decisions the contract
+leaves open, or where the live data contradicts it, are marked **Decided** in 8.9.
+
+### 8.1 Build groups and file ownership
+
+| group  | owns |
+|--------|------|
+| model  | `app/js/path.js` (new), `scripts/test_path.mjs` (new) |
+| gate   | `app/js/gate.js`, `app/js/hold.js`, the additions to `scripts/test_gate.mjs` |
+| game   | `app/js/game.js` |
+| coach  | `app/js/coach.js`, `app/js/validate.js`, `scripts/test_validate.mjs` (the K3 cases; the store section (e) already carries the KEEP.GAMES change) |
+| store  | `app/js/store.js`, `app/js/sync.js` (new), `scripts/test_sync.mjs` (new), the capability note in `scripts/build_artifact.py`, the publish step in `app/README.md` |
+| shell  | `app/index.html`, `app/styles.css`, `scripts/copy_check.js` |
+| tests  | `scripts/app_check.js`, `scripts/scenarios/path.js` (new), `scripts/test_all.sh`, the one new assertion in `scripts/scenarios/holdon.js` |
+| architect (done) | `app/ARCHITECTURE.md`, `app/js/contract.js` |
+
+Untouched this iteration: `bot.js`, `engine.js`, `board.js`, `facts.js`, `ghost.js`, `scripts/bot_sim.py`,
+`data/*.json`. Nobody edits another group's file; a need is raised with the integrator.
+
+### 8.2 Module graph additions
+
+```
+game.js ─┬─ path.js      (model)  pure: nodeOf, norm, digestOf, counted, weight, compute, plan, words, countWord; imports contract.js and chess.js only
+         ├─ sync.js      (store)  pure: merge, trimGames, trimDigest, normaliseDoc; imports contract.js only
+         ├─ store.js     (store)  localStorage as before + mirror({ db, user, permissions, onMerged }); imports contract.js and sync.js
+         ├─ gate.js      (gate)   + rewards(), recordVerdict(); verdict() reads gameState.hand through contract.handLevel()
+         ├─ hold.js      (gate)   open(hold, { hear, question })
+         ├─ coach.js     (coach)  + closeLines() (K3), k3Context(), buildK3Prompt(); K1/K2 gain the path fact lines
+         └─ validate.js  (coach)  + validateK3(), maskForPrompt()
+```
+Dependency rules stand: `path.js`, `sync.js`, `validate.js` import nothing from the app but
+`contract.js` (path.js also chess.js, for the v1 split and the still's scratch position only).
+`game.js` alone resolves `claude.use('db' | 'user' | 'permissions')` (after first paint, like the
+coach resolves `sample`) and hands the namespaces to `store.mirror()`; outside the viewer every
+`use()` is null and the page plays fully without them.
+
+### 8.3 Data shapes
+
+```
+// HoldRecord v2 (holds(); summary.holds; KEYS.HOLDS). Additive over v1; norm() fills a v1 record at read time.
+{ fen, san, category, sub, variant: 'takes_back'|null, pawnAmongTakers: boolean,
+  taps: [{ square, grade, ask: ASK_KIND|null }],
+  outcome: 'back'|'anyway'|'ended'|'landed'|'again',  // landed: a verdict the gate matched but did not show; again: the drill's take-back
+  why: null|'pair'|'quiet'|'hand',                    // the suppression reason of a landed record, null otherwise
+  answered, coachShown,
+  said: string|null,                                  // the Hear me out text, trimmed to PATH.SAID_TEXT_MAX, stored raw (masked only in a prompt)
+  netLoss, piece, to, best,
+  answer: { squares, best, partial }, refutation: [uci], refutationFrom: 'post'|'pre',
+  ply, gameId }
+
+// GameSummary v2 (KEYS.GAMES)
+{ v: 2, id: Date.now().toString(36) + 2 random base-36 chars, date: ISO, result: 'mate-win'|'mate-loss'|'draw'|'resign'|'giveup',
+  givenAway, holds: [HoldRecord], freeTaken, playedAnyway, plies, backs,
+  observed,                       // committed, non-tutorial player moves whose verdict was not null (taken-back and cold-engine moves excluded)
+  captures,                       // his committed moves that captured (null in a normalised v1 game)
+  rewards: [{ kind: 'free_taken'|'escaped', ply, piece, said: boolean }],   // both kinds recorded on one move when both apply
+  gifts: { offered, taken },      // offered: a verified gift came back from chooseBotMove; taken: his capture landed on gift.square
+  again: boolean,                 // the again-from drill's game
+  hand: plan.hand,                // the hand the game was played with
+  review: boolean }               // the fourteen-day review was on
+
+// DigestLine (KEYS.PATH.digest, append-only, PATH.DIGEST_MAX newest, built by path.digestOf(summary))
+{ id, date, result, observed, again, captures: number|null, escapes, gifts: { offered, taken },
+  looks: { [lookId]: { n, w, netLoss } } }   // only looks with n > 0; n records, w their summed weight, netLoss summed (null netLoss counts 0)
+
+// KEYS.PATH
+{ v: 1,
+  k3: null | { gameId, nodeId, promptVersion, where, next, again: { line, recordGameId, recordPly } | null, question, askFirst, focus },
+  said: [string],                 // 'off:<lookId>' once the OFF line was said for that look; 'nc:<gameId>' once NOT_COUNTED was said for that game
+  digest: [DigestLine],
+  shown: null | { [lookId]: stage } }   // the stages at the last time the opening line was planned (8.4)
+// KEYS.SYNC: { uid, at: ISO }  after every successful mirror read in this browser
+
+// PathState (path.compute(digest, now); frozen)
+{ looks: [{ id, stage: 'asking'|'quiet'|'off', woken, run, everFired,
+            state: 'not_yet'|'current'|'asking'|'quiet'|'off'|'back'|'always',   // the face state (8.5)
+            word: null | 'asking'|'quiet'|'back',    // mates only: its words-only state
+            n3, w3, netLoss3,                        // records over the last PATH.FLOOR_WINDOW counted games
+            nGame,                                   // records in the newest non-again line
+            since: ISO|null }],                      // the date of the line in which the look reached its current stage
+  stages: { [lookId]: stage },      // looks[].stage keyed; what shown stores
+  before: { [lookId]: stage },      // the stages before the newest non-again line (the baseline when shown is absent)
+  current: lookId|null, tied: [lookId], review: boolean, countedGames,
+  newest: DigestLine|null,          // the newest line of any kind (the idle clock)
+  newestReal: DigestLine|null,      // the newest non-again line (records, 'back', the remembering question)
+  positive: { free: boolean, their_last_move: boolean } }   // gifts taken ever / escapes ever
+
+// plan (path.plan(state, k3, shown, said); frozen; kept on S.plan for the whole game)
+{ hand: { hanging_after_move: { pawn, piece, takes_back }, ignored_attack: { already, lost_guard, opened_line },
+          free_piece_ignored, allowed_mate: 'full', missed_mate: 'full', allowed_stalemate: 'full' },   // 'full' | 'bare' | 'off'
+  giftRate: 0.12 | 0.08, review, current, tied,
+  transitions: [{ look, kind: 'QUIET'|'OFF'|'SLIP'|'WAKE' }],   // diff(baseline, stages) for the material looks
+  line: string|null,            // the opening line (null means: keep today's first-game / tutorial line)
+  announce: null | { kind: 'REVIEW'|'WAKE'|'SLIP'|'OFF'|'QUIET'|'NOT_COUNTED', look },   // the one sentence the line carries; game.js appends 'off:<look>' / 'nc:<id>' to said after saying it
+  countdown: string|null,       // the countdown or floor sentence appended to OPEN
+  question: { [slot]: string }, // the remembering question per COPY.PATH.QUESTION slot of the current look (K3's for current when valid)
+  askFirst: ASK_KIND|null, focus: lookId|null,
+  closeLine: string,            // COPY.PATH.CLOSE.* for the newest non-again game (or AGAIN for an again game)
+  where: string,                // COPY.PATH.WHERE.* (k3.where overrides on the view when k3.gameId === newestReal.id)
+  drill: null | { record, gameId },   // the newest anyway/landed record of current (or of mates) with answer and refutation, from the newest non-again game
+  k3: k3|null }                 // the entry as used (null when its nodeId !== current or gameId !== newestReal.id)
+
+// words (path.words(state, ctx); plain strings, number words, never a square or SAN)
+{ rows: [{ id, sentence, state, caption, ink: 'ink'|'coach'|'muted' }],   // ladder order, not_yet looks removed
+  collapsed: string|null,        // COPY.PATH.COLLAPSED(_ONE) for the not_yet looks
+  where: string,
+  facts: { looks: [{ id, meaning, word }], current, yours: [id], changed: [{ id, kind }],
+           game: { holds: [{ look, taker, outcome, firstTap: 'right'|'shown'|'none', when: 'early'|'late' }], observed, gifts, escapes, freeTaken } /* in words */,
+           lastThree: string, said: [{ look, text /* masked by coach.js */ }], again: string, allowed: { [id]: [pieceWord] }, asks: [kind], tied: [id] } }
+
+// K3 (validateK3 ctx and reply)
+K3ctx = { nodeId, allowedPieces: PATH.QUESTION_PIECES[nodeId], offeredAsks: [kind], tied: [lookId], allowedSquares: [], piecesOn: {}, allowedMoves: [] }
+K3 reply = { where, next, again, question, ask_first, focus }   // caps in CLAUDE.K3; acceptance per field (8.7)
+
+// the mirror document: db.doc('data/users/' + uid + '/holdon')
+{ v: 2, updatedAt: ISO, games: [GameSummary], flags: { tutorialSeen, firstHoldSeen, firstFloatSeen }, path: { k3, said, digest, shown } }
+```
+
+### 8.4 The state machine additions
+
+`#board[data-state]` keeps its five states. Two additions:
+
+- **The path view**: `main#stage[data-view="path"]`, a sub-state of `over`. Entered only by
+  `[data-action=path]` on the close card (state over, not during a hold, not in the tutorial, never
+  on boot). `#close` hides, `#path` shows, the action bar holds `[data-action=back]` (class `btn quiet`),
+  the board becomes the still (8.5), `#board.dataset.state` stays `over`, input `locked`. Left by
+  Back, by Escape (a document keydown while `S.view === 'path'`), or by Again (clears the view, then
+  `newGame()`). Leaving restores `board.setPosition(chess)`, the final marks and `#close`.
+  `S.view` is `null | 'path'`; `window.__app.view()` returns it.
+- **Again games** (the drill): `[data-action=again-from]` on the close card (only when `S.plan.drill`
+  is set, never after an again game) starts a game at `record.fen` with `S.again = true`, a new game
+  id, `lastMove = null`, the opponent and the counters as in any game, then opens the hold at 0 ms
+  from `gate.recordVerdict(record, applied, chess)` with no engine call: the hold's question is
+  `${k3.again.line || COPY.PATH.AGAIN} ${copy.question}` (Claude's framing line only when
+  `k3.again.recordGameId === record.gameId && recordPly === record.ply`). Take it back logs outcome
+  `again` and says `COPY.PATH.ANSWERED`; Play it anyway logs `anyway` and continues as today. The
+  game goes on against the normal opponent; its summary and digest line carry `again: true`, every
+  climb and decay skips it, the summaries trim keeps the newest KEEP.AGAIN_GAMES of them beside
+  the KEEP.GAMES real games, its close card's path line is `COPY.PATH.CLOSE.AGAIN`, no K3 fires and
+  no drill is offered from it.
+
+The per-game sequence:
+
+```
+boot      S.path = compute(digest, Date.now()); S.plan = plan(S.path, k3, shown, said); S.hand = plan.hand (frozen)
+          line: the tutorial and the first game keep today's lines (no stored non-again game => plan.line null);
+          from the second game plan.line, then shown := S.path.stages (written once the line is planned)
+newGame   as boot (recompute from the stored digest, which now holds the game just stored)
+drop      gate.verdict(..., { move, anyways, playedPairs, lastMove, hand: S.hand }) ; suppressed 'hand' commits and logs 'landed' why 'hand'
+openHold  level = handLevel(S.hand, verdict): 'bare' -> COPY.QUESTION.bare; else if nodeOf(verdict) === S.path.current
+          and S.path.looks[current].nGame > 0 -> S.plan.question[slot]; else copy.question. Never in the tutorial or a drill.
+commit    observed += 1 when verdict !== null and not the tutorial; captures += 1 when real.captured; gifts.taken when the capture lands on a verified gift;
+          rewards: gate.rewards() -> both recorded with said flags; the one that gets the words: escaped while their_last_move is current, else free
+endGame   storeGame: summary v2 appended (trim rule), KEYS.HOLDS appended, digest line appended (PATH.DIGEST_MAX), no notch write;
+          S.path = compute(...); endPlan = plan(...); fillCloseCard(endPlan) [the path line, Where you are, Play it again from here];
+          mirror.sync() queued; K3 fired once per game id when coach.consented() && !S.again && !tutorial; its result stores k3 and fades .close-where in
+```
+
+Transitions: `plan()` diffs `state.stages` against a baseline: `shown` when it is a non-empty object,
+else `state.before` (the fold without the newest non-again line, so a seeded log announces its own
+last game). `game.js` writes `shown := S.path.stages` whenever it plans an opening line, and resets
+it silently to the merged stages right after a mirror merge, so a merge never announces anything.
+The one sentence the line carries is chosen in the order REVIEW, WAKE, SLIP, OFF, QUIET, NOT_COUNTED,
+the current look first within a kind; OFF is said once per look ever (`said` holds `off:<look>`) and
+NOT_COUNTED once per game (`nc:<id>`). The mate-loss line replaces OPEN when the newest real game
+ended in mate-loss and no sentence applies.
+
+### 8.5 DOM hooks (index.html, styles.css)
+
+```
+<main id="stage" class="stage" [data-view="path"]>
+  ... (as before) ...
+  <section id="close" class="close" hidden>
+    <p class="close-sum"></p>
+    <ul class="close-holds"></ul>
+    <p class="close-path"></p>                       <!-- the serif path line in the coach's voice, 17 px --ink -->
+    <p class="close-where" hidden></p>               <!-- Claude's where line, --coach, fades in (opacity, var(--fade)) -->
+    <button class="btn primary" data-action="again" type="button">Again</button>
+    <button class="link muted" data-action="again-from" type="button" hidden>Play it again from here</button>
+    <button class="link muted" data-action="path" type="button">Where you are</button>
+  </section>
+  <section id="path" class="path" hidden aria-label="Where you are">
+    <ol id="path-looks" class="path-looks"></ol>    <!-- rows written by game.js -->
+  </section>
+</main>
+```
+Row markup (game.js writes it with textContent; one `li` per look in ladder order, not_yet looks
+replaced by one collapsed row at the end):
+`<li class="row" data-look="pawns" data-stage="current"><span class="dot" aria-hidden="true"></span><button class="sentence" type="button">I see the pawn before it lands.</button><span class="caption">This is where we are.</span></li>`
+and `<li class="row collapsed"><span class="caption">Three more, not come up yet.</span></li>`.
+`data-stage` is the face state; the `.dot` span exists in the current row only. Tapping a
+`.sentence` (delegated on `#path [data-look]`, not a data-action) re-aims the still at that look's
+newest record. Styles: rows 17 px serif, captions 14 px Plex `--muted`, 12 px between rows; ink by
+`data-stage` (`current`, `off` -> `--ink`; `asking`, `quiet`, `back`, `always` -> `--coach`; the
+collapsed row `--muted`); the dot 10 px `--hold` with a 1 px `--bg` hairline in the left margin;
+`.stage[data-view="path"] .sq:not(.amber)::after { background: var(--dim) }` and
+`.stage[data-view="path"] .sq.amber { animation: none }` (the static ring) in both themes;
+`.stage[data-view="path"] #close { display: none }` is not needed (game.js sets `hidden`). The
+longest caption fits one line at 368 px. No numeral, tick, bar, ring, badge or heading anywhere
+in `#path`.
+
+The still: a scratch `Chess(record.fen)` with `record.san` applied, `board.setPosition(scratch)`,
+`board.lift(record.to)`, `board.setMarks({ amber: record.to })`; the start position (no lift, no
+marks) when the look has no record.
+
+### 8.6 Test API additions (window.__app)
+
+```
+path(): PathState                 // the frozen state this game was planned from
+plan(): plan                      // the frozen plan on S
+seed({ games?, path?, giftRate? }): Promise<PathState>   // writes KEYS.GAMES / KEYS.PATH (digest built by digestOf when absent) / KEYS.GIFT_RATE, then newGame(); resolves the new S.path
+view(): null | 'path'
+again(): Promise<void>            // the again-from drill from the close card; resolves when the hold is up
+state() additionally exposes: hand, giftRate, review, again, view, counted (this game's observed so far)
+stats() additionally exposes: observed, captures, gifts, rewards (count), landed (count)
+holds(): every record of this game, landed ones included (stats().holdsCount counts PATH.SHOWN_OUTCOMES only)
+window.__coachRejectsBy = { where, next, again, question, ask_first, focus, reply }
+```
+
+### 8.7 Module APIs (exact exports)
+
+```
+// path.js (model, pure)
+export function nodeOf(record): lookId|null            // pawnAmongTakers first (8.9); null for a record of no look
+export function norm(game): GameSummary v2             // idempotent; fills a v1 game and its holds (pawnAmongTakers via chess.js, variant from 'x' in san, taps[].ask null, said null, answer null, why null)
+export function digestOf(summary): DigestLine          // idempotent on a normalised summary
+export function counted(line): boolean
+export function weight(record): 1|2
+export function compute(digest, now = Date.now()): PathState
+export function plan(state, k3 = null, shown = null, said = []): plan
+export function words(state, ctx = {}): words           // ctx: { games, digest, k3, said, transitions, drill, offeredAsks, saidTexts }
+export function countWord(n): string                    // NUMBER_WORDS up to PATH.MAX_COUNT_WORD, else COPY.PATH.MANY
+export function stillOf(games, lookId): { record, chess } | null   // the newest record of the look across the newest non-again games, with the scratch position after record.san (for the view and the drill)
+
+// sync.js (store, pure)
+export function normaliseDoc(doc): Doc
+export function merge(local, remote): Doc               // commutative, idempotent
+export function trimGames(games): [GameSummary]         // KEEP.GAMES newest non-again + KEEP.AGAIN_GAMES newest again, by date asc then id
+export function trimDigest(lines): [DigestLine]         // PATH.DIGEST_MAX newest by date
+
+// store.js (store)
+export const store = { get, set, remove, list, append,  // as before; append(KEYS.GAMES) applies sync.trimGames when max is omitted
+  giftRateFallback(): number,                           // KEYS.GIFT_RATE read once, never written
+  localDoc(): Doc, applyDoc(doc): void,                 // the keys <-> the mirror document
+  mirror({ db, user, permissions, onMerged }): Mirror }
+Mirror = { boot(): Promise<void>, sync(): Promise<'merged'|'written'|'skipped'|'readonly'|'stopped'>, status(): { uid, state, readDone, readOnly, stopped, pending } }
+
+// gate.js (gate)
+export function verdict(pre, post, factsBefore, factsAfter, gameState: { move, anyways, playedPairs, lastMove, hand }): Verdict   // suppressed: null|'pair'|'quiet'|'hand'
+export function rewards(pre, factsBefore, factsAfter, move, lastMove = null): { free: Reward|null, escaped: Reward|null }
+export function recordVerdict(record, move, chessBefore): Verdict   // the tutorialVerdict() shape from a v2 record
+export function reward(...), remembered(lastGame) /* shown outcomes only */, closeCaption(record) /* landed, FREE_STAYED, again */  as before
+
+// hold.js (gate)
+open(hold, { hear = false, question = null })          // question replaces hold.question before it is said
+
+// coach.js (coach)
+closeLines({ words, signal }): Promise<{ ok: true, value: K3value, rejected: [field] } | { ok: false, code }>   // K3; per-field acceptance; value fields null when rejected
+k3Context(words): K3ctx
+buildK3Prompt(ctx): string                               // PROMPT_VERSION v3; under CLAUDE.K3.PROMPT_MAX_BYTES; said texts masked
+hearMeOut({ ..., path }), followUps({ ..., path })        // path: { current, meaning, hand: 'full'|'fewer words', lastThree: { holds, backs } } -> the two fact lines; K2's offered list puts the current look's kind first
+
+// validate.js (coach, pure)
+export function validateK3(reply, ctx): { ok: boolean, value: { where, next, again, question, ask_first, focus }, rejected: [field], reasons: { [field]: string } }
+export function maskForPrompt(text): string              // squares -> 'that square', SAN tokens -> 'that move'
+```
+
+### 8.8 The harness (app_check.js, scenarios/path.js, test_all.sh)
+
+- `--scenarios a.js,b.js` (or repeated) runs the files in order on every page; `--script` stays as
+  an alias for one file. The report gains `seconds` and `timings: [{ scenario, viewport, scheme, ms }]`.
+- The stub reads `sessionStorage['holdon.test.caps']` (JSON) at init, like the cold flag:
+  `{ db: 'granted'|'prompt'|'denied'|'unavailable'|'none', user: 'u_test'|null, permissions: true|false, errors: [{ op: 'get'|'set', code }] }`.
+  `claude.use('db')` resolves an in-memory db (`'none'`: null) whose `doc(path).get()/set(body)`
+  go through `window.__stubDbCall(op, path, body)`, exposed from node (`page.exposeFunction`) over
+  one Map shared by every page of the run; `get` answers `{ exists: false }` until a `set`; errors
+  are consumed one per call in order and reject `{ code, message }`; every call is recorded on
+  `window.__dbCalls` as `{ op, path, outcome }`. `use('user')` resolves `{ id: async () => caps.user, me, isOwner, canEdit, can }`;
+  `use('permissions')` resolves `{ state: async (name) => name === 'db' ? caps.db : 'unavailable', request, manage }` or null.
+  `ctx.db` gives the scenario node-side `get(path)`, `set(path, body)`, `reset()`, `calls`;
+  `ctx.newDevice()` opens a page in a fresh browser context (own localStorage) with the same stub
+  and viewport; the scenario closes it.
+- `scripts/scenarios/path.js` exports one `async (page, ctx)`; the path-view block runs on all four
+  pages and ends every page in the path view (so app_check's final full-page screenshot is the path
+  state and the overflow check covers it); everything else runs on desktop/light only.
+- `test_all.sh`: test_gate, test_validate, test_path, test_sync, copy_check, the build check
+  (`python3 scripts/build_artifact.py --check` prints the capability declaration; exactly
+  sample, db, user), the stub harness over `holdon.js,path.js`, the no-stub harness over `holdon.js`;
+  each harness pass prints its seconds against `HARNESS_BUDGET_S` (default 300) and fails over it.
+
+### 8.9 Decisions where the contract is silent (or the data disagrees)
+
+- **The nodeOf table follows the recorded data.** positions.json records `nc4_rook Nc4` as
+  ignored_attack/opened_line (so **guards**, not takers) and `italian_nxe4 Nc3` as
+  free_piece_ignored (so **free**, not guards); the contract's table misattributes both. The test
+  table in test_path.mjs is: italian_d6 Nxe5 pawns, Bxf7+ takes_back; queen_hang Qxe5+ and Qxf7+
+  takes_back; tutorial Nd4/Ba6/Be6 pawns, tutorial Bxf7+/Nxe5 takes_back; ruy_a6 O-O and Ng5
+  their_last_move; nc4_rook Nc4/Nb3 and italian_bg5 Nh4 guards; italian_nxe4 Nc3, placement_oo Nbd2,
+  italian_ng4 O-O free; f3_e5 g4, two_mates Qc7, scholars_white Qh3, kq_stalemate Qf7 mates. No
+  recorded position yields takers (hanging, no pawn among the takers, not a capture) or lost_guard:
+  both branches are covered by synthetic records only.
+- **`escaped` cannot fire on the Italian dxe4** (nothing of White's hangs before the move), so the
+  "two entries on one move" case is asserted in test_gate.mjs on a position the gate group
+  constructs with chess.js (a hanging White piece captures a free Black piece); the harness asserts
+  free_taken on dxe4 and escaped on Ba4 separately, each with its said flag.
+- **`escaped` requires the opponent's last move as attacker**: `lastMove` non-null and `lastMove.to`
+  among the escaped piece's attackers in factsBefore (a discovered attack is not counted). The piece
+  is the dearest hanging non-pawn piece worth >= 2, as reward() picks it.
+- **Shown holds** are PATH.SHOWN_OUTCOMES; a landed record never counts as a stop; the drill's
+  `again` counts on the again game's own card.
+- **holdLog keeps every record**, landed ones included; KEYS.HOLDS and summary.holds receive all of
+  them; the close card lists all of them (a landed caption ends 'it landed').
+- **Suppression order** in verdict(): pair, quiet, hand; a verdict with `suppressed` set is logged
+  'landed' with `why = suppressed` only when `category` is non-null.
+- **observed** excludes tutorial moves and again games are stored but never counted.
+- **The off window** needs PATH.OFF_WINDOW counted games to exist and the last OFF_WINDOW of them to
+  hold zero records of the look (so a look never goes off before the sixth game). A woken look keeps
+  `woken` until it goes off again; the climb from quiet needs WOKEN_TO_OFF clean counted games then.
+- **Transitions baseline** is `shown` when present, else `state.before` (8.4); the contract's
+  "only when the newest digest line is the game this view just played" is met by resetting `shown`
+  after a merge, which is the only other way the newest line can change.
+- **The newest stored game** for 'back' and the remembering question is the newest non-again line
+  (again games hold no records); the idle clock reads the newest line of any kind.
+- **COUNTDOWN** is honest: the number of further clean counted games to the next stage when every
+  floor already holds; otherwise the look's COUNTDOWN.FLOOR sentence; nothing for a current look
+  whose next stage is unreachable this way.
+- **The guards opened_line remembering question ends 'Tap it.'** (the contract's 'Tap along it.'
+  fails its own shape rule).
+- **The mirror's deferred read is the endGame sync's own get**: under 'prompt' (or no permissions
+  namespace) `boot()` reads nothing and the first `sync()` after the close card reads then writes on
+  the one chain; under 'granted' `boot()` reads at boot. A sync never writes without its own read
+  succeeding first; `invalid_argument` marks the view read-only, `unavailable` retries once after
+  1000-2000 ms, quota_exceeded, resource_exhausted, revoked and the lifecycle codes stop the mirror;
+  unknown codes are 'unavailable'. Nothing is said about any of it.
+- **merge ties** are broken without reference to the side (equal ids: the later date, then the
+  larger plies, then the larger JSON; shown and k3 on equal dates: the larger JSON) so the function
+  is commutative.
+- **fen() during the drill's hold** keeps today's meaning: the position before the held move, i.e.
+  `record.fen`; the scenario asserts that plus `state().hold.san === record.san`, the lifted piece
+  on `record.to` and `#board.dataset.state === 'held'`, not "the fen with Nxe5 made".
+- **said** holds strings `off:<look>` and `nc:<gameId>`, union-merged.
+- **The caption 'Yours.'** is used the day a look goes off, 'Yours since Tuesday.' within
+  PATH.SINCE_WEEK_DAYS, 'Yours for a while.' after; a merged or v1 history without a date reads 'Yours.'
+- **The dot** is `#path .dot`; the test asserts exactly one in `#path` and no `.sq.dot` on the board.
+- **BOT.GIFT_RATE_STEPS** stays in contract.js until game.js stops reading it; the integrator
+  deletes it last. The store test's KEEP.GAMES expectation was updated with the constant.
+- **copy_check's new banned words** (level, mastered, progress, XP, curriculum, lesson) exempt
+  the exact UCI option name 'Skill Level'.
+- **No drill after an again game**, and the still of a look without a record is the start position.
+
+### 8.10 Integration order
+
+1. contract.js and this section (done) -> model, gate, coach, store, shell in parallel, each green
+   on its own node test (`node scripts/test_path.mjs`, test_gate, test_validate, test_sync, copy_check).
+2. game (game.js) against the APIs above; it can start at once and integrates last among the modules.
+3. tests: the stub additions and `--scenarios` first (they pass over the live page with holdon.js
+   alone), then scenarios/path.js against the integrated page, then test_all.sh with the budgets.
+4. Integrator: delete BOT.GIFT_RATE_STEPS, run `bash scripts/test_all.sh --sim`, build and republish
+   with capabilities {sample: {}, db: {}, user: {}}.

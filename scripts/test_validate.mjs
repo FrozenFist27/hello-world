@@ -459,11 +459,15 @@ console.log('templates: ok');
   ok(mem.get(K.GIFT_RATE) === '0.12' && store.get(K.GIFT_RATE, 0.08) === 0.12, 'a number round-trips when the fallback is a number');
   ok(JSON.parse(mem.get(K.GIFT_RATE)) === 0.12, 'the stored number parses as JSON');
   eq(store.list(K.GAMES), [], 'empty list');
-  for (let i = 1; i <= 7; i++) store.append(K.GAMES, { id: String(i), holds: [{}, {}] }, C.KEEP.GAMES);
+  // the cap is KEEP.GAMES (12 since iteration two); append keeps the newest cap entries. The
+  // again-aware trim (KEEP.GAMES non-again plus KEEP.AGAIN_GAMES again games) is sync.js's and
+  // is tested in scripts/test_sync.mjs.
+  const total = C.KEEP.GAMES + 2;
+  for (let i = 1; i <= total; i++) store.append(K.GAMES, { id: String(i), holds: [{}, {}] }, C.KEEP.GAMES);
   const games = JSON.parse(mem.get(K.GAMES));
-  ok(Array.isArray(games) && games.length === 5 && games[0].id === '3' && games[4].id === '7', 'append keeps the last five');
+  ok(Array.isArray(games) && games.length === C.KEEP.GAMES && games[0].id === '3' && games[games.length - 1].id === String(total), `append keeps the last ${C.KEEP.GAMES}`);
   ok(games[games.length - 1].holds.length === 2, 'the last entry keeps its holds');
-  eq(store.list(K.GAMES).map((g) => g.id), ['3', '4', '5', '6', '7'], 'list reads the array back');
+  eq(store.list(K.GAMES).map((g) => g.id), Array.from({ length: C.KEEP.GAMES }, (_, i) => String(i + 3)), 'list reads the array back');
   for (let i = 0; i < 35; i++) store.append(K.HOLDS, { ply: i });
   ok(store.list(K.HOLDS).length === 30, 'append without max keeps KEEP.HOLDS for the holds key');
   store.set('holdon.test.obj', { a: 1, b: [1, 2] });

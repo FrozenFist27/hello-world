@@ -130,13 +130,17 @@ export function createHold({ board, coachLine, actions, links, store, fast = () 
     if (fromClaude && hold) hold.claude.coachShown = true;
   }
 
-  function open(h, { hear = false } = {}) {
+  // `question` (a non-empty string) replaces hold.question before it is said: the bare line at
+  // the quiet hand, the remembering question of the current look, the drill's framing. Grading,
+  // the hint after a wrong tap, the naming after the second, Show me and the buttons never read it.
+  function open(h, { hear = false, question = null } = {}) {
     close();
     hold = h;
     wrongs = 0;
     k1 = null;
     marks = { ok: [], glow: null, lit: [] };
     linkState = { but: hear ? 'hear' : 'hidden' };
+    if (typeof question === 'string' && question.trim()) hold.question = question;
     hold.taps = hold.taps || [];
     hold.answered = false;
     hold.buttonsShown = false;
