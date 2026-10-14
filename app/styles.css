@@ -447,17 +447,22 @@ body.typing .board { width: min(100vw - 32px, 62vh, calc(var(--vvh, 100vh) - 260
   transition: opacity var(--fade) ease-out;
 }
 .close-where.in { opacity: 1; }
-.close > .btn.primary { display: block; margin-top: 16px; }
-/* the two muted links, each on its own line under Again, each a 44 px target */
-.close > .link.muted {
-  display: block;
+/* Again and the two muted links on one row beside it (PATHWAY: 'beside Again'), each link a
+   44 px target; on a narrow phone the row wraps and the links sit directly under Again */
+.close-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 20px;
+  margin-top: 16px;
+}
+.close-row .link.muted {
   min-height: 44px;
   padding: 10px 0;
   line-height: 24px;
   text-align: left;
 }
-.close > .btn.primary + .link.muted,
-.close > .btn.primary + .link.muted[hidden] + .link.muted { margin-top: 12px; }
+.close-row [hidden] { display: none; }
 
 /* --------------------------------------------------------- the path view */
 

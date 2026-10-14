@@ -457,6 +457,13 @@ module.exports = async function pathScenarios(page, ctx = {}) {
       await page.click('#path li.row[data-look] .sentence');
       s = await still();
       expect(JSON.stringify(s.lifted) === '["wN@e5"]' && JSON.stringify(s.amber) === '["e5"]', `after tapping the first row the still is ${JSON.stringify(s)}`);
+      // a row of another look re-aims the still (the mates row has no record: the start position)
+      if (await present('#path li.row[data-look="mates"] .sentence')) {
+        await page.click('#path li.row[data-look="mates"] .sentence');
+        s = await still();
+        expect(s.lifted.length === 0 && s.amber.length === 0, `the mates row (no record) left the still at ${JSON.stringify(s)}`);
+        await page.click('#path li.row[data-look] .sentence');
+      }
       await page.click('#actions [data-action="back"]');
       const left = await app(() => ({ view: document.getElementById('stage').dataset.view, close: !document.getElementById('close').hidden, path: !document.getElementById('path').hidden }));
       expect(!left.view && left.close && !left.path && await fen() === finalFen, `Back left ${JSON.stringify(left)}`);
@@ -533,6 +540,61 @@ module.exports = async function pathScenarios(page, ctx = {}) {
     await action('takeback');
     await seed(away.concat(log([{ again: true, observed: 4 }], { tag: 'yday', endDaysAgo: 1 })));
     expect(await app(() => window.__app.path().review) === false, 'an again game yesterday did not end the review');
+
+    // ============================================================================================
+    // 10b. review2 regressions (ARCHITECTURE.md 8.11)
+    // ============================================================================================
+    mark('10b review2');
+    {
+      // P7: a game given up before any move is not stored: its card names nothing of the last game
+      await seed(log([{ holds: [['pawns', 'anyway']] }], { tag: 'p7' }));
+      await giveup();
+      const pathLine = await app(() => document.querySelector('#close .close-path').textContent);
+      expect(pathLine.startsWith('I never stopped your hand') && !/today/.test(pathLine), `P7: a ply-0 give-up's path line is '${pathLine}'`);
+      expect(!(await visible('#close [data-action="again-from"]')), 'P7: Play it again from here offered for a game that was not stored');
+      // the still of an attack ignored lifts the attacked piece, not the piece he moved (the
+      // castled king): the Ruy's bishop on b5; tapping its row re-aims the still there
+      await action('again');
+      await seed(log([{ holds: [['pawns', 'anyway'], ['their_last_move', 'anyway']] }], { tag: 'still' }));
+      await giveup();
+      await page.click('#close [data-action="path"]');
+      await waitFor(() => window.__app.view() === 'path', null, 2000, 'the path view (still)');
+      await page.click('#path li.row[data-look="their_last_move"] .sentence');
+      {
+        const s = await app(() => ({ lifted: Array.from(document.querySelectorAll('.pc.lifted')).map((x) => `${x.dataset.piece}@${x.dataset.square}`), amber: Array.from(document.querySelectorAll('.sq.amber')).map((x) => x.dataset.square) }));
+        expect(JSON.stringify(s.lifted) === '["wB@b5"]' && JSON.stringify(s.amber) === '["b5"]', `the their_last_move still is ${JSON.stringify(s)}`);
+      }
+      await action('back');
+      // P14: the pawns question grades the pawn right and the knight that could too partial
+      await seed(log([{ holds: [['pawns', 'anyway']] }], { tag: 'p14' }));
+      await load('r1bq1rk1/ppp2ppp/2np1n2/2b1p3/2B1P3/2PP1N2/PP1N1PPP/R1BQK2R w KQ - 1 7');
+      expect(await play('Nxe5') === 'held', 'P14: Nxe5 was not held');
+      expect(await coach() === C.questionPawns, `P14: the pawns question is '${await coach()}'`);
+      expect(await tap('c6') === 'partial', `P14: the knight under the pawns question: '${await coach()}'`);
+      expect(await tap('d6') === 'right', 'P14: the pawn under the pawns question is not right');
+      await action('takeback');
+      // P19 and P6: the tutorial's card has no 'Where you are'; the first card's path line counts
+      // the holds the card lists, the tutorial's among them
+      await reload({ clear: true });
+      await P.waitEngine();
+      expect(await app(() => window.__app.state().tutorial) === true, 'P19: no tutorial on a fresh profile');
+      expect(await play('Bxf7+') === 'held', 'P19: the tutorial Bxf7+ was not held');
+      await giveup();
+      expect(!(await visible('#close [data-action="path"]')), 'P19: the tutorial card shows Where you are');
+      await reload({ clear: true });
+      await P.waitEngine();
+      expect(await play('Bxf7+') === 'held', 'P6: the tutorial Bxf7+ was not held');
+      await action('takeback');
+      expect(await play('O-O') === 'committed', 'P6: O-O after the tutorial take-back did not commit');
+      await giveup();
+      {
+        const card = await app(() => ({ sum: document.querySelector('#close .close-sum').textContent, path: document.querySelector('#close .close-path').textContent }));
+        expect(card.sum.startsWith('I stopped your hand once') && !card.path.startsWith('I never stopped'), `P6: the first card reads '${card.sum}' then '${card.path}'`);
+        expect(await visible('#close [data-action="path"]'), 'P6: no Where you are after the first real game');
+      }
+      await reload({ clear: true, flags: { [KEYS.tutorialSeen]: '1' } });
+      await P.waitEngine();
+    }
 
     if (stub) {
       // ==========================================================================================
@@ -611,6 +673,9 @@ module.exports = async function pathScenarios(page, ctx = {}) {
         const stored = (await pathKey()).k3;
         expect(stored.nodeId === await app(() => window.__app.path().current), `k3 stored for ${stored.nodeId}`);
         await waitFor((w) => { const el = document.querySelector('#close .close-where'); return !!el && !el.hidden && el.textContent === w; }, K3.where, 2000, "Claude's where line on the card");
+        // P18: the line that faded in did not push Again and its links past the fold
+        const fold = await app(() => ({ vh: window.innerHeight, row: Math.round(document.querySelector('#close .close-row').getBoundingClientRect().bottom) }));
+        expect(fold.row <= fold.vh, `after the where line faded in Again's row ends at ${fold.row} of ${fold.vh}`);
       }
       {
         // no K3 for an again game (and no K1 inside it)
@@ -751,6 +816,65 @@ module.exports = async function pathScenarios(page, ctx = {}) {
           await dev.close();
         }
       }
+
+      // ==========================================================================================
+      // 14. review2 regressions over the stubs (ARCHITECTURE.md 8.11)
+      // ==========================================================================================
+      mark('14 review2 stub');
+      {
+        // P1: the close card's first read brings another device's old game: the slip this view's
+        // own game caused is still said
+        ctx.db.reset();
+        const other = log(clean(1), { tag: 'lap', endDaysAgo: 30 });
+        ctx.db.set(DOC, await remoteDoc(other));
+        await reload({ clear: true, flags: { [KEYS.tutorialSeen]: '1' }, caps: { ...GRANTED, db: 'prompt' } });
+        await P.waitEngine();
+        await seed(OFF_LOG());
+        await load(FEN.d6);
+        await botMove('dxe5');
+        expect(await play('Nxe5') === 'committed', 'P1: Nxe5 was held under the off hand');
+        await giveup();
+        await waitFor(() => (window.__dbCalls || []).some((x) => x.op === 'set' && x.outcome !== 'pending'), null, 6000, 'the close-card sync (P1)');
+        await waitFor(() => (window.__dbCalls || []).every((x) => x.outcome !== 'pending'), null, 3000, 'the sync to settle (P1)');
+        await action('again');
+        expect((await coach()).includes('said nothing'), `P1: after a merge the slip line is lost: '${await coach()}'`);
+      }
+      {
+        // P3: K3's line arriving after the next game began keeps the slip sentence it opened with
+        await reload({ clear: true, flags: { [KEYS.tutorialSeen]: '1' } });
+        await P.waitEngine();
+        await seed(OFF_LOG());
+        await load(FEN.d6);
+        expect(await play('Bxf7+') === 'held', 'P3: Bxf7+ was not held');
+        await app((t) => window.__app.say(t), 'I am taking the pawn');
+        await P.app(() => new Promise((r) => setTimeout(r, 300)));
+        await action('takeback');
+        await load(FEN.d6);
+        await botMove('dxe5');
+        expect(await play('Nxe5') === 'committed', 'P3: Nxe5 was held under the off hand');
+        const next = 'Before you take, look at what takes back.';
+        await app((r) => { window.__stubReplies = [r]; }, JSON.stringify({ where: 'You let one land today.', next, again: '', question: 'Hold on. This one again. Tap it.', ask_first: null, focus: null }));
+        await giveup();
+        await action('again');
+        await waitFor((n) => document.getElementById('coach').textContent.includes(n), next, 3000, "K3's next line (P3)");
+        expect((await coach()).includes('said nothing'), `P3: the K3 line replaced the slip sentence: '${await coach()}'`);
+      }
+      {
+        // P16: K3 closes the first game, the one that goes on from the tutorial dare
+        await reload({ clear: true });
+        await P.waitEngine();
+        expect(await play('Bxf7+') === 'held', 'P16: the tutorial Bxf7+ was not held');
+        await action('takeback');
+        await botMove('Bc5');
+        expect(await play('d3') === 'committed', 'P16: d3 did not commit');
+        expect(await play('Bxf7+') === 'held', 'P16: the engine Bxf7+ was not held');
+        await app((t) => window.__app.say(t), 'I am taking the pawn next to the king');
+        await P.app(() => new Promise((r) => setTimeout(r, 300)));
+        const n0 = await app(() => (window.__sampleCalls || []).length);
+        await action('takeback');
+        await giveup();
+        await waitFor((k) => (window.__sampleCalls || []).slice(k).some((c) => String(c.input).includes('"where"')), n0, 3000, 'the K3 call of the first game (P16)');
+      }
     }
   }
 
@@ -765,8 +889,21 @@ module.exports = async function pathScenarios(page, ctx = {}) {
   await load(FEN.scholars);
   expect(await play('Qxf7#') === 'over', 'Qxf7# did not end the game (view)');
   expect(await visible('#close [data-action="path"]'), 'no Where you are link on the close card (view)');
+  {
+    // P17: Again and its links on one row, in view
+    const r = await app(() => {
+      const box = (sel) => { const el = document.querySelector(sel); const b = el.getBoundingClientRect(); return { top: Math.round(b.top), bottom: Math.round(b.bottom) }; };
+      return { vh: window.innerHeight, again: box('#close [data-action="again"]'), link: box('#close [data-action="path"]') };
+    });
+    expect(r.link.bottom <= r.vh && r.again.bottom <= r.vh, `the close card's Again and Where you are are past the fold: ${JSON.stringify(r)}`);
+  }
   await page.click('#close [data-action="path"]');
   await waitFor(() => window.__app.view() === 'path', null, 2000, 'the path view');
+  {
+    // P22: entering the view never scrolls the coach's line or the still away
+    const t = await app(() => ({ coach: Math.round(document.getElementById('coach').getBoundingClientRect().top), board: Math.round(document.getElementById('board').getBoundingClientRect().top) }));
+    expect(t.coach >= 0 && t.board >= 0, `the view scrolled the coach line or the still away: ${JSON.stringify(t)}`);
+  }
   {
     const v = await app(() => {
       const pathEl = document.getElementById('path');

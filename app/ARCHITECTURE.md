@@ -1122,3 +1122,83 @@ The integrator's notes, kept here so the next iteration starts from what is true
 - **The idle position's facts are built ahead of the drop** (game.js `warmFacts()`, scheduled from
   `startPre()` at 0 ms and run only while idle, keyed by fen): the tutorial hold fell from a 45 to
   70 ms median (with a 105 ms spike that failed holdon.js step 1 once) to about 20 to 40 ms.
+
+#### 8.11, second review (review2): what changed and why
+
+- **An OFF line is never lost (P2).** The one sentence slot is still REVIEW, WAKE, SLIP, OFF,
+  QUIET, NOT_COUNTED, but OFF is no longer read from the shown diff: any material look at off
+  whose `off:<look>` is not in `said` is announced (current first, then ladder order), and until
+  it has been said its hand reads `'bare'`, not `'off'`. So a look whose OFF lost the slot to a
+  REVIEW, WAKE or SLIP holds with the bare question that game and is announced the next, and the
+  hand never comes off unannounced ('the first off game is announced before his first move'). The
+  other kinds that lose the slot are not carried (their stage is felt at the next hold, and a slip
+  is named on its own close card). After a merge an off look that neither device has said is
+  announced too (said is union-merged, so one said on the other device stays said); test_path's
+  merge-silence fixture says so.
+- **A merge silences only what it changed (P1).** `store.mirror` passes `onMerged({ changed,
+  before })`, `before` the local document before the merge; game.js recomputes the stages over
+  `before.path.digest` and resets `shown` (and the game's line baseline, next item) only for the
+  looks whose stage the merged-in lines changed. A transition this view's own last game caused is
+  said; the contract's 'reset silently' is read as 'reset what the merge did'.
+- **A ply-0 replan keeps the first line's sentence (P3).** `S.lineBase = { shown, added }` holds the
+  shown the game's first opening line was planned against and the `said` entries that line added;
+  K3's late line and the merge replan (`replanGame()`) plan against them again, so K3's next line
+  is prefixed by the same transition sentence.
+- **v1 tutorial records are dropped (P4).** The MVP stored the tutorial dare whenever he took it
+  back and played on; `norm()` drops a v1 record whose fen is TUTORIAL_FEN (the position cannot
+  recur once he has moved, and the page holds nothing there but the tutorial) and any record with
+  `tutorial: true`, so the dare is no record of a look in the digest, the still or the drill.
+- **One answered record at off keeps the look off (P5).** A weight-1 record (taken back after a
+  right first tap) exists at off only when the hold was shown (the review's bare hold, a loss of
+  five or more); the fold now treats it as quiet treats one: the stage stays, run 0. A weight-2
+  shown record at off still wakes the look, and its slip line is `TRANSITION.SLIP_HELD[look]`
+  (the digest line's `landed` count says whether the hand spoke): 'I said nothing' is said only
+  of a landing.
+- **The close line reads the card (P6, P7, P8, P20).** `path.closeLineFor(state, { holds, again,
+  stored })` words the serif line from the holds the card lists (the tutorial's included, so it
+  never contradicts 'I stopped your hand twice'); a game that was not stored (given up before any
+  move) counts nothing and offers no drill. `CLOSE.LANDED` is per look and chosen by any look whose
+  off hand let a piece land (why 'hand'), current first; the current look's pair/quiet landings
+  read `CLOSE.LANDED_LET[look]`. `NONE_FIRST` names the pawns, so it is used only when the pawns
+  are current. `plan.closeLine` keeps the summary-based line for the tests.
+- **The mate line (P9).** A mate-loss is never NOT_COUNTED (a short Scholar's loss is not 'early'
+  from his chair), and `MATE_LOSS` replaces OPEN as 8.4 says (it was prepended). Any announcement
+  drops the countdown, so every composed line stays within 28 words (asserted over every pair).
+- **ignored_attack against the board (P10, P11).** 'Was attackable before' uses Black's legal
+  captures in the position before his move (the turn handed over; pins honoured), so a pin
+  release is `opened_line`. 'already' carries `byLastMove` (their last move's piece among the
+  takers; null after a load, when it is unknown); lost_guard carries `guardMoved` (the moved piece
+  was a guard; false when the move only blocked one). The remembering questions are used only
+  when they fit (`byLastMove !== false`, `guardMoved !== false`); the template otherwise. The wrong
+  tap hints `IF_WRONG.ignored_attack_already_old` and `ignored_attack_lost_guard` are new. A
+  persisting attack stays a their_last_move record (he still left it en prise). The flags are
+  kept on the record (`gate.recordFlags`) for the caption and the drill.
+- **A guarded piece is won, not free (P12).** free_piece_ignored carries `defended`; the copy
+  takes the `_cheap` keys (question, hints, right tap, anyway, K2 fallback, caption,
+  `CLOSE.FREE_STAYED_CHEAP`) and the free remembering question is not used. It still counts as a
+  free record (it was material walked past).
+- **K3's guards question (P13)** is stored with `k3.slot`, the sub-case of the game's newest guards
+  hold (the prompt says which); plan() uses it for that slot only.
+- **The pawns question grades the pawn (P14).** When the pawns remembering question is asked and
+  the engine's best taker is not a pawn, the hold's answer is rebuilt with a pawn as best and the
+  dearer takers partial ('The knight on c6 could too. Is there something cheaper?').
+- **Drills (P15):** a missed mate or a stalemate played anyway is a drill without a refutation
+  (the gate writes none for them); the drill is his worst moment: the larger netLoss, then the later ply.
+- **K3 for the first game (P16):** K3 is skipped only when the game never left the tutorial (no
+  committed move after it and no non-tutorial hold), not for the game that goes on from it.
+- **The close card's row (P17, P18, P19):** Again and the two muted links sit in one wrapping row
+  (`.close-row`); the last visible one is brought into view at the card and again when Claude's
+  where line has faded in; 'Where you are' shows exactly when the view would open (`pathReachable()`:
+  not in the tutorial, a stored real game, state over).
+- **The path view (P22, minors):** entering it scrolls the current row into view but never past
+  the coach line or the top of the still; focus goes to the current row and comes back to the
+  link; the bar holds Back and Again. `WHERE.FIRST` is keyed on real games (not counted ones) and
+  'I still hold {rest}' counts the mates row. The review game's gift notch is the held one.
+- **The still's subject (minor):** for an attack ignored or a free piece walked past, the still lifts
+  and rings the piece that was attacked or free (`record.answer.best`), not the piece he moved (the
+  castled king); the hanging looks and the mates keep the moved piece (8.5).
+- **K1's last-three line (P23)** is sent only for a hold of the current look; the plan's
+  `askFirst` is passed to K1/K2. '(last game N)' and the remembered line skip an again game.
+- **Not changed: P21** (a free capture that is not the pre-search's first line earns no 'Free
+  knight' and no count). It is the MVP's rule (PRODUCT.md), the engine's 103 cp says fxe3 is the
+  worse capture there, and changing what counts is a product call.

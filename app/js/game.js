@@ -127,6 +127,10 @@ const S = {
   // the path (iteration two): the state this game was planned from (endGame recomputes it for
   // the close card and the path view), the plan kept for the whole game, its hand and notch
   path: null, plan: null, hand: null, giftRate: null, review: false, again: false, view: null,
+  // the shown this game's first opening line was planned against, and the said entries that
+  // line added: a ply-0 replan (K3's line arriving, a merge) plans against them again, so the
+  // line keeps the transition sentence it already carried
+  lineBase: null,
 };
 let chess = new Chess(START_FEN);   // the truth: the position before any held move
 let gameId = newGameId();
@@ -147,14 +151,16 @@ let restingTimer = null;
 let ringTimer = null;
 let barBefore = null;               // the action bar's contents before a give-up confirm
 let coachHidden = false;            // a not_granted-family code hid the coach for this view
-let previousGame = store.list(KEYS.GAMES).slice(-1)[0] || null;   // the game before this one
+let previousGame = lastRealGame();   // the game before this one
 
 // the path's per-game counters (the v2 summary)
 let observed = 0;                   // committed non-tutorial player moves with a non-null verdict
 let captures = 0;                   // his committed (non-tutorial) moves that captured
 let gifts = { offered: 0, taken: 0 };   // verified gifts the opponent left / the ones he took
 let rewardsLog = [];                // [{ kind, ply, piece, said }]: both kinds, said or not
-let gameHadTutorial = false;        // the tutorial ran in this game: no K3 for it, its holds are not records
+let gameHadTutorial = false;        // the tutorial ran in this game (its holds are not records)
+let realMoves = 0;                  // his committed moves after the tutorial (a game K3 may close)
+let endStored = false;              // the game just ended was stored (a give-up before any move is not)
 let k3Fired = null;                 // the game id K3 was fired for (once per game)
 let endPlan = null;                 // the plan computed at endGame (the close card, the drill)
 let endLine = '';                   // the end line, said again when the path view is left
@@ -165,6 +171,14 @@ Object.defineProperty(S, 'counted', { get: () => observed, enumerable: true, con
 
 // Date.now() in base 36 plus PATH.ID_SUFFIX random base-36 characters: two games begun in the
 // same millisecond still differ
+// The newest stored real game: the practice (again) game is never 'last game' (the count line's
+// '(last game N)' and the remembered line compare like with like).
+function lastRealGame() {
+  try {
+    const games = store.list(KEYS.GAMES).filter((g) => g && typeof g === 'object' && !g.again);
+    return games.slice(-1)[0] || null;
+  } catch { return null; }
+}
 function newGameId() {
   let suffix = '';
   for (let i = 0; i < PATH.ID_SUFFIX; i++) suffix += Math.floor(Math.random() * 36).toString(36);
@@ -402,7 +416,7 @@ function backsOverThree(current) {
 }
 // compute + plan from the stored keys; a stored k3 written for another look is dropped. Returns
 // { state, plan, key } (state and plan null when path.js failed: the page plays on the MVP's rules).
-function computePlan() {
+function computePlan(over = {}) {
   const key = loadPathKey();
   let state = null;
   let plan = null;
@@ -412,7 +426,9 @@ function computePlan() {
       key.k3 = null;
       writePathKey(key);
     }
-    plan = pathModel.plan(state, key.k3, key.shown, key.said, store.list(KEYS.GAMES));
+    const shown = over.shown !== undefined ? over.shown : key.shown;
+    const said = Array.isArray(over.said) ? over.said : key.said;
+    plan = pathModel.plan(state, key.k3, shown, said, store.list(KEYS.GAMES));
   } catch {
     state = null;
     plan = null;
@@ -422,6 +438,18 @@ function computePlan() {
 // The plan for the game about to start: kept on S, frozen, for the whole game.
 function planGame() {
   const r = computePlan();
+  S.lineBase = { shown: isObj(r.key.shown) ? { ...r.key.shown } : null, added: [] };
+  return adoptPlan(r);
+}
+// The same game planned again at ply 0 (K3's line, a merge): against the shown and said this
+// game's first line was planned with, so the transition it carried is carried again.
+function replanGame() {
+  const base = S.lineBase || { shown: null, added: [] };
+  const key = readPathKey();
+  const r = computePlan({ shown: base.shown, said: key.said.filter((x) => !base.added.includes(x)) });
+  return adoptPlan(r);
+}
+function adoptPlan(r) {
   S.path = r.state;
   S.plan = r.plan;
   S.hand = r.plan && r.plan.hand ? r.plan.hand : null;
@@ -434,10 +462,15 @@ function planGame() {
 // shown := the stages he is told about, and the once-only sentences are remembered in said.
 function openingLine(plan, key) {
   if (!plan || typeof plan.line !== 'string' || !plan.line || !S.path) return null;
-  key.shown = { ...S.path.stages };
+  key.shown = { ...(isObj(plan.shownAfter) ? plan.shownAfter : S.path.stages) };
   const a = plan.announce;
-  if (a && a.kind === 'OFF' && a.look && !key.said.includes(`off:${a.look}`)) key.said.push(`off:${a.look}`);
-  if (a && a.kind === 'NOT_COUNTED' && S.path.newestReal && !key.said.includes(`nc:${S.path.newestReal.id}`)) key.said.push(`nc:${S.path.newestReal.id}`);
+  const add = (entry) => {
+    if (key.said.includes(entry)) return;
+    key.said.push(entry);
+    if (S.lineBase && !S.lineBase.added.includes(entry)) S.lineBase.added.push(entry);
+  };
+  if (a && a.kind === 'OFF' && a.look) add(`off:${a.look}`);
+  if (a && a.kind === 'NOT_COUNTED' && S.path.newestReal) add(`nc:${S.path.newestReal.id}`);
   writePathKey(key);
   return plan.line;
 }
@@ -454,12 +487,17 @@ function pathFacts(hold) {
   const current = S.path && S.path.current;
   if (!current || !COPY.PATH.MEANING[current]) return undefined;
   const look = lookState(current);
-  return {
+  let node = null;
+  try { node = hold && hold.verdict ? pathModel.nodeOf(hold.verdict) : null; } catch { node = null; }
+  const out = {
     current,
     meaning: COPY.PATH.MEANING[current],
     hand: hold && hold.hand === 'bare' ? 'fewer words' : 'full',
-    lastThree: { holds: pathModel.countWord(look ? look.n3 : 0), backs: pathModel.countWord(backs3) },
+    askFirst: S.plan && typeof S.plan.askFirst === 'string' ? S.plan.askFirst : null,
   };
+  // 'Holds of this kind in their last three games' counts the current look: said only of a hold of it
+  if (node === current) out.lastThree = { holds: pathModel.countWord(look ? look.n3 : 0), backs: pathModel.countWord(backs3) };
+  return out;
 }
 function drawEnd() {
   return chess.isStalemate() || chess.isInsufficientMaterial() || chess.isThreefoldRepetition() || chess.isDrawByFiftyMoves() || chess.isDraw();
@@ -685,6 +723,7 @@ async function commit(applied, { verdict = null, pre = null, before = null, afte
   factsCache = null;
   // the v2 counters: observed (a verdict was reached on a real move), captures, a gift taken
   if (!wasTutorial) {
+    realMoves += 1;
     if (verdict !== null && verdict !== undefined) observed += 1;
     if (real.captured) captures += 1;
   }
@@ -887,7 +926,8 @@ function warmFacts() {
 // otherwise the question follows the hand: the bare line when the hand reads 'bare', the remembering question
 // for a hold of the current look when the newest real game held one (never in the tutorial or an
 // again game), else the category template.
-function openHold(applied, verdict, before, after, scratch, { tint = [], drill = false, framing = null } = {}) {
+function openHold(applied, verdictIn, before, after, scratch, { tint = [], drill = false, framing = null } = {}) {
+  let verdict = verdictIn;
   let copy;
   try { copy = gate.holdCopy(verdict, after, applied); } catch { copy = null; }
   if (!copy) copy = plainCopy(verdict);
@@ -906,7 +946,17 @@ function openHold(applied, verdict, before, after, scratch, { tint = [], drill =
       try { node = pathModel.nodeOf(verdict); } catch { node = null; }
       const look = lookState(S.path.current);
       const own = S.plan.question ? S.plan.question[questionSlot(node, verdict)] : null;
-      if (node && node === S.path.current && look && look.nGame > 0 && typeof own === 'string' && own) question = own;
+      if (node && node === S.path.current && look && look.nGame > 0 && typeof own === 'string' && own && rememberingFits(node, verdict)) {
+        question = own;
+        // the pawns question asks for a pawn: a pawn taker is the answer, a dearer one partial
+        if (node === 'pawns') {
+          const v2 = pawnAnswer(verdict);
+          if (v2 !== verdict) {
+            verdict = v2;
+            try { copy = gate.holdCopy(verdict, after, applied) || copy; } catch { /* the first copy stands */ }
+          }
+        }
+      }
     }
   }
   const hold = {
@@ -931,6 +981,31 @@ function openHold(applied, verdict, before, after, scratch, { tint = [], drill =
   holdUI.open(hold, { hear: false, question });
   applyLinkPolicy();
   if (!hold.tutorial && !S.again && coach && !coachHidden && coach.consented() && coach.available()) fireK1(hold);
+}
+
+// The remembering questions say what made this hold: 'Their last move pointed at something of
+// yours' (not when the attack was older than their last move), 'The piece you are moving was
+// guarding something' (not when his move only blocked a guard's line), 'Something of theirs is
+// free again' (not when the piece was guarded and only won by a cheaper one). Otherwise the
+// category template, which is true of all of them.
+function rememberingFits(node, verdict) {
+  if (!verdict) return false;
+  if (node === 'their_last_move') return verdict.byLastMove !== false;
+  if (node === 'guards' && verdict.sub === 'lost_guard') return verdict.guardMoved !== false;
+  if (node === 'free') return verdict.defended !== true;
+  return true;
+}
+// The verdict with a pawn taker as its best answer, every dearer taker partial: the pawns
+// question asks which pawn reaches the square, so the knight that could too is not 'Yes'.
+// Unchanged when the best taker is a pawn already or no pawn takes.
+function pawnAnswer(verdict) {
+  const a = verdict && verdict.answer;
+  const takers = (verdict && Array.isArray(verdict.takers) ? verdict.takers : []).filter((t) => t && a && (a.squares || []).includes(t.square));
+  const pawns = takers.filter((t) => t.type === 'p').map((t) => t.square).sort();
+  const best = a && a.best;
+  if (!a || !pawns.length || pawns.includes(best)) return verdict;
+  const partial = (a.squares || []).filter((sq) => !pawns.includes(sq));
+  return { ...verdict, answer: { squares: [...pawns, ...partial], best: pawns[0], partial } };
 }
 
 // A last-resort copy set when gate.holdCopy throws: templates filled with the plain words.
@@ -1001,6 +1076,7 @@ function holdRecord(hold, outcome) {
     refutation: Array.isArray(hold.refutation) ? hold.refutation.slice() : [],
     refutationFrom: v.refutationFrom === 'pre' ? 'pre' : 'post',
     ply: hold.ply, gameId,
+    ...gate.recordFlags(v),
   };
   // a tutorial hold is shown on the card but is never a record of a look (summary.holds skips it)
   if (hold.tutorial) rec.tutorial = true;
@@ -1023,6 +1099,7 @@ function logLanded(real, verdict, fenBefore) {
     refutation: Array.isArray(verdict.refutation) ? verdict.refutation.slice() : [],
     refutationFrom: verdict.refutationFrom === 'pre' ? 'pre' : 'post',
     ply: S.plies, gameId,
+    ...gate.recordFlags(verdict),
   };
   holdLog.push(rec);
   return rec;
@@ -1294,14 +1371,18 @@ function endGame(result, line) {
   actionsEl.textContent = '';
   endLine = line;
   sayHeld(line);
-  const tutorialGame = gameHadTutorial || S.tutorial;
+  // K3 closes a game he played: not the tutorial on its own (the first real game goes on from the
+  // tutorial position, and that one K3 does close once he has made a move or met a real hold)
+  const tutorialGame = S.tutorial || (realMoves === 0 && !holdLog.some((h) => !h.tutorial));
   const stored = S.plies > 0 || holdLog.length > 0;
+  endStored = stored;
   if (stored) storeGame(result);
-  // the end plan: the state after this game (the close card, the path view, the drill)
+  // the end plan: the state after this game (the close card, the path view, the drill); a game
+  // that was not stored offers nothing of the previous game as today's
   const r = computePlan();
   if (r.state) S.path = r.state;
-  endPlan = r.plan;
-  fillCloseCard(endPlan);
+  endPlan = stored || !r.plan ? r.plan : { ...r.plan, drill: null };
+  fillCloseCard(endPlan, { stored });
   // the mirror reads and writes behind the card (fire and forget; silent in every outcome)
   if (stored && mirror && typeof mirror.sync === 'function') {
     try { Promise.resolve(mirror.sync()).catch(() => {}); } catch { /* local only */ }
@@ -1343,7 +1424,33 @@ function pathWords(planNow, extra = {}) {
   } catch { return null; }
 }
 
-function fillCloseCard(planNow = null) {
+// The close card's serif path line: from the holds the card itself lists (the tutorial's among
+// them), so it never contradicts the counts above it; nothing of a game that was not stored.
+function cardPathLine(planNow, stored) {
+  if (!planNow) return '';
+  try {
+    return pathModel.closeLineFor(S.path, { holds: holdLog, again: !!S.again, stored });
+  } catch {
+    return typeof planNow.closeLine === 'string' ? planNow.closeLine : '';
+  }
+}
+// The path view opens only from a close card of a real game that was stored and played past the
+// tutorial: the link shows exactly when enterPath() would open it.
+function pathReachable() {
+  return S.state === 'over' && !S.view && !S.hold && !S.tutorial && !!pathEl && !!S.path && !!S.path.newestReal;
+}
+// On a phone the card can run past the fold: bring the row with Again and its links into view.
+function bringCardIntoView() {
+  try {
+    const row = closeEl && closeEl.querySelector('.close-row');
+    const links = row ? Array.from(row.children).filter((el) => !el.hidden) : [];
+    const last = links[links.length - 1];
+    const over = last ? last.getBoundingClientRect().bottom - window.innerHeight : 0;
+    // a little air under the row rather than the buttons flush with the bottom edge
+    if (over > 0) window.scrollBy(0, over + 12);
+  } catch { /* no layout: nothing to scroll */ }
+}
+function fillCloseCard(planNow = null, { stored = true } = {}) {
   if (!closeEl) return;
   const sum = closeEl.querySelector('.close-sum');
   const list = closeEl.querySelector('.close-holds');
@@ -1358,7 +1465,7 @@ function fillCloseCard(planNow = null) {
   if (sum) sum.textContent = fill(template, vars);
   // the path line, Claude's where (only once K3 wrote it for this game), the two links
   const pathLine = closeEl.querySelector(`.${DOM.path.closePath}`);
-  if (pathLine) pathLine.textContent = planNow && typeof planNow.closeLine === 'string' ? planNow.closeLine : '';
+  if (pathLine) pathLine.textContent = cardPathLine(planNow, stored);
   const where = closeEl.querySelector(`.${DOM.path.closeWhere}`);
   if (where) {
     const k3 = readPathKey().k3;
@@ -1368,9 +1475,9 @@ function fillCloseCard(planNow = null) {
     where.classList.toggle('in', !!mine);
   }
   const againFromEl = closeEl.querySelector('[data-action="again-from"]');
-  if (againFromEl) againFromEl.hidden = !(planNow && planNow.drill) || !!S.again;
+  if (againFromEl) againFromEl.hidden = !stored || !(planNow && planNow.drill) || !!S.again;
   const pathLink = closeEl.querySelector('[data-action="path"]');
-  if (pathLink) pathLink.hidden = false;
+  if (pathLink) pathLink.hidden = !pathReachable();
   if (list) {
     list.textContent = '';
     for (const rec of holdLog) {
@@ -1383,11 +1490,7 @@ function fillCloseCard(planNow = null) {
     }
   }
   closeEl.hidden = false;
-  // on a phone the card can run past the fold when a game had many holds: bring Again into view
-  try {
-    const again = closeEl.querySelector('[data-action="again"]');
-    if (again && again.getBoundingClientRect().bottom > window.innerHeight) again.scrollIntoView({ block: 'end' });
-  } catch { /* no layout: nothing to scroll */ }
+  bringCardIntoView();
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1408,7 +1511,12 @@ function fireK3(planNow, { tutorialGame = false } = {}) {
     try { look = pathModel.nodeOf(h); } catch { look = null; }
     return { look, text: h.said };
   });
-  const words = pathWords(planNow, { saidTexts });
+  let guardsSlot = null;
+  if (nodeId === 'guards') {
+    const g = holdLog.filter((h) => !h.tutorial && PATH.RECORD_OUTCOMES.includes(h.outcome) && pathModel.nodeOf(h) === 'guards').sort((a, b) => (b.ply || 0) - (a.ply || 0))[0];
+    guardsSlot = g ? questionSlot('guards', g) : null;
+  }
+  const words = pathWords(planNow, { saidTexts, guardsSlot });
   if (!words) return;
   // the templates that stand in for each rejected field
   const firstSlot = nodeId && COPY.PATH.QUESTION[nodeId] ? nodeId : null;
@@ -1431,6 +1539,8 @@ function fireK3(planNow, { tutorialGame = false } = {}) {
         next: text(v.next) || templates.next,
         again: againLine && drill && drill.record ? { line: againLine, recordGameId: drill.record.gameId, recordPly: drill.record.ply } : null,
         question: text(v.question) || templates.question,
+        // guards: the sub-case this game's guards holds were (one question cannot be true of both)
+        slot: guardsSlot,
         askFirst: v.ask_first != null ? v.ask_first : (nodeId ? PATH.ASK_FIRST[nodeId] ?? null : null),
         focus: v.focus != null ? v.focus : null,
       };
@@ -1445,10 +1555,13 @@ function fireK3(planNow, { tutorialGame = false } = {}) {
           where.textContent = k3.where;
           where.hidden = false;
           requestFrame(() => where.classList.add('in'));
+          // the line takes its height now: Again and its links stay in view
+          if (S.view !== 'path') bringCardIntoView();
         }
       } else if (gameId !== thisGame && S.state === 'idle' && S.plies === 0 && !picked && !S.tutorial && !S.again && !S.hold) {
-        // the next game already began and nothing has happened in it: its line is Claude's now
-        const { plan, key: k } = planGame();
+        // the next game already began and nothing has happened in it: its line is Claude's now,
+        // planned against what its first line was planned with (its transition sentence stays)
+        const { plan, key: k } = replanGame();
         const line = openingLine(plan, k);
         if (line) { coachLine.say(line); lineHold = true; }
       }
@@ -1504,9 +1617,17 @@ function aimStill(lookId) {
   let still = null;
   try { still = lookId ? pathModel.stillOf(store.list(KEYS.GAMES), lookId) : null; } catch { still = null; }
   if (still && still.chess && still.record) {
+    // the look's subject: for an attack ignored or a free piece walked past, the piece that was
+    // attacked or free (record.answer.best), not the piece he moved; else the moved piece
+    const r = still.record;
+    let at = r.to;
+    const best = r.answer && typeof r.answer.best === 'string' ? r.answer.best : null;
+    try {
+      if ((r.category === 'ignored_attack' || r.category === 'free_piece_ignored') && best && still.chess.get(best)) at = best;
+    } catch { at = r.to; }
     board.setPosition(still.chess);
-    board.lift(still.record.to);
-    board.setMarks({ amber: still.record.to });
+    board.lift(at);
+    board.setMarks({ amber: at });
   } else {
     board.setPosition(new Chess(START_FEN));
     board.lift(null);
@@ -1514,7 +1635,7 @@ function aimStill(lookId) {
   }
 }
 function enterPath() {
-  if (S.state !== 'over' || S.view || S.hold || S.tutorial || !pathEl || !S.path) return;
+  if (!pathReachable()) return;
   const words = pathWords(endPlan);
   if (!words) return;
   S.view = 'path';
@@ -1525,13 +1646,27 @@ function enterPath() {
   coachLine.say(words.where);
   lineHold = true;
   actionsEl.textContent = '';
+  // the view is left by Back or by Again (the next game), both in the bar
   actionsEl.appendChild(button(DOM.buttonClasses.quiet, 'back', COPY.BUTTONS.BACK));
+  actionsEl.appendChild(button(DOM.buttonClasses.primary, 'again', COPY.BUTTONS.AGAIN));
   aimStill(S.path.current);
-  // the last row in view, as Again is on the card
+  // the rows in view as Again is on the card, but never past the coach's where line or the top of
+  // the still: the current row first, the rest a scroll away (the board stays the hero)
   try {
-    const last = pathLooksEl && pathLooksEl.lastElementChild;
-    if (last && last.getBoundingClientRect().bottom > window.innerHeight) last.scrollIntoView({ block: 'end' });
+    const rows = pathLooksEl ? Array.from(pathLooksEl.children) : [];
+    const target = rows.find((li) => li.dataset && li.dataset.stage === 'current') || rows[rows.length - 1];
+    const need = target ? target.getBoundingClientRect().bottom - window.innerHeight : 0;
+    const tops = [coachEl, boardEl].filter(Boolean).map((el) => el.getBoundingClientRect().top);
+    const room = tops.length ? Math.min(...tops) : 0;
+    // room < 0: the card had scrolled the coach line away; bring it back first
+    const by = room < 0 ? room : Math.min(Math.max(need, 0), room);
+    if (by !== 0) window.scrollBy(0, by);
   } catch { /* no layout: nothing to scroll */ }
+  // focus follows the view: the current row's sentence (Back is in the action bar)
+  try {
+    const cur = pathLooksEl && pathLooksEl.querySelector('[data-stage="current"] .' + DOM.path.sentence);
+    if (cur && typeof cur.focus === 'function') cur.focus({ preventScroll: true });
+  } catch { /* no focus target */ }
 }
 // Leave the view silently (a new game is starting): no line, no board restore.
 function clearView() {
@@ -1549,6 +1684,11 @@ function leavePath() {
   paint();
   coachLine.say(endLine);
   lineHold = true;
+  // focus returns to the link that opened the view
+  try {
+    const link = closeEl && closeEl.querySelector('[data-action="path"]');
+    if (link && !link.hidden && typeof link.focus === 'function') link.focus({ preventScroll: true });
+  } catch { /* no focus target */ }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1574,7 +1714,7 @@ async function againFrom() {
   if (!verdict) { await newGame(); return; }
   dropEverything();
   resetGame();
-  previousGame = store.list(KEYS.GAMES).slice(-1)[0] || null;
+  previousGame = lastRealGame();
   planGame();
   S.again = true;
   chess = start;
@@ -1612,6 +1752,8 @@ function resetGame() {
   gifts = { offered: 0, taken: 0 };
   rewardsLog = [];
   gameHadTutorial = false;
+  realMoves = 0;
+  endStored = false;
   endPlan = null;
   S.again = false;
   backs = 0;
@@ -1686,7 +1828,7 @@ async function startGame(fen, { line = null, tutorial = false, keepLine = false 
 async function newGame({ line } = {}) {
   dropEverything();
   resetGame();
-  previousGame = store.list(KEYS.GAMES).slice(-1)[0] || null;
+  previousGame = lastRealGame();
   const { plan, key } = planGame();
   let opening = line || openingLine(plan, key);
   if (!opening) opening = rememberedLine() || COPY.YOUR_MOVE;
@@ -1885,20 +2027,40 @@ async function bootMirror() {
     try { await mirror.boot(); } catch { /* local only */ }
   }
 }
-// A merge rewrote the local keys: shown is reset silently to the merged stages (a merge never
-// announces anything); a game not yet begun takes the merged plan, hand and line.
-function onMerged() {
+// A merge rewrote the local keys. shown is reset silently for the looks whose stage the merged-in
+// lines changed (a merge never announces anything of its own), and kept for the rest, so a
+// transition this view's own last game caused (a slip, a wake) is still said. `info.before` is the
+// local document before the merge (store.mirror); without it every look is reset, as before.
+// A game not yet begun takes the merged plan, hand and line.
+function onMerged(info = {}) {
   try {
     const fresh = computePlan();
     if (fresh.state) {
       const key = readPathKey();
-      key.shown = { ...fresh.state.stages };
+      let pre = null;
+      try {
+        const d = info && info.before && info.before.path && Array.isArray(info.before.path.digest) ? info.before.path.digest : null;
+        if (d) pre = pathModel.compute(d, Date.now());
+      } catch { pre = null; }
+      const merged = fresh.state.stages;
+      const has = (x) => isObj(x) && Object.keys(x).length > 0;
+      const silence = (base) => {
+        const b = has(base) ? base : pre ? pre.before : null;
+        const out = {};
+        for (const id of PATH.MATERIAL_LOOKS) {
+          const keep = pre && b && pre.stages[id] === merged[id] && PATH.STAGES.includes(b[id]);
+          out[id] = keep ? b[id] : merged[id];
+        }
+        return out;
+      };
+      key.shown = silence(key.shown);
       if (!Array.isArray(key.digest)) key.digest = fresh.key.digest || [];
       writePathKey(key);
+      if (S.lineBase) S.lineBase = { ...S.lineBase, shown: silence(S.lineBase.shown) };
     }
     if (S.state === 'idle' && S.plies === 0 && !picked && !S.tutorial && !S.again && !S.hold && !S.view) {
-      previousGame = store.list(KEYS.GAMES).slice(-1)[0] || null;
-      const { plan, key } = planGame();
+      previousGame = lastRealGame();
+      const { plan, key } = replanGame();
       const line = openingLine(plan, key);
       if (line) { coachLine.say(line); lineHold = true; }
     }

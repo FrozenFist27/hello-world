@@ -377,7 +377,13 @@ section('current and the tie-break', () => {
   ok(pa.line.endsWith(COPY.PATH.NOTHING_LEFT), `nothing left line: ${pa.line}`);
   ok(pa.where === COPY.PATH.WHERE.ALL_OFF && pa.closeLine === COPY.PATH.CLOSE.NOTHING_LEFT, 'nothing left: where and close');
   ok(pa.giftRate === 0.08 && Object.keys(pa.question).length === 0 && pa.askFirst === null, 'nothing left: notch, no question, no ask');
-  eq(pa.hand, C.handAll('off'), 'every look off: the hand off, mates full');
+  // the hand comes off one announced look at a time: unsaid, only the announced look is off (P2)
+  eq(pa.announce, { kind: 'OFF', look: 'pawns' }, 'every look off, nothing said: pawns announced first');
+  eq(pa.hand, { ...C.handAll('bare'), hanging_after_move: { pawn: 'off', piece: 'bare', takes_back: 'bare' } }, 'every look off, nothing said: the unsaid looks hold bare');
+  const allSaid = PATH.MATERIAL_LOOKS.map((id) => `off:${id}`);
+  const pz = P.plan(sa, null, null, allSaid);
+  eq(pz.hand, C.handAll('off'), 'every look off and said: the hand off, mates full');
+  ok(pz.line === COPY.PATH.NOTHING_LEFT && pz.announce === null, `every look off and said: the line is nothing left alone (${pz.line})`);
   const pr = P.plan(st(all, nowOf(all) + 15 * DAY));
   eq(pr.hand, C.handAll('bare'), 'every look off under review: the bare hand');
   // capped quiet looks only: current null
@@ -454,7 +460,15 @@ section('merge silence', () => {
   const merged = [older, ...log];
   const b = P.compute(digestOf(merged), nowOf(merged));
   eq(P.plan(b, null, b.stages).transitions, [], 'transitions over a merged log are empty when shown is the merged stages');
-  ok(P.plan(b, null, b.stages).announce === null || P.plan(b, null, b.stages).announce.kind === 'NOT_COUNTED', 'a merge announces no stage change');
+  // the off looks this device has already announced are in said (said is union-merged)
+  // (the inserted older game turns their_last_move off here: no device has said that one, so it
+  // is announced, as below; ARCHITECTURE.md 8.11)
+  const saidOff = PATH.MATERIAL_LOOKS.filter((id) => b.stages[id] === 'off').map((id) => `off:${id}`);
+  const ab = P.plan(b, null, b.stages, saidOff);
+  ok(ab.announce === null || ab.announce.kind === 'NOT_COUNTED', `a merge announces no stage change (${JSON.stringify(ab.announce)})`);
+  // an off look neither device has announced is still said once, before the hand comes off (P2)
+  const unsaid = P.plan(b, null, b.stages, []);
+  ok(b.stages.pawns === 'off' && unsaid.announce && unsaid.announce.kind === 'OFF' && unsaid.announce.look === 'pawns' && unsaid.hand.hanging_after_move.pawn === 'off', `an unsaid off look is announced after a merge too (${JSON.stringify(unsaid.announce)})`);
   eq(P.plan(a, null, a.stages).transitions, [], 'shown equal to the stages: no transitions');
   // a shown that is empty falls back to before
   eq(P.plan(a, null, {}).transitions, P.plan(a, null, null).transitions, 'an empty shown reads as absent');
@@ -496,7 +510,7 @@ section('nodeOf table', () => {
       const want = TABLE[pos.id] && TABLE[pos.id][san];
       ok(want, `${pos.id} ${san} is in the table`);
       const r = recordFrom(pos.fen, san, row);
-      const n = P.norm({ holds: [r] }).holds[0];
+      const n = P.norm({ v: 2, holds: [r] }).holds[0];
       ok(typeof n.pawnAmongTakers === 'boolean', `${pos.id} ${san}: pawnAmongTakers derived`);
       ok(P.nodeOf(n) === want, `${pos.id} ${san}: ${P.nodeOf(n)} (want ${want})`);
       ok(P.nodeOf(r) === want, `${pos.id} ${san}: nodeOf normalises a record without the split`);
@@ -509,7 +523,9 @@ section('nodeOf table', () => {
     tut += 1;
     const want = TUTORIAL_TABLE[san];
     const r = recordFrom(tutorial.fen, san, row);
-    const n = P.norm({ holds: [r] }).holds[0];
+    // (a v2-shaped game: a v1 game's record at the tutorial position is the tutorial dare and is
+    // dropped by norm, below)
+    const n = P.norm({ v: 2, holds: [r] }).holds[0];
     ok(P.nodeOf(n) === want, `tutorial ${san}: ${P.nodeOf(n)} (want ${want})`);
     ok(n.pawnAmongTakers === row.pawnAmongTakers, `tutorial ${san}: the derived split matches the recorded one`);
     ok(n.variant === row.variant, `tutorial ${san}: the derived variant matches the recorded one`);
@@ -577,6 +593,20 @@ section('norm and the v1 twin', () => {
   eq(Object.keys(dl).sort(), ['again', 'captures', 'date', 'escapes', 'gifts', 'id', 'looks', 'observed', 'result'], 'the digest line fields');
   ok(dl.escapes === 1 && dl.gifts.offered === 2 && dl.gifts.taken === 1 && dl.captures === 3, 'the digest line counters');
   ok(JSON.stringify(dl).length < 260, `a digest line is small (${JSON.stringify(dl).length} bytes)`);
+  // P4: the MVP stored the tutorial dare whenever he took it back and played on; a v1 record at
+  // the tutorial position is never a record of a look, so takes_back cannot go off on it
+  const TUT = { fen: C.TUTORIAL_FEN, san: 'Bxf7+', category: 'hanging_after_move', sub: null, taps: [{ square: 'e8', grade: 'right' }], outcome: 'back', coachShown: false, netLoss: 2, piece: 'b', to: 'f7', best: 'e8', ply: 1 };
+  const tutLog = [v1Game(1, [TUT]), v1Game(2, []), v1Game(3, []), v1Game(4, []), v1Game(5, [])];
+  eq(P.norm(tutLog[0]).holds, [], 'v1: the tutorial dare is dropped by norm');
+  eq(P.digestOf(tutLog[0]).looks, {}, 'v1: the tutorial dare is in no digest line');
+  const tutV2 = [];
+  for (let k = 0; k < 7; k += 1) tutV2.push(game({ captures: 2, gifts: { offered: 1, taken: 1 } }));
+  const tutState = P.compute([...tutLog, ...tutV2].map(P.digestOf), nowOf(tutV2));
+  ok(tutState.stages.takes_back !== 'off' && P.plan(tutState).hand.hanging_after_move.takes_back !== 'off', `v1 tutorial dare: takes_back never goes off on it (${tutState.stages.takes_back})`);
+  ok(look(tutState, 'takes_back').everFired === false, 'v1 tutorial dare: takes_back never fired');
+  // a v2 record at the tutorial position (a loaded position, an engine hold) is a record
+  ok(P.norm({ v: 2, holds: [TUT] }).holds.length === 1, 'v2: a record at the tutorial position is kept');
+  ok(P.norm({ v: 2, holds: [{ ...TUT, tutorial: true }] }).holds.length === 0, 'a record flagged tutorial is dropped');
   // a v1 hold is never a drill (no answer)
   const s = P.compute(n.map(P.digestOf), now);
   ok(P.plan(s, null, null, [], n).drill === null, 'a v1 hold is never offered as a drill');
@@ -609,9 +639,16 @@ section('the opening line', () => {
   // mate-loss with nothing to announce
   const ml = game({ result: 'mate-loss', observed: 22, holds: [rec('mates', { outcome: 'ended' })] });
   const pm = P.plan(st([ml]));
-  ok(pm.announce === null && pm.line.startsWith(COPY.PATH.MATE_LOSS + ' ' + COPY.PATH.OPEN.pawns), `mate-loss line: ${pm.line}`);
+  // the mate-loss line replaces OPEN (PATHWAY 'The next rule', ARCHITECTURE.md 8.4)
+  ok(pm.announce === null && pm.line === COPY.PATH.MATE_LOSS, `mate-loss line alone: ${pm.line}`);
+  // P9: a four-move Scholar's loss (observed 3) is never 'early' from his chair: the mate line, not NOT_COUNTED
   const ms = game({ result: 'mate-loss', observed: 3, holds: [rec('mates', { outcome: 'ended' })] });
-  ok(!P.plan(st([ms])).line.includes(COPY.PATH.MATE_LOSS), 'a short mate-loss announces NOT_COUNTED instead');
+  const pms = P.plan(st([ms]));
+  ok(pms.line === COPY.PATH.MATE_LOSS && pms.announce === null && !pms.line.includes('do not count'), `a short mate-loss says the mate line: ${pms.line}`);
+  // a transition still outranks the mate line
+  const msq = [game({ holds: [rec('pawns')] }), clean(), game({ result: 'mate-loss', observed: 22, holds: [rec('mates', { outcome: 'ended' })] })];
+  const pmq = P.plan(st(msq));
+  ok(pmq.announce && pmq.announce.kind === 'QUIET' && !pmq.line.includes(COPY.PATH.MATE_LOSS), `a transition outranks the mate line: ${pmq.line}`);
   // QUIET announced; transitions against shown
   const q = [game({ holds: [rec('pawns')] }), clean(), clean()];
   const pq = P.plan(st(q));
@@ -629,6 +666,94 @@ section('the opening line', () => {
   ok(offs.announce.kind === 'OFF' && offs.announce.look === 'pawns', 'OFF in ladder order');
   ok(P.plan(st(base), null, null, ['off:pawns']).announce.look === 'takers', 'the next unsaid OFF');
   ok(P.plan(st(base), null, null, ['off:pawns', 'off:takers']).announce === null, 'every OFF said: nothing');
+});
+
+// review2 P2 and P5: an OFF is never lost to another sentence, and a slip the hand spoke for is not
+// called silent
+section('the OFF line is never lost; a shown slip is not silent', () => {
+  // (a) he comes back fifteen days after the game that took the pawns off: REVIEW takes the slot
+  const offLog = [game({ holds: [rec('pawns')] }), clean(), clean(), clean(), clean()];
+  const shownBefore = st(offLog).stages;
+  const off5 = [...offLog, clean()];
+  const later = nowOf(off5) + 15 * DAY;
+  const sRev = P.compute(digestOf(off5), later);
+  const pRev = P.plan(sRev, null, shownBefore, []);
+  ok(sRev.stages.pawns === 'off' && pRev.announce.kind === 'REVIEW' && pRev.hand.hanging_after_move.pawn === 'bare', 'a: review game, pawns bare');
+  const reviewGame = clean({ date: new Date(later).toISOString() });
+  const after = [...off5, reviewGame];
+  const pNext = P.plan(st(after), null, pRev.shownAfter, []);
+  ok(pNext.announce && pNext.announce.kind === 'OFF' && pNext.announce.look === 'pawns', `a: the OFF comes the game after the review (${JSON.stringify(pNext.announce)})`);
+  ok(pNext.line.includes('They are yours') && pNext.hand.hanging_after_move.pawn === 'off', `a: said, then off: ${pNext.line}`);
+  ok(P.plan(st(after), null, pNext.shownAfter, ['off:pawns']).hand.hanging_after_move.pawn === 'off' && P.plan(st(after), null, pNext.shownAfter, ['off:pawns']).announce === null, 'a: said once');
+  // (b) one game: pawns slips and free completes its off window; SLIP takes the slot
+  const fb = [game({ gifts: { offered: 1, taken: 1 }, holds: [rec('pawns')] }), game({ gifts: { offered: 1, taken: 1 }, holds: [rec('free')] }),
+    ...[1, 2, 3, 4].map(() => clean({ gifts: { offered: 1, taken: 1 } }))];
+  const sb = st(fb);
+  ok(sb.stages.pawns === 'off' && sb.stages.free === 'quiet', `b: before (${JSON.stringify(sb.stages)})`);
+  const shownB = sb.stages;
+  const slipGame = game({ gifts: { offered: 1, taken: 1 }, holds: [rec('pawns', { outcome: 'landed', why: 'hand' })] });
+  const fb2 = [...fb, slipGame];
+  const s8 = st(fb2);
+  const p8 = P.plan(s8, null, shownB, ['off:pawns']);
+  ok(s8.stages.free === 'off' && s8.stages.pawns === 'quiet', `b: free off, pawns woken (${JSON.stringify(s8.stages)})`);
+  ok(p8.announce.kind === 'SLIP' && p8.announce.look === 'pawns' && p8.line.includes('said nothing'), `b: the SLIP is said: ${p8.line}`);
+  ok(p8.hand.free_piece_ignored === 'bare', `b: free is not off before its OFF line is said (${p8.hand.free_piece_ignored})`);
+  const fb3 = [...fb2, clean({ gifts: { offered: 1, taken: 1 } })];
+  const p9 = P.plan(st(fb3), null, p8.shownAfter, ['off:pawns']);
+  ok(p9.announce && p9.announce.kind === 'OFF' && p9.announce.look === 'free' && p9.hand.free_piece_ignored === 'off', `b: the free OFF the next game (${JSON.stringify(p9.announce)})`);
+  // P5: in the review game he is held bare and answers right: the look stays off, nothing is announced as a slip
+  const answered = game({ date: new Date(later).toISOString(), holds: [rec('pawns', { outcome: 'back', taps: RIGHT })] });
+  const sAns = st([...off5, answered]);
+  ok(sAns.stages.pawns === 'off' && look(sAns, 'pawns').woken === false, `P5: a right answer in the review game keeps pawns off (${sAns.stages.pawns})`);
+  const pAns = P.plan(sAns, null, pRev.shownAfter, ['off:pawns']);
+  ok(!pAns.line.includes('said nothing') && pAns.announce === null, `P5: no slip line after a right answer: ${pAns.line}`);
+  // played anyway under the review's bare hold: woken, and the slip line does not say 'I said nothing'
+  const anywayG = game({ date: new Date(later).toISOString(), holds: [rec('pawns', { outcome: 'anyway' })] });
+  const sAny = st([...off5, anywayG]);
+  const pAny = P.plan(sAny, null, pRev.shownAfter, ['off:pawns']);
+  ok(sAny.stages.pawns === 'quiet' && pAny.announce.kind === 'SLIP' && pAny.line.startsWith(COPY.PATH.TRANSITION.SLIP_HELD.pawns), `P5: a shown slip says SLIP_HELD: ${pAny.line}`);
+  ok(!pAny.line.includes('said nothing'), 'P5: never "I said nothing" when the hand spoke');
+  // the review game offers gifts at the held rate for an off free look
+  const freeOff = [game({ gifts: { offered: 1, taken: 1 }, holds: [rec('free')] }), ...[1, 2, 3, 4, 5].map(() => clean({ gifts: { offered: 1, taken: 1 } }))];
+  ok(st(freeOff).stages.free === 'off' && P.plan(st(freeOff)).giftRate === PATH.GIFT_RATE.off, 'free off: the off notch');
+  ok(P.plan(P.compute(digestOf(freeOff), nowOf(freeOff) + 15 * DAY)).giftRate === PATH.GIFT_RATE.on, 'free off under review: the held notch');
+});
+
+// review2 P13: K3's one question is used for guards only for the sub-case it was written about
+// every opening line the plan can compose stays within the 28-word cap: one announcement and
+// OPEN, or OPEN and its countdown
+section('composed opening lines', () => {
+  const words = (t) => t.trim().split(/\s+/).filter(Boolean).length;
+  const T = COPY.PATH.TRANSITION;
+  const announces = [T.REVIEW, COPY.PATH.NOT_COUNTED];
+  for (const kind of ['QUIET', 'OFF', 'SLIP', 'SLIP_HELD', 'WAKE']) announces.push(...Object.values(T[kind]));
+  const C2 = COPY.PATH.COUNTDOWN;
+  const countdowns = [C2.QUIET_ONE, C.fill(C2.QUIET_MANY, { n: 'Twelve' }), C2.OFF_ONE, C.fill(C2.OFF_MANY, { n: 'Twelve' }), ...Object.values(C2.FLOOR)];
+  let worst = 0;
+  for (const open of [...Object.values(COPY.PATH.OPEN), COPY.PATH.NOTHING_LEFT, COPY.PATH.MATE_LOSS]) {
+    for (const a of announces) worst = Math.max(worst, words(`${a} ${open}`));
+    for (const c of countdowns) worst = Math.max(worst, words(`${open} ${c}`));
+  }
+  ok(worst <= 28, `the longest composed opening line is ${worst} words`);
+  // and the plan composes them that way: an announcement drops the countdown
+  const nc = P.plan(st([game({ holds: [rec('pawns')] }), game({ observed: 6 })]));
+  ok(nc.announce.kind === 'NOT_COUNTED' && nc.line === `${COPY.PATH.NOT_COUNTED} ${COPY.PATH.OPEN.pawns}`, `NOT_COUNTED then OPEN alone: ${nc.line}`);
+});
+
+section('the guards question from K3', () => {
+  const gl = [game({ captures: 1, escapes: 1, gifts: { offered: 1, taken: 1 }, holds: PATH.MATERIAL_LOOKS.filter((id) => id !== 'guards').map((id) => rec(id)) }),
+    ...[1, 2, 3, 4, 5].map(() => clean({ captures: 1, escapes: 1, gifts: { offered: 1, taken: 1 } })),
+    game({ captures: 1, escapes: 1, gifts: { offered: 1, taken: 1 }, holds: [rec('guards'), rec('guards', { ply: 30 })] })];
+  const sg = st(gl);
+  ok(sg.current === 'guards', 'guards current');
+  const q = 'Hold on. The piece you are moving was guarding something. Tap it.';
+  const k3 = { gameId: sg.newestReal.id, nodeId: 'guards', promptVersion: 'v3', where: null, next: null, again: null, question: q, askFirst: null, focus: null, slot: 'guards_lost_guard' };
+  const p = P.plan(sg, k3);
+  ok(p.question.guards_lost_guard === q && p.question.guards_opened_line === COPY.PATH.QUESTION.guards_opened_line, 'K3 question on its own sub-case only');
+  const pNone = P.plan(sg, { ...k3, slot: undefined });
+  ok(pNone.question.guards_lost_guard === COPY.PATH.QUESTION.guards_lost_guard && pNone.question.guards_opened_line === COPY.PATH.QUESTION.guards_opened_line, 'K3 without a sub-case: the templates for guards');
+  const pawnsK3 = P.plan(st([game({ holds: [rec('pawns')] })]), { gameId: null, nodeId: 'pawns', question: 'Hold on. The pawn again. Which one reaches that square? Tap it.' });
+  ok(pawnsK3.question.pawns === COPY.PATH.QUESTION.pawns, '(a k3 of another game is not used)');
 });
 
 function fillN(t, n) {
@@ -691,16 +816,52 @@ section('the question, the close line, where, the drill', () => {
   ok(P.plan(sNone, null, null, [], [none1, none2]).closeLine === C.fill(COPY.PATH.CLOSE.NONE, { look: COPY.PATH.LOOK_WORDS[sNone.current] }), 'close NONE');
   const landedG = game({ holds: [rec('pawns', { outcome: 'landed', why: 'pair' })] });
   const pl = P.plan(st([landedG]), null, null, [], [landedG]);
-  ok(pl.closeLine === C.fill(COPY.PATH.CLOSE.LANDED, { look: 'the pawns' }), `close LANDED: ${pl.closeLine}`);
-  ok(P.plan(st([landedG])).closeLine === pl.closeLine, 'close LANDED from the digest alone');
+  ok(pl.closeLine === COPY.PATH.CLOSE.LANDED_LET.pawns, `close LANDED_LET (pair): ${pl.closeLine}`);
+  ok(P.plan(st([landedG])).closeLine === pl.closeLine, 'close LANDED_LET from the digest alone');
+  // P8/P20: a piece the off hand let land names its own look, whatever is current
+  const offBase = [game({ holds: [rec('pawns')] }), clean(), clean(), clean(), clean(), clean()];
+  const slipG = game({ holds: [rec('pawns', { outcome: 'landed', why: 'hand' })] });
+  const slipLog = [...offBase, slipG];
+  const pSlip = P.plan(st(slipLog), null, st(offBase).stages, ['off:pawns'], slipLog);
+  ok(pSlip.closeLine === COPY.PATH.CLOSE.LANDED.pawns, `close LANDED (hand) names the pawns: ${pSlip.closeLine}`);
+  ok(P.plan(st(slipLog), null, st(offBase).stages, ['off:pawns']).closeLine === COPY.PATH.CLOSE.LANDED.pawns, 'close LANDED (hand) from the digest alone');
+  // the wording is the look's own for free, their_last_move and guards (P8)
+  for (const id of ['free', 'their_last_move', 'guards']) {
+    const lg = game({ holds: [rec('pawns'), rec(id, { outcome: 'landed', why: 'quiet', ply: 30 })], observed: 13, result: 'mate-loss' });
+    const ls = st([lg]);
+    const line = P.closeLineFor({ ...ls, current: id }, { holds: lg.holds });
+    ok(line === COPY.PATH.CLOSE.LANDED_LET[id], `close LANDED_LET for ${id}: ${line}`);
+    ok(!/where (what|their)/.test(line), `no ungrammatical look words for ${id}`);
+  }
+  for (const id of PATH.MATERIAL_LOOKS) {
+    ok(typeof COPY.PATH.CLOSE.LANDED[id] === 'string' && typeof COPY.PATH.CLOSE.LANDED_LET[id] === 'string' && typeof COPY.PATH.TRANSITION.SLIP_HELD[id] === 'string', `${id}: its own landed and slip lines`);
+  }
+  // P6: the card's line reads the holds the card lists (the tutorial's among them)
+  const tutHold = { fen: C.TUTORIAL_FEN, san: 'Bxf7+', category: 'hanging_after_move', sub: null, variant: 'takes_back', pawnAmongTakers: false, outcome: 'back', taps: [{ square: 'e8', grade: 'right', ask: null }], tutorial: true, netLoss: 2, ply: 1 };
+  const firstG = game({ holds: [] });
+  const sFirst = st([firstG]);
+  ok(P.plan(sFirst, null, null, [], [firstG]).closeLine === COPY.PATH.CLOSE.NONE_FIRST, 'the stored first game holds no record');
+  const cardLine = P.closeLineFor(sFirst, { holds: [tutHold, { ...tutHold, ply: 3 }], stored: true });
+  ok(cardLine === 'Two holds today, none on the pawns. That is still what we are on.', `the first card counts the tutorial holds it lists: ${cardLine}`);
+  // P7: a game given up before any move was not stored: nothing of the previous game is 'today'
+  const pawnsG = game({ holds: [rec('pawns')] });
+  const unstored = P.closeLineFor(st([pawnsG]), { holds: [], stored: false });
+  ok(unstored === C.fill(COPY.PATH.CLOSE.NONE, { look: 'the pawns' }), `an unstored game: close NONE (${unstored})`);
+  ok(P.closeLineFor(P.compute([]), { holds: [], stored: false }) === COPY.PATH.CLOSE.NONE_FIRST, 'an unstored first game: NONE_FIRST');
+  ok(P.closeLineFor(st([pawnsG]), { again: true }) === COPY.PATH.CLOSE.AGAIN, 'the card of an again game: AGAIN');
   const againG = game({ again: true, holds: [rec('pawns', { outcome: 'again' })] });
   const pa = P.plan(st([one, againG]), null, null, [], [one, againG]);
   ok(pa.closeLine === COPY.PATH.CLOSE.AGAIN && pa.drill === null, 'an again game: close AGAIN, no drill');
   // where
   ok(P.plan(st([one, none2])).where === COPY.PATH.WHERE.NONE_OFF, 'where NONE_OFF');
   const offLog = [game({ holds: [rec('pawns')] }), clean(), clean(), clean(), clean(), clean()];
-  ok(P.plan(st(offLog)).where === 'One of these is yours. I still hold five.', `where ONE_OFF: ${P.plan(st(offLog)).where}`);
-  ok(P.plan(st(gl)).where === 'Five of these are yours. I still hold one.', `where SOME_OFF: ${P.plan(st(gl)).where}`);
+  // the rows still held, mates among them
+  ok(P.plan(st(offLog)).where === 'One of these is yours. I still hold six.', `where ONE_OFF: ${P.plan(st(offLog)).where}`);
+  ok(P.plan(st(gl)).where === 'Five of these are yours. I still hold two.', `where SOME_OFF: ${P.plan(st(gl)).where}`);
+  // FIRST is the first real game, not the first counted one
+  const shortLog = [clean({ observed: 6 }), clean({ observed: 6 }), clean({ observed: 6 })];
+  ok(P.plan(st(shortLog)).where !== COPY.PATH.WHERE.FIRST, 'three short games: not the first-game where line');
+  ok(P.plan(st([clean({ observed: 6 })])).where === COPY.PATH.WHERE.FIRST, 'one short game: the first-game where line');
   // the drill
   const anyG = game({ holds: [rec('pawns', { outcome: 'back', taps: RIGHT, ply: 9 }), rec('pawns', { outcome: 'anyway', ply: 21 }), rec('takers', { outcome: 'anyway', ply: 31 })] });
   const pd = P.plan(st([anyG]), null, null, [], [anyG]);
@@ -708,8 +869,16 @@ section('the question, the close line, where, the drill', () => {
   ok(P.plan(st([anyG])).drill === null, 'no summaries: no drill');
   const backOnly = game({ holds: [rec('pawns', { outcome: 'back', taps: RIGHT })] });
   ok(P.plan(st([backOnly]), null, null, [], [backOnly]).drill === null, 'a game with only a take-back: no drill');
-  const mateG = game({ holds: [rec('mates', { category: 'missed_mate', outcome: 'anyway' })] });
-  ok(P.plan(st([mateG]), null, null, [], [mateG]).drill.record.category === 'missed_mate', 'a missed mate played anyway is a drill');
+  // P15: the gate writes refutation [] for missed_mate and allowed_stalemate; both are drills
+  const mateG = game({ holds: [rec('mates', { category: 'missed_mate', outcome: 'anyway', refutation: [] })] });
+  ok(P.plan(st([mateG]), null, null, [], [mateG]).drill.record.category === 'missed_mate', 'a missed mate played anyway is a drill (no refutation)');
+  const staleG = game({ holds: [rec('mates', { category: 'allowed_stalemate', outcome: 'anyway', refutation: [], fen: '7k/8/8/8/8/8/8/K4Q2 w - - 0 1', san: 'Qf7', to: 'f7', piece: 'q', best: 'h8', answer: { squares: ['h8'], best: 'h8', partial: [] } })] });
+  ok(P.plan(st([staleG]), null, null, [], [staleG]).drill.record.category === 'allowed_stalemate', 'a stalemate played anyway is a drill (no refutation)');
+  const amG = game({ holds: [rec('mates', { category: 'allowed_mate', outcome: 'anyway', refutation: [] })] });
+  ok(P.plan(st([amG]), null, null, [], [amG]).drill === null, 'an allowed mate without its mating reply is no drill');
+  // his worst moment: the larger loss before the later move
+  const worstG = game({ holds: [rec('pawns', { outcome: 'anyway', netLoss: 3, ply: 11 }), rec('pawns', { outcome: 'anyway', netLoss: 2, ply: 31 })] });
+  ok(P.plan(st([worstG]), null, null, [], [worstG]).drill.record.ply === 11, 'the drill is the larger loss');
   const noRef = game({ holds: [rec('pawns', { refutation: [] })] });
   ok(P.plan(st([noRef]), null, null, [], [noRef]).drill === null, 'a record without a refutation is no drill');
   ok(P.plan(st([anyG]), null, null, [], [game({ date: new Date(EPOCH).toISOString() })]).drill === null, 'only the newest real game\'s own summary gives a drill');

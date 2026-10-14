@@ -817,7 +817,7 @@ console.log('rewards both: ok');
         taps: [], outcome: 'anyway', why: null, answered: true, coachShown: false, said: null,
         netLoss: v.netLoss, piece: move.piece, to: move.to, best: v.answer.best,
         answer: { squares: [...v.answer.squares], best: v.answer.best, partial: [...v.answer.partial] },
-        refutation: [...v.refutation], refutationFrom: v.refutationFrom, ply: 12, gameId: 'g1', ...over,
+        refutation: [...v.refutation], refutationFrom: v.refutationFrom, ply: 12, gameId: 'g1', ...G.recordFlags(v), ...over,
       },
       live: v,
     };
@@ -928,5 +928,75 @@ console.log('recordVerdict: ok');
   ok(C.COPY.CLOSE.OUTCOME.landed === C.COPY.CLOSE.LANDED, 'the landed outcome word is the one COPY key');
 }
 console.log('shown outcomes: ok');
+
+// ------------------------------------------------------------------------------------------
+// 16. review2: the ignored_attack sub-cases against the board, and a guarded 'free' piece
+//     (P10 their last move and the pin release, P11 a blocked guard, P12 won, not free)
+// ------------------------------------------------------------------------------------------
+{
+  // a synthetic pre/post: his move, the reply that takes (and an optional recapture), the scores
+  const synth = (fen, san, replyUci, { bestUci, evalBefore = 0, evalAfter = -400, back = null, lastMove = null } = {}) => {
+    const s = setup(fen, san);
+    const sc = new Chess(s.after.fen());
+    const rm = sc.move({ from: replyUci.slice(0, 2), to: replyUci.slice(2, 4) });
+    ok(rm, `synth: illegal reply ${replyUci}`);
+    const reply = { uci: replyUci, san: rm.san, from: rm.from, to: rm.to, piece: rm.piece, captured: rm.captured || null, isCapture: !!rm.captured, isCheck: sc.isCheck(), isMate: sc.isCheckmate() };
+    const post = { fen: s.after.fen(), evalAfter, lines: [{ reply, score: evalAfter, pv: back ? [replyUci, back] : [replyUci] }], replyMateIn: null, depth: 12 };
+    const bc = new Chess(fen);
+    const bm = bc.move({ from: bestUci.slice(0, 2), to: bestUci.slice(2, 4) });
+    const pre = { fen, evalBefore, best: { uci: bestUci, san: bm.san, from: bm.from, to: bm.to, piece: bm.piece, captured: bm.captured || null, isMate: false }, mateIn: null, line2: null, depth: 12, stopped: false };
+    const v = G.verdict(pre, post, s.fb, s.fa, { move: s.move, anyways: 0, playedPairs: [], lastMove });
+    return { ...s, v, copy: G.holdCopy(v, s.fa, s.move) };
+  };
+  // P10a: the bishop on b5 has stood attacked by the a6 pawn since 3...a6; their last move (Nf6) hit e4
+  const ruy = new Chess();
+  for (const m of ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6', 'd3', 'Nf6']) ruy.move(m);
+  const nf6 = { from: 'g8', to: 'f6', piece: 'n', color: 'b', captured: null };
+  const persist = synth(ruy.fen(), 'h3', 'a6b5', { bestUci: 'b5a4', lastMove: nf6 });
+  ok(persist.v.held && persist.v.category === 'ignored_attack' && persist.v.sub === 'already', `P10a: held as already (${persist.v.reason})`);
+  ok(persist.v.byLastMove === false, 'P10a: the attack did not come with their last move');
+  ok(persist.copy.question === C.COPY.QUESTION.ignored_attack_already, `P10a: the template question (${persist.copy.question})`);
+  ok(persist.copy.if_wrong === C.COPY.IF_WRONG.ignored_attack_already_old && !/last move/.test(persist.copy.if_wrong), `P10a: the wrong-tap hint does not send him to their last move (${persist.copy.if_wrong})`);
+  // the same bishop, attacked by the move they just made (a6 as their last move): byLastMove true
+  const ruy5 = new Chess();
+  for (const m of ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6']) ruy5.move(m);
+  const fresh = synth(ruy5.fen(), 'd3', 'a6b5', { bestUci: 'b5a4', lastMove: { from: 'a7', to: 'a6', piece: 'p', color: 'b', captured: null } });
+  ok(fresh.v.sub === 'already' && fresh.v.byLastMove === true && fresh.copy.if_wrong === C.COPY.IF_WRONG.ignored_attack, `P10: a fresh attack keeps the last-move hint (${fresh.v.byLastMove})`);
+  // no last move known (a loaded position): unknown, the MVP's copy
+  const loaded = synth(ruy5.fen(), 'd3', 'a6b5', { bestUci: 'b5a4' });
+  ok(loaded.v.sub === 'already' && loaded.v.byLastMove === null, 'P10: a loaded position: byLastMove unknown');
+  // P10b: Bb5 pins the c6 knight to the king; Bc4 releases the pin and Nxe5 follows. Nothing could take e5 before: opened_line (guards)
+  const pin = synth('r3k3/pp3ppp/2n5/1B2B3/8/8/PP3PPP/6K1 w - - 0 1', 'Bc4', 'c6e5', { bestUci: 'e5c7' });
+  ok(pin.v.held && pin.v.category === 'ignored_attack' && pin.v.sub === 'opened_line', `P10b: a pin release is opened_line (${pin.v.sub}: ${pin.v.reason})`);
+  ok(!/already under attack/.test(pin.copy.question), `P10b: not 'already under attack' (${pin.copy.question})`);
+  // P11: Bd3 blocks the queen's guard of d4 (the moved bishop guarded nothing)
+  const block = synth('6k1/ppp1qppp/1b6/8/3N4/8/PPP2PPP/3Q1BK1 w - - 0 1', 'Bd3', 'b6d4', { bestUci: 'd4f5' });
+  ok(block.v.held && block.v.sub === 'lost_guard' && block.v.guardMoved === false, `P11: a blocked guard is lost_guard with guardMoved false (${block.v.sub} ${block.v.guardMoved})`);
+  ok(block.copy.if_wrong === C.COPY.IF_WRONG.ignored_attack_lost_guard && !/last move/.test(block.copy.if_wrong), `P11: the lost_guard hint (${block.copy.if_wrong})`);
+  // the moved piece was the guard: guardMoved true
+  const moved = synth('6k1/ppp2ppp/1b6/8/3N4/4B3/PPP2PPP/6K1 w - - 0 1', 'Bg5', 'b6d4', { bestUci: 'd4f5' });
+  ok(moved.v.held && moved.v.sub === 'lost_guard' && moved.v.guardMoved === true, `P11: the guard moved (${moved.v.sub} ${moved.v.guardMoved}: ${moved.v.reason})`);
+  // P12: placement_oo, the g4 bishop is guarded by Nf6; hxg4 wins it for a pawn: won, not free
+  const oo = run('placement_oo', 'Nbd2');
+  ok(oo.v.category === 'free_piece_ignored' && oo.v.defended === true, 'P12: the g4 bishop is guarded');
+  const ooCopy = G.holdCopy(oo.v, oo.fa, oo.move);
+  ok(ooCopy.question === C.COPY.QUESTION.free_piece_ignored_cheap && !/free/.test(ooCopy.question), `P12: the question says won (${ooCopy.question})`);
+  ok(ooCopy.if_wrong === C.COPY.IF_WRONG.free_piece_ignored_cheap && !/nothing is guarding/.test(ooCopy.if_wrong), `P12: the hint does not say unguarded (${ooCopy.if_wrong})`);
+  ok(ooCopy.if_right(oo.v.answer.best) === 'Yes, the bishop. It is worth more than what takes it.', `P12: the right tap (${ooCopy.if_right(oo.v.answer.best)})`);
+  ok(!/free/.test(ooCopy.anyway(false)) && !/free/.test(ooCopy.fallback) && !/free/.test(ooCopy.caption), 'P12: no "free" in the anyway, fallback or caption');
+  for (const t of [ooCopy.question, ooCopy.if_wrong, ooCopy.if_right(oo.v.answer.best), ooCopy.anyway(false), ooCopy.fallback]) templateOk(t, 'P12 copy');
+  const nxe4 = run('italian_nxe4', 'Nc3');
+  ok(nxe4.v.defended === false && G.holdCopy(nxe4.v, nxe4.fa, nxe4.move).question === C.COPY.QUESTION.free_piece_ignored, 'P12: an unguarded piece keeps the free copy');
+  const cheapLanded = { fen: find('placement_oo').fen, san: 'Nbd2', category: 'free_piece_ignored', sub: null, outcome: 'landed', why: 'hand', piece: 'n', to: 'd2', best: 'g4', netLoss: 2, defended: true };
+  ok(G.closeCaption(cheapLanded) === 'Their bishop could be won: it stayed.', `P12: the landed caption (${G.closeCaption(cheapLanded)})`);
+  ok(G.closeCaption({ ...cheapLanded, outcome: 'anyway' }) === 'Knight to d2, their bishop could be won: played anyway.', `P12: the played-anyway caption (${G.closeCaption({ ...cheapLanded, outcome: 'anyway' })})`);
+  // recordFlags keeps exactly the booleans
+  eq_(G.recordFlags(persist.v), { byLastMove: false }, 'recordFlags already');
+  eq_(G.recordFlags(block.v), { guardMoved: false }, 'recordFlags lost_guard');
+  eq_(G.recordFlags(oo.v), { defended: true }, 'recordFlags free');
+  eq_(G.recordFlags(loaded.v), {}, 'recordFlags: an unknown byLastMove is not kept');
+}
+function eq_(a, b, msg) { checks += 1; assert.deepEqual(a, b, msg); }
+console.log('ignored_attack sub-cases and a guarded free piece: ok');
 
 console.log(`all ${checks} checks passed (${BASELINE} of the MVP unchanged, ${checks - BASELINE} for the pathway)`);

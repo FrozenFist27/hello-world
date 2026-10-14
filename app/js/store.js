@@ -295,7 +295,9 @@ function createMirror(local, { db = null, user = null, permissions = null, onMer
     } catch { changed = false; }
     stamp(new Date().toISOString());
     if (changed && typeof onMerged === 'function') {
-      try { await onMerged({ changed }); } catch { /* the local plan stands */ }
+      // `before`: the local document as it was, so the page can tell which stages the merge
+      // itself changed (only those are silenced; its own last game's change is still said)
+      try { await onMerged({ changed, before: here }); } catch { /* the local plan stands */ }
       try {
         const after = local.localDoc().path.shown;
         if (after) merged.path.shown = after;

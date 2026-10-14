@@ -364,6 +364,9 @@ export const COPY = {
     ignored_attack_lost_guard: 'Hold on. Something of yours just lost its guard. Tap it.',
     ignored_attack_opened_line: 'Hold on. Your move opens a line to something of yours. Tap it.',
     free_piece_ignored: 'Hold on. Something of theirs is free right now. Tap it.',
+    // a guarded piece of theirs that a cheaper piece of his takes for a net gain (facts' hanging
+    // by the cheaper attacker): not free, but won
+    free_piece_ignored_cheap: 'Hold on. Something of theirs can be won right now. Tap it.',
     allowed_mate: 'Hold on. Their {piece} has a check next move. Where does it land? Tap it.',
     missed_mate: 'Hold on. You have a checkmate on the board. Tap the square.',
     allowed_stalemate: 'Hold on. After this, can their king move at all? Tap their king.',
@@ -377,6 +380,7 @@ export const COPY = {
     ignored_attack_lost_guard: 'Yes, the {piece}. Your move took its guard away.',
     ignored_attack_opened_line: 'Yes, the {piece}. The piece you moved was standing in the {attacker}\'s way.',
     free_piece_ignored: 'Yes, the {piece}. It was yours for the taking.',
+    free_piece_ignored_cheap: 'Yes, the {piece}. It is worth more than what takes it.',
     allowed_mate: 'Yes, there. Their {piece} lands and the king has no way out.',
     missed_mate: 'Yes, there. Your {piece} lands and it is checkmate.',
     allowed_stalemate: 'Yes, their king. It cannot move, and that is a draw, not a win.',
@@ -391,8 +395,12 @@ export const COPY = {
     hanging_after_move_pawn: 'Not that one. Look at the pawns next to it.',
     hanging_after_move: 'Not that one. Look at what reaches that square.',
     ignored_attack: 'Not that one. Look at what their last move pointed at.',
+    // the attack was there before their last move (it did not make it)
+    ignored_attack_already_old: 'Not that one. Look at what their pieces can already take.',
+    ignored_attack_lost_guard: 'Not that one. Look for the piece that lost its guard.',
     ignored_attack_opened_line: 'Not that one. Look along the line your piece just left.',
     free_piece_ignored: 'Not that one. Look at their pieces nothing is guarding.',
+    free_piece_ignored_cheap: 'Not that one. Look at what you can take with something cheaper.',
     allowed_mate: 'Not that one. Look at the squares around your king.',
     missed_mate: 'Not that one. Look at the squares around their king.',
     allowed_stalemate: 'Not that one. Tap their king.',
@@ -409,6 +417,7 @@ export const COPY = {
     hanging_after_move: 'There it goes. A {piece} for {gained}.',
     ignored_attack: 'There it goes. The {piece} is gone.',
     free_piece_ignored: 'There it goes. The free {piece} is not free any more.',
+    free_piece_ignored_cheap: 'There it goes. The {piece} could have been won.',
     missed_mate: 'There it goes. The checkmate was there.',
     allowed_mate: 'There it goes.',     // the mate's own line follows at game over
     allowed_stalemate: 'There it goes.', // the draw's own line follows at game over
@@ -425,6 +434,7 @@ export const COPY = {
     hanging_after_move: 'The {taker} on {square} takes the {piece}. Still want to?',
     ignored_attack: 'The {attacker} takes your {piece} next move. Still want to?',
     free_piece_ignored: 'Their {piece} on {square} is free right now. Still want to?',
+    free_piece_ignored_cheap: 'Their {piece} on {square} can be won right now. Still want to?',
     allowed_mate: 'Their {piece} lands on {square} and it is mate. Still want to?',
     missed_mate: 'Your {piece} to {square} is checkmate. Still want to?',
     allowed_stalemate: 'Their king cannot move after this. Still want to?',
@@ -461,6 +471,7 @@ export const COPY = {
       hanging_after_move: 'a {taker} was waiting',
       ignored_attack: 'your {piece} was under attack',
       free_piece_ignored: 'a free {piece} was there',
+      free_piece_ignored_cheap: 'their {piece} could be won',
       allowed_mate: 'their check next move was mate',
       missed_mate: 'you had a checkmate',
       allowed_stalemate: 'their king had no move',
@@ -471,6 +482,7 @@ export const COPY = {
     LANDED: 'it landed',
     // the whole caption of a landed free_piece_ignored record (nothing of his was lost)
     FREE_STAYED: 'A free {piece} was there: it stayed.',
+    FREE_STAYED_CHEAP: 'Their {piece} could be won: it stayed.',
   },
   // The pathway's copy. Every string here is at most 28 words, holds no digit, passes
   // validate.templateRules and the banned list (copy_check); the LOOK sentences are under 34
@@ -497,9 +509,9 @@ export const COPY = {
       pawns: 'a piece left where a pawn takes it',
       takers: 'a piece left where something takes it',
       takes_back: 'a capture that loses to the recapture',
-      their_last_move: 'a piece their last move attacked, left where it was',
+      their_last_move: 'a piece of yours under attack, left where it was',
       free: 'a free piece of theirs walked past',
-      guards: 'a piece of yours that falls when the piece guarding it moves',
+      guards: 'a piece of yours left unguarded or opened up by your move',
       mates: 'a mate next move, theirs or yours, or a stalemate in a won game',
     },
     // the opening line of games two onward while the look is current (the countdown follows it)
@@ -550,6 +562,16 @@ export const COPY = {
         free: 'A free piece stayed where it was, and I said nothing. I will ask again.',
         guards: 'A guard went missing last game, and I said nothing. I will ask about those again.',
       },
+      // a look that was off woken by one record of a hold he was shown (the fourteen-day review
+      // or a loss of five or more): the hand spoke, so 'I said nothing' would be false
+      SLIP_HELD: {
+        pawns: 'The pawns, once, last game. I will ask again.',
+        takers: 'A piece went where something takes it, once. I will ask again.',
+        takes_back: 'A capture lost to the recapture, once. I will ask again.',
+        their_last_move: 'Their last move went unanswered, once. I will ask again.',
+        free: 'A free piece was walked past, once. I will ask again.',
+        guards: 'A guard went missing last game. I will ask about those again.',
+      },
       WAKE: {
         pawns: 'The pawns again. I am holding those once more.',
         takers: 'Pieces left where something takes them, again. I am holding those once more.',
@@ -583,7 +605,25 @@ export const COPY = {
       SOME: '{n} holds today, {k} on {look}. That is what we are on.',
       OTHER: '{n} holds today, none on {look}. That is still what we are on.',
       OTHER_ONE: 'One hold today, none on {look}. That is still what we are on.',
-      LANDED: 'A piece landed today where {look} would have caught it. I will ask again.',
+      // a landed record of a look whose hand was off (why 'hand'): the hand comes back
+      LANDED: {
+        pawns: 'A piece landed today where a pawn could take it, and I said nothing. I will ask about the pawns again.',
+        takers: 'A piece landed today where something could take it, and I said nothing. I will ask again.',
+        takes_back: 'A capture today lost to the recapture, and I said nothing. I will ask again.',
+        their_last_move: 'Their last move went unanswered today, and I said nothing. I will ask again.',
+        free: 'A free piece of theirs stayed today, and I said nothing. I will ask again.',
+        guards: 'A piece of yours lost its guard today, and I said nothing. I will ask about those again.',
+      },
+      // a landed record of the current look let go by the pair or quiet rule (he had played
+      // holds anyway, so the gate stopped asking for the rest of the game)
+      LANDED_LET: {
+        pawns: 'Later I let one go: a piece landed where a pawn could take it. The pawns are what we are on.',
+        takers: 'Later I let one go: a piece landed where something could take it. That is what we are on.',
+        takes_back: 'Later I let one go: a capture that lost to the recapture. That is what we are on.',
+        their_last_move: 'Later I let one go: their last move went unanswered. That is what we are on.',
+        free: 'Later I let one go: a free piece of theirs stayed. That is what we are on.',
+        guards: 'Later I let one go: a piece of yours lost its guard. That is what we are on.',
+      },
       AGAIN: 'That one was practice. Nothing in it counts for or against you.',
       NOTHING_LEFT: 'There is nothing left for me to hold.',
     },

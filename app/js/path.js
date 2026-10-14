@@ -5,7 +5,7 @@
 // deep-equal state. Every function is total: a malformed line or record is skipped, never
 // thrown on. Every line of copy comes from COPY.PATH through fill(); nothing is worded here.
 
-import { PATH, COPY, PIECE_WORDS, NUMBER_WORDS, ALWAYS_HOLD, fill, handAll } from './contract.js';
+import { PATH, COPY, PIECE_WORDS, NUMBER_WORDS, ALWAYS_HOLD, TUTORIAL_FEN, fill, handAll } from './contract.js';
 import { Chess } from '../vendor/chess.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -129,11 +129,20 @@ export function weight(record) {
   return isObj(t) && (t.grade === 'right' || t.grade === 'partial') ? 1 : 2;
 }
 
+// A tutorial hold is never a record of a look. A v2 summary never holds one (storeGame keeps them
+// out), but the MVP's storeGame wrote every hold of the game, the tutorial dare included, whenever
+// he took it back and played on: a v1 record at the tutorial position is that dare (the tutorial
+// is the only time the page holds a move there, and the position cannot recur once he has moved).
+function tutorialRecord(rec, v1) {
+  return rec.tutorial === true || (v1 && rec.fen === TUTORIAL_FEN);
+}
+
 // A GameSummary v2 from a v1 or v2 summary. Returns a new object; idempotent; never mutates.
 export function norm(game) {
   const g = isObj(game) ? game : {};
   const plies = num(g.plies);
-  const holds = (Array.isArray(g.holds) ? g.holds : []).filter(isObj).map(normRecord);
+  const v1 = g.v !== 2;
+  const holds = (Array.isArray(g.holds) ? g.holds : []).filter(isObj).filter((h) => !tutorialRecord(h, v1)).map(normRecord);
   const gifts = isObj(g.gifts) ? { offered: num(g.gifts.offered), taken: num(g.gifts.taken) } : { offered: 0, taken: 0 };
   return {
     ...g,
@@ -258,8 +267,15 @@ function fold(lines) {
         const w = Math.max(n, num(e && e.w));
         const was = s.stage;
         if (s.stage === 'off') {
-          s.stage = n >= 2 ? 'asking' : 'quiet';
-          s.woken = true;
+          // one record he took back after a right first tap keeps the look off: a weight-1
+          // record exists at off only when the hold was shown (the fourteen-day review's bare
+          // hold, or a loss of five or more), and he answered it, which is what quiet does with
+          // one too (ARCHITECTURE.md 8.11)
+          const answered = n === 1 && !!e && e.w != null && Number.isFinite(Number(e.w)) && Number(e.w) === 1;
+          if (!answered) {
+            s.stage = n >= 2 ? 'asking' : 'quiet';
+            s.woken = true;
+          }
         } else if (s.stage === 'quiet' && (n >= 2 || w >= 2)) {
           s.stage = 'asking';
         }
@@ -445,9 +461,12 @@ function countdownOf(state) {
 }
 function whereOf(state) {
   if (state.current === null) return COPY.PATH.WHERE.ALL_OFF;
-  if (state.countedGames <= 1) return COPY.PATH.WHERE.FIRST;
+  // one game played (counted or not) is not enough to know him; a short-game player with many
+  // games is past that line even with none counted
+  if (num(state.realGames) <= 1) return COPY.PATH.WHERE.FIRST;
   const offs = PATH.MATERIAL_LOOKS.filter((id) => state.stages[id] === 'off').length;
-  const rest = countWord(PATH.MATERIAL_LOOKS.length - offs);
+  // every row still held, the mates row among them
+  const rest = countWord(PATH.LOOKS.length - offs);
   if (offs === 0) return COPY.PATH.WHERE.NONE_OFF;
   if (offs >= PATH.MATERIAL_LOOKS.length) return COPY.PATH.WHERE.ALL_OFF;
   if (offs === 1) return fill(COPY.PATH.WHERE.ONE_OFF, { rest });
@@ -462,37 +481,74 @@ function seen(line, id, before) {
   const landed = Number.isFinite(Number(e.landed)) && e.landed !== null ? Math.min(n, Math.max(0, num(e.landed))) : before[id] === 'off' ? n : 0;
   return { shown: n - landed, landed };
 }
-// The newest real game's holds as he saw them: every shown hold of any look, and the current
-// look's shown and landed counts; from the summary when it is given, else from the digest line.
-function tallyOf(state, games) {
-  const g = newestRealGame(games, state);
-  if (g) {
-    const mine = g.holds.filter((h) => nodeOf(h));
-    const shownAll = mine.filter((h) => PATH.SHOWN_OUTCOMES.includes(h.outcome) && h.outcome !== 'again');
-    return {
-      total: shownAll.length,
-      cur: {
-        shown: shownAll.filter((h) => nodeOf(h) === state.current).length,
-        landed: mine.filter((h) => h.outcome === 'landed' && nodeOf(h) === state.current).length,
-      },
-    };
-  }
+// One game's holds as the close line reads them: the shown holds of any look (total), those of
+// the current look, the looks whose hand was off and let a piece land (why 'hand'), and the
+// current look's landed records let go by the pair or quiet rule.
+function tallyHolds(holds, current) {
+  const mine = (Array.isArray(holds) ? holds : []).filter(isObj).filter((h) => nodeOf(h));
+  const shownAll = mine.filter((h) => PATH.SHOWN_OUTCOMES.includes(h.outcome) && h.outcome !== 'again');
+  const landed = mine.filter((h) => h.outcome === 'landed');
+  return {
+    total: shownAll.length,
+    curShown: shownAll.filter((h) => nodeOf(h) === current).length,
+    handLanded: landed.filter((h) => h.why === 'hand').map((h) => nodeOf(h)),
+    curLet: landed.filter((h) => h.why !== 'hand' && nodeOf(h) === current).length,
+  };
+}
+// The same tally from the digest line alone (no summary): a landed record of a look that was off
+// before the line was the hand's; of the current look otherwise, the pair or quiet rule's.
+function tallyLine(state) {
   const line = state.newestReal;
   let total = 0;
-  for (const id of PATH.LOOKS) total += seen(line, id, state.before).shown;
-  return { total, cur: seen(line, state.current, state.before) };
+  const handLanded = [];
+  let curLet = 0;
+  for (const id of PATH.LOOKS) {
+    const v = seen(line, id, state.before);
+    total += v.shown;
+    if (v.landed > 0 && state.before[id] === 'off') handLanded.push(id);
+    else if (v.landed > 0 && id === state.current) curLet += v.landed;
+  }
+  return { total, curShown: seen(line, state.current, state.before).shown, handLanded, curLet };
+}
+function byCurrentThenLadder(current) {
+  return (a, b) => ((a === current ? 0 : 1) - (b === current ? 0 : 1)) || (ladderIndex(a) - ladderIndex(b));
+}
+// The serif close line from a tally. A piece the faded hand let land names its own look (the
+// slip is the sentence that matters); then a let-go landing of the current look; then the shown
+// holds against the current look. `first`: this is his first real game.
+function closeFromTally(state, t, first) {
+  const C = COPY.PATH.CLOSE;
+  const look = COPY.PATH.LOOK_WORDS[state.current];
+  const hand = t.handLanded.filter((id) => C.LANDED[id]).sort(byCurrentThenLadder(state.current));
+  if (hand.length) return C.LANDED[hand[0]];
+  if (state.current === null) return C.NOTHING_LEFT;
+  if (t.curLet > 0 && C.LANDED_LET[state.current]) return C.LANDED_LET[state.current];
+  const { total, curShown } = t;
+  if (total === 0) return first && state.current === 'pawns' ? C.NONE_FIRST : fill(C.NONE, { look });
+  if (curShown === total) return total === 1 ? fill(C.ONE, { look }) : fill(C.ALL, { n: cap(countWord(total)), look });
+  if (curShown === 0) return total === 1 ? fill(C.OTHER_ONE, { look }) : fill(C.OTHER, { n: cap(countWord(total)), look });
+  return fill(C.SOME, { n: cap(countWord(total)), k: countWord(curShown), look });
 }
 function closeLineOf(state, games) {
-  const look = COPY.PATH.LOOK_WORDS[state.current];
   if (!state.newest) return state.current ? COPY.PATH.CLOSE.NONE_FIRST : COPY.PATH.CLOSE.NOTHING_LEFT;
   if (state.newest.again) return COPY.PATH.CLOSE.AGAIN;
-  if (state.current === null || !state.newestReal) return COPY.PATH.CLOSE.NOTHING_LEFT;
-  const { total, cur } = tallyOf(state, games);
-  if (cur.landed > 0) return fill(COPY.PATH.CLOSE.LANDED, { look });
-  if (total === 0) return state.realGames <= 1 ? COPY.PATH.CLOSE.NONE_FIRST : fill(COPY.PATH.CLOSE.NONE, { look });
-  if (cur.shown === total) return total === 1 ? fill(COPY.PATH.CLOSE.ONE, { look }) : fill(COPY.PATH.CLOSE.ALL, { n: cap(countWord(total)), look });
-  if (cur.shown === 0) return total === 1 ? fill(COPY.PATH.CLOSE.OTHER_ONE, { look }) : fill(COPY.PATH.CLOSE.OTHER, { n: cap(countWord(total)), look });
-  return fill(COPY.PATH.CLOSE.SOME, { n: cap(countWord(total)), k: countWord(cur.shown), look });
+  if (!state.newestReal) return COPY.PATH.CLOSE.NOTHING_LEFT;
+  const g = newestRealGame(games, state);
+  const t = g ? tallyHolds(g.holds, state.current) : tallyLine(state);
+  return closeFromTally(state, t, state.realGames <= 1);
+}
+
+// The close line for the card on screen, from the holds the card itself lists (the tutorial's
+// among them, so the line never contradicts the counts above it): card = { holds, again, stored }.
+// A game that was not stored (given up before any move) counts nothing.
+export function closeLineFor(state, card = {}) {
+  const S = isObj(state) && Array.isArray(state.looks) ? state : compute([]);
+  const c = isObj(card) ? card : {};
+  if (c.again) return COPY.PATH.CLOSE.AGAIN;
+  const stored = c.stored !== false;
+  const holds = stored && Array.isArray(c.holds) ? c.holds.filter(isObj).map(normRecord) : [];
+  const first = stored ? num(S.realGames) <= 1 : num(S.realGames) === 0;
+  return closeFromTally(S, tallyHolds(holds, S.current), first);
 }
 function normGames(games) {
   return (Array.isArray(games) ? games : []).filter(isObj).map(norm);
@@ -512,18 +568,33 @@ function drillOf(state, games) {
   if (!state.current || !state.newest || state.newest.again) return null;
   const g = newestRealGame(games, state);
   if (!g) return null;
+  // a record the drill can rebuild: an answer set, and a refutation (a missed mate or a
+  // stalemate has none: the gate writes [] for both, and recordVerdict needs none for them)
+  const drillable = (h) => isObj(h.answer) && Array.isArray(h.answer.squares) && h.answer.squares.length > 0
+    && ((Array.isArray(h.refutation) && h.refutation.length > 0) || h.category === 'missed_mate' || h.category === 'allowed_stalemate');
+  // his worst moment: the larger loss, then the later move
+  const worse = (h, best) => !best || num(h.netLoss) > num(best.netLoss) || (num(h.netLoss) === num(best.netLoss) && num(h.ply) >= num(best.ply));
   const pick = (look) => {
     let best = null;
     for (const h of g.holds) {
       if (h.outcome !== 'anyway' && h.outcome !== 'landed') continue;
       if (nodeOf(h) !== look) continue;
-      if (!isObj(h.answer) || !Array.isArray(h.refutation) || !h.refutation.length) continue;
-      if (!best || num(h.ply) >= num(best.ply)) best = h;
+      if (!drillable(h)) continue;
+      if (worse(h, best)) best = h;
     }
     return best;
   };
   const record = pick(state.current) || pick('mates');
   return record ? { record: JSON.parse(JSON.stringify(record)), gameId: g.id } : null;
+}
+
+// The SLIP of a look woken by a hold he was shown (the newest real line has a record of it that
+// did not land): the bare hold of the review or a loss of five or more spoke, so 'I said
+// nothing' would be false. A hand-built line without a landed count reads as landed.
+function slipWasShown(state, id) {
+  const e = state.newestReal ? entry(state.newestReal, id) : null;
+  if (!e || e.landed == null || !Number.isFinite(Number(e.landed))) return false;
+  return Math.min(num(e.n), num(e.landed)) < num(e.n);
 }
 
 // The plan for one game (frozen; game.js keeps it on S for the whole game). The digest holds no
@@ -535,49 +606,66 @@ export function plan(state, k3 = null, shown = null, said = [], games = null) {
   const saidList = Array.isArray(said) ? said.filter((x) => typeof x === 'string') : [];
   const current = S.current;
   const stage = (id) => S.stages[id];
-  const hand = {
-    hanging_after_move: { pawn: levelOf(stage('pawns'), S.review), piece: levelOf(stage('takers'), S.review), takes_back: levelOf(stage('takes_back'), S.review) },
-    ignored_attack: { already: levelOf(stage('their_last_move'), S.review), lost_guard: levelOf(stage('guards'), S.review), opened_line: levelOf(stage('guards'), S.review) },
-    free_piece_ignored: levelOf(stage('free'), S.review),
-    allowed_mate: 'full', missed_mate: 'full', allowed_stalemate: 'full',
-  };
-  const giftRate = stage('free') === 'off' ? PATH.GIFT_RATE.off : PATH.GIFT_RATE.on;
+  // the material slots are set below, once the announcement is known
+  const hand = { hanging_after_move: null, ignored_attack: null, free_piece_ignored: null, allowed_mate: 'full', missed_mate: 'full', allowed_stalemate: 'full' };
+  // the review game holds an off free look again, so the opponent leaves pieces as for a held one
+  const giftRate = stage('free') === 'off' && !S.review ? PATH.GIFT_RATE.off : PATH.GIFT_RATE.on;
   const k3use = usableK3(k3, S);
   const baseline = isObj(shown) && Object.keys(shown).length ? shown : S.before;
   const transitions = diffStages(baseline, S.stages);
   const byCurrent = (a, b) => ((a.look === current ? 0 : 1) - (b.look === current ? 0 : 1)) || (ladderIndex(a.look) - ladderIndex(b.look));
   const ofKind = (kind) => transitions.filter((t) => t.kind === kind).sort(byCurrent);
+  // an off look whose OFF line has not been said yet: the diff may have lost it (another sentence
+  // took the one slot, or a merge reset shown), so 'said' is the record of what was announced
+  const offUnsaid = PATH.MATERIAL_LOOKS.filter((id) => stage(id) === 'off' && !saidList.includes(`off:${id}`))
+    .sort((a, b) => byCurrent({ look: a }, { look: b }));
 
   let announce = null;
   if (S.review) announce = { kind: 'REVIEW', look: current };
   else if (ofKind('WAKE').length) announce = { kind: 'WAKE', look: ofKind('WAKE')[0].look };
   else if (ofKind('SLIP').length) announce = { kind: 'SLIP', look: ofKind('SLIP')[0].look };
-  else if (ofKind('OFF').some((t) => !saidList.includes(`off:${t.look}`))) announce = { kind: 'OFF', look: ofKind('OFF').find((t) => !saidList.includes(`off:${t.look}`)).look };
+  else if (S.newestReal && offUnsaid.length) announce = { kind: 'OFF', look: offUnsaid[0] };
   else if (ofKind('QUIET').length) announce = { kind: 'QUIET', look: ofKind('QUIET')[0].look };
-  else if (S.newestReal && !counted(S.newestReal) && !saidList.includes(`nc:${S.newestReal.id}`)) announce = { kind: 'NOT_COUNTED', look: current };
+  // a loss by mate is never 'early' from his chair: the mate line is said instead (below)
+  else if (S.newestReal && !counted(S.newestReal) && S.newestReal.result !== 'mate-loss' && !saidList.includes(`nc:${S.newestReal.id}`)) announce = { kind: 'NOT_COUNTED', look: current };
+
+  // the hand comes off only once it has been said: an off look whose OFF line is not said before
+  // this game's first move holds with the bare question until it is
+  const level = (id) => {
+    const l = levelOf(stage(id), S.review);
+    if (l !== 'off') return l;
+    return saidList.includes(`off:${id}`) || (announce && announce.kind === 'OFF' && announce.look === id) ? 'off' : 'bare';
+  };
+  hand.hanging_after_move = { pawn: level('pawns'), piece: level('takers'), takes_back: level('takes_back') };
+  hand.ignored_attack = { already: level('their_last_move'), lost_guard: level('guards'), opened_line: level('guards') };
+  hand.free_piece_ignored = level('free');
 
   const countdown = countdownOf(S);
+  const transitionSaid = !!announce;
   let line = null;
   if (S.newestReal) {
     const parts = [];
     if (announce) {
       if (announce.kind === 'REVIEW') parts.push(COPY.PATH.TRANSITION.REVIEW);
       else if (announce.kind === 'NOT_COUNTED') parts.push(COPY.PATH.NOT_COUNTED);
+      else if (announce.kind === 'SLIP' && slipWasShown(S, announce.look)) parts.push(COPY.PATH.TRANSITION.SLIP_HELD[announce.look]);
       else parts.push(COPY.PATH.TRANSITION[announce.kind][announce.look]);
     }
     if (current === null) parts.push(COPY.PATH.NOTHING_LEFT);
     else if (k3use && str(k3use.next).trim()) parts.push(str(k3use.next).trim());
-    else {
-      if (!announce && S.newestReal.result === 'mate-loss') parts.push(COPY.PATH.MATE_LOSS);
-      parts.push(COPY.PATH.OPEN[current] + (countdown ? ' ' + countdown : ''));
-    }
+    else if (!announce && S.newestReal.result === 'mate-loss') parts.push(COPY.PATH.MATE_LOSS);   // replaces OPEN
+    // the countdown rides on OPEN alone: after an announcement the line stays short (28 words)
+    else parts.push(COPY.PATH.OPEN[current] + (countdown && !transitionSaid ? ' ' + countdown : ''));
     line = parts.filter(Boolean).join(' ');
   }
 
+  // the remembering question per slot: K3's for the current look; for guards only for the
+  // sub-case K3 was written about (k3.slot), since one question cannot be true of both
   const question = {};
   if (current && current !== 'mates') {
     for (const slot of SLOTS[current] || [current]) {
-      const own = k3use && str(k3use.question).trim();
+      const fits = !SLOTS[current] || (k3use && k3use.slot === slot);
+      const own = fits && k3use && str(k3use.question).trim();
       question[slot] = own || COPY.PATH.QUESTION[slot];
     }
   }
@@ -598,6 +686,8 @@ export function plan(state, k3 = null, shown = null, said = [], games = null) {
     askFirst,
     focus,
     closeLine: closeLineOf(S, games),
+    // the stages this plan's line tells him about (game.js writes them to shown once it says it)
+    shownAfter: { ...S.stages },
     where: whereOf(S),
     drill: drillOf(S, games),
     k3: k3use ? JSON.parse(JSON.stringify(k3use)) : null,
@@ -734,6 +824,8 @@ export function words(state, ctx = {}) {
     allowed: Object.fromEntries(PATH.LOOKS.map((id) => [id, (PATH.QUESTION_PIECES[id] || []).slice()])),
     asks: (Array.isArray(c.offeredAsks) ? c.offeredAsks : []).filter((k) => typeof k === 'string'),
     tied: S.tied.slice(),
+    // guards: the sub-case K3's question is written for (game.js: the newest guards hold's slot)
+    guardsCase: typeof c.guardsSlot === 'string' && SLOTS.guards.includes(c.guardsSlot) ? c.guardsSlot : null,
   };
   return deepFreeze({ rows, collapsed, where, facts });
 }

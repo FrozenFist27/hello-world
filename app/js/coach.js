@@ -316,8 +316,10 @@ function pathLines(path, { k1 = false } = {}) {
     look ? `The player's current look: ${look}${meaning ? ` (${meaning})` : ''}.` : "The player's current look: none.",
     `This hold's hand: ${path.hand === 'fewer words' ? 'fewer words' : 'full'}.`,
   ];
-  if (k1) {
-    const last = path.lastThree && typeof path.lastThree === 'object' ? path.lastThree : {};
+  // K1 only, and only for a hold of the current look (game.js leaves lastThree out otherwise: the
+  // counts are the current look's, not this hold's kind)
+  if (k1 && path.lastThree && typeof path.lastThree === 'object') {
+    const last = path.lastThree;
     lines.push(`Holds of this kind in their last three games: ${countText(last.holds)}, ${countText(last.backs)} taken back.`);
   }
   return lines;
@@ -445,6 +447,12 @@ function k3Said(t, max) {
   return `\u00ab${text}\u00bb${look ? ` (${look} hold)` : ''}`;
 }
 
+// The guards sub-case of this game's newest guards hold (words.facts.guardsCase), for K3's question.
+const K3_GUARDS_CASE = {
+  guards_lost_guard: 'the piece they moved was guarding the piece that fell',
+  guards_opened_line: 'their move opened a line onto the piece that fell',
+};
+
 // Block 2. `o` shrinks it when the prompt would pass PROMPT_MAX_BYTES: meanings for the looks
 // that matter this game only (current, changed, held), then fewer holds and fewer, shorter said
 // texts, then the current look's meaning alone.
@@ -474,6 +482,7 @@ function k3Facts(facts, o) {
     `Holds this game, unheld too: ${shown.length ? shown.join('; ') : 'none'}.`,
     `Moves watched ${countText(g.observed)}; gifts offered ${countText(gifts.offered)}, taken ${countText(gifts.taken)}; escapes ${countText(g.escapes)}; free pieces taken ${countText(g.freeTaken)}.`,
     `Current look lately: ${clean(f.lastThree).replace(/[.]+$/, '') || 'none'}.`,
+    ...(current === 'guards' && K3_GUARDS_CASE[f.guardsCase] ? [`Guards holds this game: ${K3_GUARDS_CASE[f.guardsCase]}; write the question for that case only.`] : []),
     `They wrote: ${said.length ? said.join('; ') : 'nothing'}.`,
     `To play again: ${clean(f.again).replace(/[.]+$/, '') || 'none'}.`,
     `Question piece words: ${list(allowed)}.`,

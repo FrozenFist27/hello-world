@@ -683,7 +683,7 @@ const PATH_FACTS = { current: 'pawns', meaning: C.COPY.PATH.MEANING.pawns, hand:
   ok(Coach.buildK2Prompt({ ...base2, asks: swapped }).includes('"ask": "safe_square" | "what_takes_it" | null'), 'K2 without a path keeps the offered order');
   // a current look whose kind is not offered: no tag, the order as offered
   const pFree = Coach.buildK2Prompt({ ...base2, path: { ...PATH_FACTS, current: 'free', meaning: C.COPY.PATH.MEANING.free, hand: 'fewer words' } });
-  ok(!pFree.includes('working on') && pFree.includes("The player's current look: what is free (a free piece of theirs walked past). This hold's hand: fewer words."), `K2 free look: no tag, fewer words:\n${pFree}`);
+  ok(!pFree.includes('working on') && pFree.includes(`The player's current look: what is free (${C.COPY.PATH.MEANING.free}). This hold's hand: fewer words.`), `K2 free look: no tag, fewer words:\n${pFree}`);
   // the context is untouched by the path, so the examples still pass
   eq(Coach.k2Context(nxe5.factsAfter, nxe5, nxe5.asks), k2ctx, 'K2 context unchanged');
   ok(V.validateK2(K2_EXAMPLE, k2ctx).ok, 'the K2 example still passes');
@@ -696,7 +696,11 @@ const PATH_FACTS = { current: 'pawns', meaning: C.COPY.PATH.MEANING.pawns, hand:
   ok(p1.includes(`This game so far: 2 holds, taken back, played anyway. ${LINE_LOOK} ${LINE_HAND} ${LINE_K1} The answer squares (never in if_wrong): d6, c6.`), `K1 path lines:\n${p1}`);
   ok(Buffer.byteLength(p1, 'utf8') < 2560, 'K1 prompt with the path lines under 2.5 KB');
   ok(Coach.buildK1Prompt({ ...base1, path: { ...PATH_FACTS, hand: 'fewer words', lastThree: { holds: 3, backs: 1 } } }).includes("This hold's hand: fewer words. Holds of this kind in their last three games: three, one taken back."), 'K1: numbers become words');
-  ok(Coach.buildK1Prompt({ ...base1, path: { current: null } }).includes("The player's current look: none. This hold's hand: full. Holds of this kind in their last three games: zero, zero taken back."), 'K1: a path with no current look');
+  ok(Coach.buildK1Prompt({ ...base1, path: { current: null, lastThree: {} } }).includes("The player's current look: none. This hold's hand: full. Holds of this kind in their last three games: zero, zero taken back."), 'K1: a path with no current look');
+  // review2 P23: the last-three line counts the current look, so it goes only with a hold of it
+  // (game.js leaves lastThree out for a hold of another kind)
+  const otherKind = Coach.buildK1Prompt({ ...base1, path: { ...PATH_FACTS, lastThree: undefined } });
+  ok(otherKind.includes(LINE_LOOK) && !otherKind.includes('Holds of this kind'), 'K1: no last-three line for a hold of another kind');
   eq(Coach.k1Context(nxe5.factsAfter, nxe5), k1ctx, 'K1 context unchanged');
   ok(V.validateK1(K1_EXAMPLE, k1ctx).ok, 'the K1 example still passes');
   console.log('path fact lines: ok');

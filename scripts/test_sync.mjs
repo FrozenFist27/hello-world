@@ -394,7 +394,9 @@ function getBeforeSet(db) {
   ok(store.list(K.GAMES).length === 12 && db1.docs.get(DOC).games.length === 12, 'granted: both hold the twelve games');
   ok(store.get(K.PATH).digest.length === 12 && db1.docs.get(DOC).path.digest.length === 12, 'granted: both hold the twelve digest lines');
   ok(mem.get(K.TUTORIAL_SEEN) === '1', 'granted: the remote flag reached the local keys');
-  eq(merged, [{ changed: true }], 'granted: onMerged({ changed: true }) once');
+  ok(merged.length === 1 && merged[0].changed === true, 'granted: onMerged({ changed: true }) once');
+  // the local document as it was before the merge rides along (game.js silences only the looks the merge changed)
+  eq(merged[0].before && merged[0].before.path.digest.map((l) => l.id), [line(30).id], 'granted: onMerged carries the pre-merge local digest');
   const sy = store.get(K.SYNC);
   ok(sy && sy.uid === 'u_test' && typeof sy.at === 'string' && sy.at === db1.docs.get(DOC).updatedAt, 'KEYS.SYNC holds the id and the last stamp');
   eq(store.get(K.PATH).shown, { pawns: 'asking' }, "this device's shown stays local");

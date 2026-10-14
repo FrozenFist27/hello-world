@@ -134,8 +134,24 @@ function blank(extra = {}) {
 // The category table
 // --------------------------------------------------------------------------------------------
 
+// Black's legal captures onto `square` in a position where White is to move (pins honoured): the
+// same position with the turn handed over. null when chess.js will not take that position (White
+// in check before his move, say): the caller falls back to the geometric attackers.
+function blackTakersBefore(fen, square) {
+  if (typeof fen !== 'string') return null;
+  const parts = fen.split(' ');
+  if (parts.length < 4) return null;
+  parts[1] = 'b';
+  parts[3] = '-';
+  try {
+    return legalTakers(new Chess(parts.join(' ')), square);
+  } catch {
+    return null;
+  }
+}
+
 function matchCategory(category, ctx) {
-  const { pre, post, fb, fa, move, cpLoss } = ctx;
+  const { pre, post, fb, fa, move, cpLoss, lastMove } = ctx;
   const lines = (post && post.lines) || [];
   const reply0 = lines[0] && lines[0].reply;
 
@@ -173,11 +189,23 @@ function matchCategory(category, ctx) {
       if (!victim || victim.color !== 'w' || !victim.hanging) continue;
       const before = fb.bySquare[r.to];
       const same = before && before.type === victim.type && before.color === 'w';
-      // not attacked at all before his move: he opened the line onto it (a pinned piece moved,
-      // a piece stepped off a file); attacked and defended before: a guard left; else: already
+      // what could legally take it before his move (a pinned attacker cannot): nothing, and his
+      // move opened the way onto it (a pinned piece moved, a piece stepped off a file, a pin on
+      // their attacker released); attacked and defended before: a guard left; else: already
+      const legalBefore = same ? blackTakersBefore(fb.fen, r.to) : null;
+      const attackableBefore = same && (legalBefore ? legalBefore.length > 0 : before.attackers.length > 0);
       let sub = SUBCASES.LOST_GUARD;
-      if (same && before.hanging) sub = SUBCASES.ALREADY;
-      else if (same && before.attackers.length === 0) sub = SUBCASES.OPENED_LINE;
+      if (same && !attackableBefore) sub = SUBCASES.OPENED_LINE;
+      else if (same && before.hanging) sub = SUBCASES.ALREADY;
+      // already: did their last move make the attack (its piece among the takers)? null when no
+      // last move is known (a loaded position): the attack may have come with it
+      let byLastMove = null;
+      if (sub === SUBCASES.ALREADY && lastMove && typeof lastMove.to === 'string') {
+        const takers = legalBefore || before.attackers || [];
+        byLastMove = takers.some((t) => t && t.square === lastMove.to);
+      }
+      // lost_guard: was the piece he moved one of its guards (else his move blocked a guard's line)
+      const guardMoved = sub === SUBCASES.LOST_GUARD && same ? (before.defenders || []).some((d) => d && d.square === move.from) : null;
       const takers = takersFrom(fa, r.to);
       if (!takers.some((t) => t.square === r.from)) takers.unshift({ square: r.from, type: r.piece, value: value(r.piece) });
       const next = line.pv && line.pv[1];
@@ -195,6 +223,7 @@ function matchCategory(category, ctx) {
         answer: { squares, best: r.to, partial: takers.map((t) => t.square) },
         takers, refutation: back ? [r.uci, next] : [r.uci], gained,
         pawnAmongTakers: takers.some((t) => t.type === 'p'),
+        byLastMove, guardMoved,
         reason: `ignored_attack (${sub}): ${word(victim.type)} on ${r.to} taken by ${word(r.piece)} from ${r.from}, net ${netLoss}, cpLoss ${cpLoss}`,
       };
     }
@@ -260,6 +289,8 @@ function matchCategory(category, ctx) {
       target: b.to, targetPiece: free.type, targetColor: 'b', netLoss,
       answer: { squares: [b.to, ...others], best: b.to, partial: others },
       takers, refutation: [b.uci], refutationFrom: 'pre', gained: [], pawnAmongTakers: takers.some((t) => t.type === 'p'),
+      // guarded, but a cheaper piece wins it: not free, won
+      defended: free.defenders.length > 0,
       reason: `free_piece_ignored: ${word(free.type)} on ${b.to} was free (${b.san}), he played ${move.san}, net ${netLoss}, cpLoss ${cpLoss}`,
     };
   }
@@ -302,7 +333,7 @@ export function verdict(pre, post, factsBefore, factsAfter, gameState = {}) {
     && Math.abs(post.evalAfter) < GATE.MATE_SCORE - 1000 && post.evalAfter >= GATE.STILL_WINNING_CP) {
     cpLoss = 0;
   }
-  const ctx = { pre, post, fb: factsBefore, fa: factsAfter, move, cpLoss };
+  const ctx = { pre, post, fb: factsBefore, fa: factsAfter, move, cpLoss, lastMove: gameState.lastMove || null };
   for (const category of CATEGORIES) {
     let hit = null;
     try { hit = matchCategory(category, ctx); } catch (e) { hit = null; }
@@ -448,15 +479,21 @@ export function holdCopy(v, factsAfter, move = null) {
   const gained = gainedWords(v.gained || []);
   const best = v.answer && v.answer.best;
 
-  let questionKey = c;
+  // a guarded piece of theirs that a cheaper piece wins is not free: its own words throughout
+  const cheap = c === 'free_piece_ignored' && v.defended === true;
+  const ck = (key) => (cheap ? `${key}_cheap` : key);
+  let questionKey = ck(c);
   if (c === 'hanging_after_move' && v.variant === 'takes_back') questionKey = 'hanging_after_move_takes_back';
   const subKey = `ignored_attack_${v.sub === SUBCASES.LOST_GUARD ? 'lost_guard' : v.sub === SUBCASES.OPENED_LINE ? 'opened_line' : 'already'}`;
   if (c === 'ignored_attack') questionKey = subKey;
   const question = fill(COPY.QUESTION[questionKey] || COPY.QUESTION[c] || '', { piece });
 
-  let wrongKey = c;
+  let wrongKey = ck(c);
   if (c === 'hanging_after_move' && v.pawnAmongTakers) wrongKey = 'hanging_after_move_pawn';
   if (c === 'ignored_attack' && v.sub === SUBCASES.OPENED_LINE) wrongKey = 'ignored_attack_opened_line';
+  if (c === 'ignored_attack' && v.sub === SUBCASES.LOST_GUARD) wrongKey = 'ignored_attack_lost_guard';
+  // the attack was there before their last move: their last move is not where to look
+  if (c === 'ignored_attack' && v.sub === SUBCASES.ALREADY && v.byLastMove === false) wrongKey = 'ignored_attack_already_old';
   const if_wrong = fill(COPY.IF_WRONG[wrongKey] || COPY.IF_WRONG[c] || '', { piece });
 
   const if_right = (square) => {
@@ -475,7 +512,7 @@ export function holdCopy(v, factsAfter, move = null) {
     }
     if (c === 'free_piece_ignored') {
       const p = (v.answer.squares || []).includes(square) && square !== best ? pieceOn(v, factsAfter, square) : null;
-      return fill(COPY.IF_RIGHT[c], { piece: p ? word(p.type) : piece });
+      return fill(COPY.IF_RIGHT[cheap && !p ? ck(c) : c], { piece: p ? word(p.type) : piece });
     }
     return fill(COPY.IF_RIGHT[c] || '', { piece });
   };
@@ -503,16 +540,16 @@ export function holdCopy(v, factsAfter, move = null) {
   else named = fill(COPY.NAMED.their_king, { square: best });
 
   const anyway = (sawIt) => {
-    const base = fill(COPY.ANYWAY[c] || COPY.ANYWAY.allowed_mate, { piece, gained });
+    const base = fill(COPY.ANYWAY[ck(c)] || COPY.ANYWAY[c] || COPY.ANYWAY.allowed_mate, { piece, gained });
     const tail = sawIt ? COPY.ANYWAY.saw_it : fill(COPY.ANYWAY.next_time, { look: lookWords(v) });
     return `${base} ${tail}`;
   };
 
-  const fallback = fill(COPY.K2_FALLBACK[c] || '', { taker: takerWord, square: best, piece, attacker: attackerWord });
+  const fallback = fill(COPY.K2_FALLBACK[ck(c)] || COPY.K2_FALLBACK[c] || '', { taker: takerWord, square: best, piece, attacker: attackerWord });
 
   const movedWord = word(move && move.piece ? move.piece : v.targetPiece);
   const movedTo = move && move.to ? move.to : v.target;
-  const caption = `${cap(movedWord)} to ${movedTo}, ${fill(COPY.CLOSE.WAITING[c] || '', { taker: takerWord, piece })}`;
+  const caption = `${cap(movedWord)} to ${movedTo}, ${fill(COPY.CLOSE.WAITING[ck(c)] || COPY.CLOSE.WAITING[c] || '', { taker: takerWord, piece })}`;
 
   return { question, if_right, if_partial, if_wrong, named, anyway, fallback, caption };
 }
@@ -603,6 +640,16 @@ export function tutorialVerdict(row, move, chessBefore) {
 // --------------------------------------------------------------------------------------------
 // A stored record as a verdict (the drill: 'Play it again from here')
 // --------------------------------------------------------------------------------------------
+
+// The verdict's copy flags a stored record keeps (game.js holdRecord and logLanded), so the close
+// caption and the drill word the record as the hold was worded: byLastMove (ignored_attack
+// 'already': their last move made the attack), guardMoved (lost_guard: the moved piece was the
+// guard), defended (free_piece_ignored: guarded, won by a cheaper piece). Only booleans are kept.
+export function recordFlags(v) {
+  const out = {};
+  for (const k of ['byLastMove', 'guardMoved', 'defended']) if (v && typeof v[k] === 'boolean') out[k] = v[k];
+  return out;
+}
 
 // {square, type, value} for the pieces of `color` that reach `square` by geometry on `chess`.
 function attackersOn(chess, square, color) {
@@ -726,6 +773,9 @@ export function recordVerdict(record, move = null, chessBefore = null) {
     refutationFrom,
     gained,
     pawnAmongTakers: typeof record.pawnAmongTakers === 'boolean' ? record.pawnAmongTakers : takers.some((t) => t.type === 'p'),
+    ...(typeof record.byLastMove === 'boolean' ? { byLastMove: record.byLastMove } : {}),
+    ...(typeof record.guardMoved === 'boolean' ? { guardMoved: record.guardMoved } : {}),
+    ...(typeof record.defended === 'boolean' ? { defended: record.defended } : {}),
     reason: `again: ${record.san} held, ${c}${record.sub ? ` (${record.sub})` : ''}`,
   });
 }
@@ -764,10 +814,11 @@ export function closeCaption(record) {
   const c = record.category;
   const at = pieceAtFen(record.fen, record.best);
   const atWord = at ? word(at.type) : 'piece';
+  const cheap = c === 'free_piece_ignored' && record.defended === true;
   if (record.outcome === 'landed' && c === 'free_piece_ignored') {
-    return fill(COPY.CLOSE.FREE_STAYED, { piece: atWord });
+    return fill(cheap ? COPY.CLOSE.FREE_STAYED_CHEAP : COPY.CLOSE.FREE_STAYED, { piece: atWord });
   }
-  const waiting = fill(COPY.CLOSE.WAITING[c] || '', { taker: atWord, piece: c === 'ignored_attack' || c === 'free_piece_ignored' ? atWord : word(record.piece) });
+  const waiting = fill((cheap && COPY.CLOSE.WAITING.free_piece_ignored_cheap) || COPY.CLOSE.WAITING[c] || '', { taker: atWord, piece: c === 'ignored_attack' || c === 'free_piece_ignored' ? atWord : word(record.piece) });
   const outcome = COPY.CLOSE.OUTCOME[record.outcome] || COPY.CLOSE.OUTCOME.ended;
   return fill(COPY.CLOSE.CAPTION, { piece: cap(word(record.piece)), square: record.to, waiting, outcome });
 }
