@@ -1,0 +1,172 @@
+<title>First Chess Lessons</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* One reading column: the two lessons first, then the whole path, so the next step is always the top of the page. */
+:root {
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --ink: #111827;
+  --muted: #586174;
+  --line: #e1e6ee;
+  --accent: #2563eb;
+  --accent-soft: #e8efff;
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1220; --surface: #131a2b; --ink: #f1f4f9; --muted: #9ba5b8; --line: #243049;
+    --accent: #6ea8ff; --accent-soft: #17264a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1220; --surface: #131a2b; --ink: #f1f4f9; --muted: #9ba5b8; --line: #243049;
+  --accent: #6ea8ff; --accent-soft: #17264a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font: 16px/1.55 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 56px;
+}
+.wrap { max-width: 640px; margin: 0 auto; display: grid; gap: 40px; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; text-wrap: balance; margin: 0; }
+h1 { font-size: 2.1rem; line-height: 1.15; }
+h2 { font-size: 1.3rem; }
+p { margin: 0; }
+.eyebrow { font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.lead { color: var(--muted); max-width: 60ch; }
+header { display: grid; gap: 12px; }
+
+.lessons { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.lesson {
+  display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; align-items: start;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 18px 16px;
+  color: inherit; text-decoration: none;
+}
+.lesson:hover { border-color: var(--accent); }
+.lesson:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num {
+  grid-row: span 3; width: 2.1rem; height: 2.1rem; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.lesson h3 { font-size: 1.15rem; line-height: 1.3; }
+.lesson .sub { color: var(--muted); font-size: .95rem; min-width: 0; }
+.lesson .go { color: var(--accent); font-weight: 600; font-size: .92rem; margin-top: 6px; }
+
+.note { border-top: 1px solid var(--line); padding-top: 18px; display: grid; gap: 8px; color: var(--muted); font-size: .95rem; }
+.note strong { color: var(--ink); }
+code { font: .86rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--accent-soft); color: var(--ink); padding: 2px 6px; border-radius: 5px; overflow-wrap: anywhere; }
+
+.looks { display: grid; gap: 6px; margin: 0; padding-left: 1.2rem; }
+.looks li::marker { color: var(--accent); font-weight: 600; }
+
+.path { display: grid; gap: 22px; }
+.pattern { display: grid; gap: 8px; }
+.pattern h3 { font-size: 1.08rem; }
+.pattern ol { margin: 0; padding-left: 1.6rem; display: grid; gap: 4px; }
+.pattern li { color: var(--muted); }
+.pattern li.ready { color: var(--ink); }
+.tag { font-size: .74rem; font-weight: 600; letter-spacing: .03em; padding: 1px 7px; border-radius: 999px; margin-left: 6px; white-space: nowrap; }
+.tag.ready { background: var(--accent-soft); color: var(--accent); }
+.tag.later { border: 1px solid var(--line); color: var(--muted); }
+.project { font-size: .9rem; color: var(--muted); }
+footer { color: var(--muted); font-size: .88rem; border-top: 1px solid var(--line); padding-top: 18px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<main class="wrap">
+  <header>
+    <p class="eyebrow">Chess study · under 1000</p>
+    <h1>First Chess Lessons</h1>
+    <p class="lead">The lessons the chess master wrote for you. Every position in them was checked with Stockfish before it was written down. Start with where you stand, then the check that decides most games at this level.</p>
+  </header>
+
+  <section aria-labelledby="start">
+    <h2 id="start" style="margin-bottom:14px">Start here</h2>
+    <ul class="lessons">
+      <li>
+        <a class="lesson" href="lessons/0000-placement.html">
+          <span class="num" aria-hidden="true">0</span>
+          <h3>Where you stand</h3>
+          <p class="sub">Three positions: a piece left hanging, a two-move tactic from Morphy's Opera Game, and a king-and-pawn ending. No score. Your answers decide where the lessons start.</p>
+          <span class="go">Open the placement</span>
+        </a>
+      </li>
+      <li>
+        <a class="lesson" href="lessons/0001-blunder-check.html">
+          <span class="num" aria-hidden="true">1</span>
+          <h3>Look both ways: the check before every move</h3>
+          <p class="sub">Three questions before every move, taught through positions from a beginner's 1.e4 game, with a recap and flashcards at the end.</p>
+          <span class="go">Open lesson one</span>
+        </a>
+      </li>
+    </ul>
+  </section>
+
+  <section class="note" aria-label="The three questions">
+    <p><strong>The three questions lesson one teaches</strong></p>
+    <ol class="looks">
+      <li>What did their last move attack?</li>
+      <li>What can I take?</li>
+      <li>What checks are there, theirs and mine?</li>
+    </ol>
+  </section>
+
+  <section class="note" aria-label="How answering works here">
+    <p><strong>How answering works on this page.</strong> Each lesson asks you to explain your move in your own words. That grading runs on a small server on your computer, so here every question switches to its multiple-choice version. Pick an answer, read the feedback, and the next section opens.</p>
+    <p>To answer in your own words and have each answer graded, run the study on your computer: <code>cd chess-study &amp;&amp; make local</code>, then open <code>http://localhost:9990</code>.</p>
+  </section>
+
+  <section class="path" aria-labelledby="path">
+    <h2 id="path">The whole path</h2>
+    <p class="lead">Four patterns, each named for what you can do when it is done, each closed by games or puzzles rather than a test.</p>
+
+    <div class="pattern">
+      <h3>I stop hanging pieces</h3>
+      <ol>
+        <li class="ready">Look both ways: the check before every move <span class="tag ready">Ready</span></li>
+        <li>Is it free? Counting attackers and defenders <span class="tag later">Not written yet</span></li>
+        <li>Forcing moves first: checks and captures <span class="tag later">Not written yet</span></li>
+      </ol>
+      <p class="project">Closes with five slow games against the bot, three of them with no piece given away.</p>
+    </div>
+
+    <div class="pattern">
+      <h3>I can mate with a queen or a rook</h3>
+      <ol start="4">
+        <li>Check, checkmate, stalemate <span class="tag later">Not written yet</span></li>
+        <li>Queen and king against king <span class="tag later">Not written yet</span></li>
+        <li>Rook and king, and the two-rook ladder <span class="tag later">Not written yet</span></li>
+      </ol>
+      <p class="project">Closes with mate from three set positions, within twenty moves, with no stalemate.</p>
+    </div>
+
+    <div class="pattern">
+      <h3>I get out of the opening alive</h3>
+      <ol start="7">
+        <li>Centre, develop, castle <span class="tag later">Not written yet</span></li>
+        <li>The early queen and Scholar's mate <span class="tag later">Not written yet</span></li>
+        <li>One setup after 1.e4 e5 <span class="tag later">Not written yet</span></li>
+      </ol>
+      <p class="project">Closes with ten games, eight of them castled by move ten with all four minor pieces out.</p>
+    </div>
+
+    <div class="pattern">
+      <h3>I see one-move threats before they land</h3>
+      <ol start="10">
+        <li>Their next capture <span class="tag later">Not written yet</span></li>
+        <li>Their next mate: f7, h7, the back rank <span class="tag later">Not written yet</span></li>
+        <li>One move, two targets <span class="tag later">Not written yet</span></li>
+      </ol>
+      <p class="project">Closes with fifteen of twenty rated puzzles, then the five-game goal.</p>
+    </div>
+  </section>
+
+  <footer>
+    The goal the coach set: an estimated 1000 against the chess-coach bot by 1 February 2027. Sources: the Steps Method, Bobby Fischer Teaches Chess, Chernev's Logical Chess.
+  </footer>
+</main>
